@@ -1,0 +1,10 @@
+import express from 'express';
+import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from '../controllers/templatesController.js';
+import { protect } from '../middleware/authMiddleware.js';
+const router = express.Router();
+router.use(protect);
+router.get('/', getTemplates);
+router.post('/', createTemplate);
+router.put('/:id', updateTemplate);
+router.delete('/:id', deleteTemplate);
+export default router;
