@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Progress } from '../../components/ui/progress';
@@ -128,16 +129,16 @@ export function CSTMonthlyTargets() {
           {myTargets.length === 0 ? (
             <p className={cls.hint}>No target assigned yet. Ask your CST Manager to assign a target.</p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
+            <div className="overflow-x-auto">
+              <Table className="w-full text-sm">
+                <TableHeader className="bg-muted/50 sticky top-0">
+                  <TableRow>
                     {['Month', 'Client Goal', 'Client Achieved', 'Rev Goal', 'Rev Achieved', 'Rev Left', '% Hit', 'Update'].map(h => (
-                      <th key={h} className={cls.tableHead}>{h}</th>
+                      <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y">
                   {myTargets.map(t => {
                     const totalTarget = (t.targetAmount || 0) + (t.targetClients || 0);
                     const totalAchieved = (t.achievedAmount || 0) + (t.achievedClients || 0);
@@ -146,12 +147,12 @@ export function CSTMonthlyTargets() {
                     const isEditing = t.id in editDrafts;
 
                     return (
-                      <tr key={t.id} className={cls.tableRow}>
-                        <td className={`${cls.tableCell} ${cls.heading}`}>{t.month}</td>
-                        <td className={`${cls.tableCell} font-mono`}>{t.targetClients}</td>
+                      <TableRow key={t.id} className={cls.tableRow}>
+                        <TableCell className={`${cls.tableCell} ${cls.heading}`}>{t.month}</TableCell>
+                        <TableCell className={`${cls.tableCell} font-mono`}>{t.targetClients}</TableCell>
                         
                         {/* Client Achieved — inline editable */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {isEditing ? (
                             <Input
                               type="number"
@@ -164,12 +165,12 @@ export function CSTMonthlyTargets() {
                           ) : (
                             <span className="font-mono">{t.achievedClients}</span>
                           )}
-                        </td>
+                        </TableCell>
 
-                        <td className={`${cls.tableCell} font-mono`}>${(t.targetAmount || 0).toLocaleString()}</td>
+                        <TableCell className={`${cls.tableCell} font-mono`}>${(t.targetAmount || 0).toLocaleString()}</TableCell>
 
                         {/* Rev Achieved — inline editable */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {isEditing ? (
                             <Input
                               type="number"
@@ -187,24 +188,24 @@ export function CSTMonthlyTargets() {
                                 : <span className={cls.hint}>—</span>}
                             </span>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Remaining — auto calculated */}
-                        <td className={`${cls.tableCell} font-mono text-orange-600`}>
+                        <TableCell className={`${cls.tableCell} font-mono text-orange-600`}>
                           {(t.achievedAmount || 0) > 0
                             ? '$' + remainingRev.toLocaleString()
                             : <span className={cls.hint}>—</span>}
-                        </td>
+                        </TableCell>
 
                         {/* % Hit */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {(t.achievedAmount || 0) > 0
                             ? <span className={`font-bold ${pctColor(revPct)}`}>{revPct}%</span>
                             : <span className={cls.hint}>In progress</span>}
-                        </td>
+                        </TableCell>
 
                         {/* Edit / Save button (ONLY for current month) */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {t.month === currentMonth ? (
                             isEditing ? (
                               <Button size="sm" onClick={() => saveEdit(t.id, t.type)} className="h-7 px-2">
@@ -218,12 +219,12 @@ export function CSTMonthlyTargets() {
                           ) : (
                             <span className={cls.hint}>Closed</span>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

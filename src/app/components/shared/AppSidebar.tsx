@@ -1,11 +1,12 @@
 import {
   LayoutDashboard, Clock, LogOut, Sun, Moon, Bell, Bug, AlertTriangle, Waves,
-  Globe, Users, BookOpen, CalendarIcon, TrendingUp, UserCog, ClipboardList, AlertCircle, Target, StickyNote, Settings, Flag, Mic, FileText, PhoneCall, ClipboardCheck
+  Globe, Users, BookOpen, CalendarIcon, TrendingUp, UserCog, ClipboardList, AlertCircle, Target, StickyNote, Settings, Flag, Mic, FileText, PhoneCall, ClipboardCheck, Building2
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { type PortalTheme } from '../../styles/portal-themes';
+import { BrandLogo, BRAND_NAME } from './BrandMark';
 import {
   Sidebar,
   SidebarContent,
@@ -163,6 +164,7 @@ export function AppSidebar({ theme }: AppSidebarProps) {
       { title: 'Active Clients', url: '/dashboard?module=clients', icon: Globe },
       { title: 'Concerns', url: '/dashboard?module=concerns', icon: AlertCircle, badge: pendingConcernsCount },
       { title: 'Events', url: '/dashboard?module=events', icon: CalendarIcon },
+      { title: 'Organization', url: '/dashboard?module=org-settings', icon: Building2 },
     ];
   }
 
@@ -171,19 +173,10 @@ export function AppSidebar({ theme }: AppSidebarProps) {
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-muted/50">
         <SidebarHeader className="p-3">
           <div className="flex items-center gap-3">
-            <div
-              className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
-            >
-              <img
-                src="branding/logo_n.png"
-                alt="N"
-                className={`h-full w-full object-cover ${isDark ? 'mix-blend-screen' : ''}`}
-                style={{ maskImage: 'radial-gradient(circle, black 80%, transparent 100%)' }}
-              />
-            </div>
+            <BrandLogo />
             {!collapsed && (
               <div className="min-w-0">
-                <p className="text-sm font-bold truncate text-sidebar-foreground">Nexuswave</p>
+                <p className="text-sm font-bold truncate text-sidebar-foreground">{user?.organization?.name ?? BRAND_NAME}</p>
                 <p className="text-xs text-muted-foreground truncate opacity-80">{theme.label}</p>
               </div>
             )}

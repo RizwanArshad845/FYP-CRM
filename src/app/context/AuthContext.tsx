@@ -1,13 +1,17 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types/crm';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken, setToken, clearToken, AUTH_EXPIRED_EVENT } from '../utils/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     staleSession: { name: string; clockInTime: string } | null;
-    login: (email: string, password: string) => Promise<boolean>;
+    login: (email: string, password: string) => Promise<User | null>;
+    /** Begin a session from a token + session profile (login or signup response) */
+    startSession: (token: string, sessionUser: any) => Promise<User>;
+    /** Merge a fresh session profile from the server (e.g. after a password change) */
+    applySession: (sessionUser: any) => void;
     logout: (clockOutAlso?: boolean) => Promise<void>;
     clockIn: () => Promise<boolean>;
     clockOut: (silent?: boolean) => Promise<boolean>;
@@ -18,7 +22,51 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SESSION_KEY = 'crm_clock_session';
-const TOKEN_KEY = 'crm_token';
+
+// Profile fields from the server session (everything except clock state).
+const sessionFields = (u: any) => ({
+    id: u.id,
+    first_name: u.first_name,
+    last_name: u.last_name,
+    name: `${u.first_name} ${u.last_name}`,
+    email: u.email,
+    role_id: u.role_id,
+    role: u.role,
+    department: u.department,
+    status: u.status,
+    tier: u.tier,
+    mustChangePassword: Boolean(u.mustChangePassword),
+    onboardingCompleted: u.onboardingCompleted !== false,
+    organization: u.organization,
+    portals: u.portals ?? [],
+});
+
+// Builds the client-side user from a session profile plus the attendance status response.
+const toUser = (u: any, statusRes: any): User => ({
+    ...sessionFields(u),
+    clockedIn: Boolean(statusRes?.success && statusRes.isClockedIn),
+    clockInTime: statusRes?.activeSession?.clock_in,
+    onBreak: Boolean(statusRes?.success && statusRes.onBreak),
+    breakInTime: statusRes?.activeBreak?.break_in,
+});
+
+// Attendance is blocked until a temporary password is changed, so skip it then.
+const fetchStatus = (u: any) =>
+    u.mustChangePassword ? Promise.resolve(null) : apiFetch('/attendance/status').catch(() => null);
+
+/** Where a signed-in user must go next, in order: password change, onboarding, clock-in, dashboard. */
+export const nextRouteFor = (user: User): string => {
+    if (user.mustChangePassword) return '/change-password';
+    if (user.role === 'admin' && user.onboardingCompleted === false) return '/onboarding';
+    if (!user.clockedIn) return '/clock-in';
+    return '/dashboard';
+};
+
+/** A blocking pre-dashboard step (password change / onboarding), or null. */
+export const pendingSetupRoute = (user: User): string | null => {
+    const next = nextRouteFor(user);
+    return next === '/change-password' || next === '/onboarding' ? next : null;
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -28,40 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Initial load: check for token and get user profile
     useEffect(() => {
         const checkAuth = async () => {
-            const token = sessionStorage.getItem(TOKEN_KEY);
-            if (!token) {
+            if (!getToken()) {
                 setIsLoading(false);
                 return;
             }
 
             try {
-                // Parallelize profile and status check
-                const [profileRes, statusRes] = await Promise.all([
-                    apiFetch('/auth/me'),
-                    apiFetch('/attendance/status')
-                ]);
-
+                const profileRes = await apiFetch('/auth/me');
                 if (profileRes.success) {
-                    const u = profileRes.data;
-                    setUser({
-                        id: u.id,
-                        first_name: u.first_name,
-                        last_name: u.last_name,
-                        name: `${u.first_name} ${u.last_name}`,
-                        email: u.email,
-                        role_id: u.role_id,
-                        role: u.role as any,
-                        department: u.department,
-                        status: u.status as any,
-                        clockedIn: statusRes.success && statusRes.isClockedIn,
-                        clockInTime: statusRes.activeSession?.clock_in,
-                        onBreak: statusRes.success && statusRes.onBreak,
-                        breakInTime: statusRes.activeBreak?.break_in
-                    });
+                    setUser(toUser(profileRes.data, await fetchStatus(profileRes.data)));
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
-                sessionStorage.removeItem(TOKEN_KEY);
+                clearToken();
             } finally {
                 setIsLoading(false);
             }
@@ -69,55 +96,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         checkAuth();
     }, []);
 
+    // apiFetch signals a rejected token; drop the session so pages redirect to /login.
+    useEffect(() => {
+        const onExpired = () => {
+            localStorage.removeItem(SESSION_KEY);
+            setUser((prev) => {
+                if (prev) toast.error('Your session has expired. Please log in again.');
+                return null;
+            });
+        };
+        window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+        return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    }, []);
 
-    const login = async (email: string, password: string): Promise<boolean> => {
+    const startSession = async (token: string, sessionUser: any): Promise<User> => {
+        setToken(token);
+        const next = toUser(sessionUser, await fetchStatus(sessionUser));
+        setUser(next);
+        return next;
+    };
+
+    const applySession = (sessionUser: any) => {
+        setUser((prev) => (prev ? { ...prev, ...sessionFields(sessionUser) } : prev));
+    };
+
+    const login = async (email: string, password: string): Promise<User | null> => {
         try {
             const res = await apiFetch('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ email, password })
             });
-
-            if (res.success) {
-                sessionStorage.setItem(TOKEN_KEY, res.token);
-                const u = res.user;
-
-                // Check status for this newly logged in user
-                const statusRes = await apiFetch('/attendance/status', {
-                    headers: { 'Authorization': `Bearer ${res.token}` }
-                });
-
-                setUser({
-                    id: u.id,
-                    first_name: u.first_name,
-                    last_name: u.last_name,
-                    name: `${u.first_name} ${u.last_name}`,
-                    email: u.email,
-                    role_id: u.role_id,
-                    role: u.role as any,
-                    department: u.department,
-                    status: u.status as any,
-                    clockedIn: statusRes.success && statusRes.isClockedIn,
-                    clockInTime: statusRes.activeSession?.clock_in,
-                    onBreak: statusRes.success && statusRes.onBreak,
-                    breakInTime: statusRes.activeBreak?.break_in
-                });
-                toast.success(`Welcome back, ${u.first_name}!`);
-                return true;
-            } else {
-                toast.error(res.error || 'Invalid credentials');
-                return false;
-            }
+            const next = await startSession(res.token, res.user);
+            toast.success(`Welcome back, ${res.user.first_name}!`);
+            return next;
         } catch (error: any) {
             toast.error(error.message || 'Invalid credentials');
-            return false;
+            return null;
         }
     };
 
     const logout = async (clockOutAlso = true) => {
-        const token = sessionStorage.getItem(TOKEN_KEY);
+        const token = getToken();
 
         // 1. INSTANT UI RESET: Don't wait for the server
-        sessionStorage.removeItem(TOKEN_KEY);
+        clearToken();
         localStorage.removeItem(SESSION_KEY);
         setUser(null);
         toast.info('Logged out successfully');
@@ -214,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, staleSession, login, logout, clockIn, clockOut, breakIn, breakOut, clearStaleSession }}>
+        <AuthContext.Provider value={{ user, isLoading, staleSession, login, startSession, applySession, logout, clockIn, clockOut, breakIn, breakOut, clearStaleSession }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,125 +1,115 @@
-import pool from '../config/db.js';
+import pool, { withTransaction } from '../config/db.js';
+import { assertUserInScope, ownerScope, scopeOf } from '../utils/tenant.js';
 
-// Get tasks, optionally filtered by assigned_to
+// Which tasks a user can see/act on, by tier: Member = ones they gave or received,
+// Manager = also any task assigned to their team, Admin = all in the org.
+const involvement = (user, nextParam) => {
+    const scope = scopeOf(user);
+    if (scope === 'org') return { sql: '', params: [] };
+    const mine = `t.assigned_to = $${nextParam} OR t.assigned_by = $${nextParam}`;
+    if (scope === 'own') return { sql: ` AND (${mine})`, params: [user.id] };
+    const team = ownerScope(user, 't.assigned_to', nextParam + 1);
+    return { sql: ` AND (${mine} OR (TRUE${team.sql}))`, params: [user.id, ...team.params] };
+};
+
 export const getTasks = async (req, res) => {
-    try {
-        const { assigned_to } = req.query;
-        let query = `
-            SELECT t.*, u.first_name || ' ' || u.last_name as assigned_to_name
-            FROM tasks t
-            LEFT JOIN users u ON t.assigned_to = u.id
-        `;
-        const params = [];
+    const params = [req.user.tenantId];
+    let query = `
+        SELECT t.*, u.first_name || ' ' || u.last_name as assigned_to_name
+        FROM tasks t
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.tenant_id = $1
+    `;
+    const inv = involvement(req.user, 2);
+    query += inv.sql;
+    params.push(...inv.params);
 
-        if (assigned_to) {
-            query += ` WHERE t.assigned_to = $1 `;
-            params.push(assigned_to);
-        }
-
-        query += ` ORDER BY t.created_at DESC `;
-
-        const result = await pool.query(query, params);
-        res.json({ success: true, data: result.rows });
-    } catch (error) {
-        console.error('Error fetching tasks:', error);
-        res.status(500).json({ success: false, error: 'Database connection error' });
+    const assignedTo = Number(req.query.assigned_to);
+    if (Number.isInteger(assignedTo) && assignedTo > 0) {
+        params.push(assignedTo);
+        query += ` AND t.assigned_to = $${params.length}`;
     }
+    query += ' ORDER BY t.created_at DESC';
+
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows });
 };
 
-// Create a new task assigned to an employee
+// Delegate a task to someone in the delegator's scope (team for Managers, org for Admins)
 export const createTask = async (req, res) => {
-    try {
-        const { title, description, assigned_to, assigned_by, due_date, priority, category } = req.body;
-        
-        // Ensure IDs are integers
-        const toId = assigned_to ? parseInt(assigned_to) : null;
-        const fromId = assigned_by && !isNaN(parseInt(assigned_by)) ? parseInt(assigned_by) : (req.user?.id || null);
+    const { title, description, assigned_to, due_date, priority, category } = req.body;
+    const toId = assigned_to ? Number(assigned_to) : null;
+    await assertUserInScope(req.user, toId);
 
-        const result = await pool.query(
-            'INSERT INTO tasks (title, description, assigned_to, assigned_by, due_date, status, priority, category) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [title, description, toId, fromId, due_date || null, 'pending', priority || 'medium', category || 'General']
-        );
-        res.status(201).json({ success: true, data: result.rows[0] });
-    } catch (error) {
-        console.error('Error creating task:', error);
-        res.status(500).json({ success: false, error: 'Database connection error' });
-    }
+    const result = await pool.query(
+        `INSERT INTO tasks (tenant_id, title, description, assigned_to, assigned_by, due_date, status, priority, category)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8) RETURNING *`,
+        [req.user.tenantId, title, description, toId, req.user.id, due_date || null, priority || 'medium', category || 'General']
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
 };
 
-// Update task status (e.g., from 'pending' to 'completed')
+// Assignee or assigner (or admin) updates the status
 export const updateTaskStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-        const result = await pool.query(
-            'UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *',
-            [status, id]
-        );
-        res.json({ success: true, data: result.rows[0] });
-    } catch (error) {
-        console.error('Error updating task:', error);
-        res.status(500).json({ success: false, error: 'Database connection error' });
-    }
+    const inv = involvement(req.user, 4);
+    const result = await pool.query(
+        `UPDATE tasks t SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE t.id = $2 AND t.tenant_id = $3${inv.sql} RETURNING *`,
+        [req.body.status, req.params.id, req.user.tenantId, ...inv.params]
+    );
+    if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Task not found' });
+    res.json({ success: true, data: result.rows[0] });
 };
 
-// Employee submits task with notes/attachments
+// Assignee submits the task with notes/attachments
 export const submitTask = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { submission_notes, attachment_url } = req.body;
-        
-        await pool.query('BEGIN');
-        const submissionResult = await pool.query(
-            'INSERT INTO task_submissions (task_id, submission_notes, attachment_url) VALUES ($1, $2, $3) RETURNING *',
-            [id, submission_notes, attachment_url]
+    const { submission_notes, attachment_url } = req.body;
+    const tenantId = req.user.tenantId;
+
+    const data = await withTransaction(async (db) => {
+        const taskResult = await db.query(
+            "UPDATE tasks SET status = 'submitted', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2 AND assigned_to = $3 RETURNING *",
+            [req.params.id, tenantId, req.user.id]
         );
-        const taskResult = await pool.query(
-            "UPDATE tasks SET status = 'submitted' WHERE id = $1 RETURNING *",
-            [id]
+        if (!taskResult.rows[0]) return null;
+        const submissionResult = await db.query(
+            'INSERT INTO task_submissions (tenant_id, task_id, submission_notes, attachment_url) VALUES ($1, $2, $3, $4) RETURNING *',
+            [tenantId, taskResult.rows[0].id, submission_notes, attachment_url]
         );
-        await pool.query('COMMIT');
-        
-        res.status(201).json({ success: true, data: { task: taskResult.rows[0], submission: submissionResult.rows[0] } });
-    } catch (error) {
-        await pool.query('ROLLBACK');
-        console.error('Error submitting task:', error);
-        res.status(500).json({ success: false, error: 'Database connection error' });
-    }
+        return { task: taskResult.rows[0], submission: submissionResult.rows[0] };
+    });
+
+    if (!data) return res.status(404).json({ success: false, error: 'Task not found' });
+    res.status(201).json({ success: true, data });
 };
 
-// Update all task fields
+// Only whoever assigned the task (or an Admin-tier user) can edit or delete it
+const assignerClause = (user, nextParam) =>
+    scopeOf(user) === 'org' ? { sql: '', params: [] } : { sql: ` AND assigned_by = $${nextParam}`, params: [user.id] };
+
 export const updateTask = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { title, description, priority, category, due_date } = req.body;
-        
-        console.log('UPDATING TASK:', { id, title, description, priority, category, due_date });
-
-        const result = await pool.query(
-            'UPDATE tasks SET title = $1, description = $2, priority = $3, category = $4, due_date = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 RETURNING *',
-            [title, description, priority, category, (due_date === '' ? null : due_date), id]
-        );
-        
-        if (result.rows.length === 0) {
-            console.warn(`Task update failed: Task ID ${id} not found.`);
-            return res.status(404).json({ success: false, error: 'Task not found' });
-        }
-        
-        res.json({ success: true, data: result.rows[0] });
-    } catch (error) {
-        console.error('CRITICAL TASK UPDATE ERROR:', error);
-        res.status(500).json({ success: false, error: 'Database connection error', detail: error.message });
-    }
+    const { title, description, priority, category, due_date } = req.body;
+    const own = assignerClause(req.user, 8);
+    const result = await pool.query(
+        `UPDATE tasks SET title = $1, description = $2, priority = $3, category = $4, due_date = $5, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6 AND tenant_id = $7${own.sql} RETURNING *`,
+        [title, description, priority, category, due_date === '' ? null : due_date, req.params.id, req.user.tenantId, ...own.params]
+    );
+    if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Task not found' });
+    res.json({ success: true, data: result.rows[0] });
 };
 
-// Delete a task entirely
 export const deleteTask = async (req, res) => {
-    try {
-        const { id } = req.params;
-        await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
-        res.json({ success: true, message: 'Task deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting task:', error);
-        res.status(500).json({ success: false, error: 'Database connection error' });
-    }
+    const own = assignerClause(req.user, 3);
+    const deleted = await withTransaction(async (db) => {
+        const task = await db.query(
+            `SELECT id FROM tasks WHERE id = $1 AND tenant_id = $2${own.sql}`,
+            [req.params.id, req.user.tenantId, ...own.params]
+        );
+        if (!task.rows[0]) return false;
+        await db.query('DELETE FROM task_submissions WHERE task_id = $1', [task.rows[0].id]);
+        await db.query('DELETE FROM tasks WHERE id = $1', [task.rows[0].id]);
+        return true;
+    });
+    if (!deleted) return res.status(404).json({ success: false, error: 'Task not found' });
+    res.json({ success: true, message: 'Task deleted successfully' });
 };

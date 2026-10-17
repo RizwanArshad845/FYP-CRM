@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -227,55 +228,55 @@ export function AgentPerformance() {
                         <>
                             {/* Desktop Table view of dynamic stats */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="border-b-2">
-                                        <tr>
+                                <Table className="w-full">
+                                    <TableHeader className="border-b-2">
+                                        <TableRow>
                                             {['Agent Name', 'Month', 'Status', 'Targets', 'Achieved', 'Goal %', 'Attendance %', 'Recordings', 'Actions'].map(h => (
-                                                <th key={h} className={cls.tableHead}>{h}</th>
+                                                <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                             ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
                                         {list.map(agent => {
                                             const pct = calcPercentage(agent.total_achieved, agent.total_target);
                                             return (
-                                                <tr key={agent.agent_id} className={cls.tableRow}>
-                                                    <td className={cls.tableCell}>
+                                                <TableRow key={agent.agent_id} className={cls.tableRow}>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={cls.inline}>
                                                             <div className={cls.avatar}>
                                                                 <span className={cls.avatarText}>{agent.first_name[0]}{agent.last_name[0]}</span>
                                                             </div>
                                                             <span className={cls.heading}>{agent.first_name} {agent.last_name}</span>
                                                         </div>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <span className="font-medium">{formatTargetMonth(agent.target_month)}</span>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <Badge variant={agent.user_status === 'active' ? 'default' : 'secondary'}>
                                                             {agent.user_status}
                                                         </Badge>
-                                                    </td>
-                                                    <td className={`${cls.tableCell} font-medium`}>{formatCurrency(agent.total_target)}</td>
-                                                    <td className={cls.tableCell}>{formatCurrency(agent.total_achieved)}</td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={`${cls.tableCell} font-medium`}>{formatCurrency(agent.total_target)}</TableCell>
+                                                    <TableCell className={cls.tableCell}>{formatCurrency(agent.total_achieved)}</TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={`px-2 py-1 rounded-md inline-flex font-bold text-sm items-center ${percentageColor(pct)}`}>
                                                             <TrendingUp className="w-3.5 h-3.5 mr-1" />
                                                             {pct}%
                                                         </div>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={`px-2 py-1 rounded-md inline-flex font-bold text-sm items-center ${percentageColor(agent.attendance_pct)}`}>
                                                             {agent.attendance_pct}%
                                                         </div>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={cls.inline}>
                                                             <Mic className="h-4 w-4 text-muted-foreground mr-1" />
                                                             <span className={cls.heading}>{agent.recording_count}</span>
                                                         </div>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={cls.inline}>
                                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleEditClick(agent)}>
                                                                 <Edit className="h-4 w-4" />
@@ -284,12 +285,12 @@ export function AgentPerformance() {
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
-                                                    </td>
-                                                </tr>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })}
-                                    </tbody>
-                                </table>
+                                    </TableBody>
+                                </Table>
                             </div>
 
                             {/* Mobile Cards View */}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, pendingSetupRoute } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Clock, CheckCircle, LogOut, User, AlertTriangle, CalendarDays, Timer } from 'lucide-react';
@@ -38,6 +38,8 @@ export function ClockIn() {
   useEffect(() => {
     if (isLoading) return;
     if (!user) { navigate('/login'); return; }
+    const setup = pendingSetupRoute(user);
+    if (setup) { navigate(setup); return; }
 
     // Fetch History
     import('../utils/api').then(({ apiFetch }) => {
@@ -287,7 +289,7 @@ export function ClockIn() {
                   Last clock-in: <span className="font-mono font-bold">{new Date(staleSession.clockInTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 </p>
               </div>
-              <button onClick={clearStaleSession} className="text-amber-600 hover:text-amber-800 text-xs underline shrink-0">Dismiss</button>
+              <Button variant="link" size="sm" onClick={clearStaleSession} className="text-amber-600 hover:text-amber-800 text-xs shrink-0 h-auto p-0">Dismiss</Button>
             </div>
           </div>
         )}

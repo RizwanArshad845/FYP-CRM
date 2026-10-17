@@ -4,7 +4,10 @@ import {
     getExpenses, createExpense, updateExpense, deleteExpense
 } from '../controllers/financeController.js';
 
+import { requireRole } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
+router.use(requireRole('finance', 'admin'));
 
 // Employee Salary Management (used by Finance Dashboard salary table)
 router.get('/employees', getEmployeesWithPayroll);

@@ -50,3 +50,6 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+
+# Local embedded Postgres data (npm run db:local)
+.local-db/

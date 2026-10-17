@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
+
+const FINANCE_ROLES: string[] = ['finance', 'admin'];
 
 export interface Expense {
     id: number;
@@ -42,6 +45,7 @@ interface FinanceContextType {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [payrolls, setPayrolls] = useState<Payroll[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -83,8 +87,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        const token = sessionStorage.getItem('crm_token');
-        if (!token) {
+        // Finance data is restricted server-side to finance/admin; don't request it for other roles.
+        if (!getToken() || !user || !FINANCE_ROLES.includes(user.role)) {
             setIsLoading(false);
             return;
         }

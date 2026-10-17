@@ -1,26 +1,19 @@
 import express from 'express';
-import { getConcerns, createConcern, updateConcern, deleteConcern } from '../controllers/concernsController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { concernHandlers } from '../controllers/concernsController.js';
+
 const router = express.Router();
-router.use(protect);
-router.get('/internal', (req, res) => {
-    req.query.is_internal = 'true';
-    return getConcerns(req, res);
-});
-router.get('/', getConcerns);
-router.post('/', createConcern);
-router.post('/internal', (req, res) => {
-    req.body.is_internal = true;
-    return createConcern(req, res);
-});
-router.put('/:id', updateConcern);
-router.put('/internal/:id', (req, res) => {
-    req.body.is_internal = true;
-    return updateConcern(req, res);
-});
-router.delete('/:id', deleteConcern);
-router.delete('/internal/:id', (req, res) => {
-    req.query.is_internal = 'true';
-    return deleteConcern(req, res);
-});
+const external = concernHandlers('external');
+const internal = concernHandlers('internal');
+
+// Internal (CST) concerns — declared before '/:id' so '/internal' isn't read as an id
+router.get('/internal', internal.list);
+router.post('/internal', internal.create);
+router.put('/internal/:id', internal.update);
+router.delete('/internal/:id', internal.remove);
+
+router.get('/', external.list);
+router.post('/', external.create);
+router.put('/:id', external.update);
+router.delete('/:id', external.remove);
+
 export default router;

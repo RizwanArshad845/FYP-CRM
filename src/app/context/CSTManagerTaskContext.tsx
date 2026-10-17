@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 
@@ -60,7 +60,7 @@ export function CSTManagerTaskProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        const token = sessionStorage.getItem('crm_token');
+        const token = getToken();
         if (token && user) {
             fetchData();
         } else {

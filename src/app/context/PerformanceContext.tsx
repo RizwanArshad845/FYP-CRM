@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
 
 export interface SalesStat {
     id: number;
@@ -80,6 +81,7 @@ interface PerformanceContextType {
 const PerformanceContext = createContext<PerformanceContextType | undefined>(undefined);
 
 export function PerformanceProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const [stats, setStats] = useState<{ sales: SalesStat[]; cst: CSTStat[]; finance: FinanceStat[] }>({
         sales: [],
         cst: [],
@@ -143,8 +145,8 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        const token = sessionStorage.getItem('crm_token');
-        if (token) {
+        // Admin-only reports; other roles would just get 403s.
+        if (getToken() && user?.role === 'admin') {
             fetchStats();
             fetchTaskDetails();
             fetchCompanyMetrics();

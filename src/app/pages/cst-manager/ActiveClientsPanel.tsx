@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -82,26 +83,26 @@ export function ActiveClientsPanel() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto rounded-lg border">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted/50">
-                                <tr>
+                    <div className="overflow-x-auto">
+                        <Table className="w-full text-sm">
+                            <TableHeader className="bg-muted/50">
+                                <TableRow>
                                     {['Client', 'Assigned Agent', 'Status', 'Action'].map(h => (
-                                        <th key={h} className={cls.tableHead}>{h}</th>
+                                        <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                     ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y">
                                 {clients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).map(c => (
-                                    <tr key={c.id} className={`${cls.tableRow} ${!c.isActive ? 'opacity-60' : ''}`}>
-                                        <td className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</td>
-                                        <td className={cls.tableCell}>{c.assigned_name || 'Unassigned'}</td>
-                                        <td className={cls.tableCell}>
+                                    <TableRow key={c.id} className={`${cls.tableRow} ${!c.isActive ? 'opacity-60' : ''}`}>
+                                        <TableCell className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</TableCell>
+                                        <TableCell className={cls.tableCell}>{c.assigned_name || 'Unassigned'}</TableCell>
+                                        <TableCell className={cls.tableCell}>
                                             <Badge variant={c.isActive ? 'default' : 'secondary'}>
                                                 {c.isActive ? 'Active' : 'Inactive'}
                                             </Badge>
-                                        </td>
-                                        <td className={cls.tableCell}>
+                                        </TableCell>
+                                        <TableCell className={cls.tableCell}>
                                             <Button
                                                 size="sm"
                                                 variant={c.isActive ? 'destructive' : 'default'}
@@ -118,11 +119,11 @@ export function ActiveClientsPanel() {
                                             {(c.status === 'onboarding' || c.assigned_name === 'Unassigned') && (
                                                 <p className="text-[10px] text-muted-foreground mt-1">Assign first</p>
                                             )}
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 </CardContent>
             </Card>

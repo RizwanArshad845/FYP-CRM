@@ -1,8 +1,6 @@
 import express from 'express';
 import { getBoard, saveBoard, deleteBoard, listBoards } from '../controllers/boardController.js';
-import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
-router.use(protect);
 router.get('/', getBoard);
 router.get('/list', listBoards);
 router.post('/', saveBoard);

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
+import { Link, useNavigate } from 'react-router';
+import { BrandLogo, BrandMark, BRAND_NAME, BRAND_TAGLINE } from '../components/shared/BrandMark';
+import { useAuth, nextRouteFor } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, Waves } from 'lucide-react';
 import { toast } from 'sonner';
+
+const REMEMBER_EMAIL_KEY = 'crm_remember_email';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -20,45 +23,40 @@ export function Login() {
   // Auto-redirect if already logged in and load Remember Me
   useEffect(() => {
     if (!isLoading && user) {
-      navigate('/clock-in');
+      navigate(nextRouteFor(user));
     }
     
-    // Load remember me
-    const stored = localStorage.getItem('crm_remember_me');
-    if (stored) {
-      try {
-        const decoded = atob(stored);
-        const { storedEmail, storedPassword } = JSON.parse(decoded);
-        if (storedEmail && storedPassword) {
-          setEmail(storedEmail);
-          setPassword(storedPassword);
-          setRememberMe(true);
-        }
-      } catch (e) {
-        console.error('Failed to parse remember me credentials');
-      }
-    }
   }, [user, isLoading, navigate]);
+
+  // Remember me stores the email only. Older builds also stored the password
+  // (base64), so that legacy key is wiped on sight.
+  useEffect(() => {
+    try {
+      localStorage.removeItem('crm_remember_me');
+      const storedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+      if (storedEmail) {
+        setEmail(storedEmail);
+        setRememberMe(true);
+      }
+    } catch {
+      // storage unavailable (private mode): nothing to restore
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoggingIn) return;
 
     setIsLoggingIn(true);
-    const success = await login(email, password);
-    if (success) {
-      if (rememberMe) {
-        const encoded = btoa(JSON.stringify({ storedEmail: email, storedPassword: password }));
-        localStorage.setItem('crm_remember_me', encoded);
-      } else {
-        localStorage.removeItem('crm_remember_me');
+    const signedIn = await login(email, password);
+    if (signedIn) {
+      try {
+        if (rememberMe) localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      } catch {
+        // storage unavailable: skip remember me
       }
-
-      navigate('/clock-in');
-      
-      setTimeout(() => {
-          window.location.reload();
-      }, 100);
+      navigate(nextRouteFor(signedIn));
     }
     setIsLoggingIn(false);
   };
@@ -78,46 +76,29 @@ export function Login() {
             <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400 blur-[100px]" />
         </div>
 
-        <div className="flex items-center gap-3 relative z-10 animate-in slide-in-from-left-8 duration-700 delay-200">
-          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl flex items-center justify-center">
-            <img 
-              src="branding/logo_n.png" 
-              alt="N" 
-              className="h-full w-full object-cover mix-blend-screen" 
-              style={{ maskImage: 'radial-gradient(circle, black 80%, transparent 100%)' }}
-            />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">Nexuswave</span>
+        <div className="relative z-10 animate-in slide-in-from-left-8 duration-700 delay-200">
+          <BrandMark logoClassName="h-10 w-10" textClassName="text-2xl" />
         </div>
 
-        <div className="space-y-8 relative z-10 flex flex-col items-center text-center">
-            <img 
-                src="branding/nexuswave_watermark.png" 
-                alt="Nexuswave BPO Marketing" 
-                className="max-w-[400px] w-full h-auto object-contain opacity-60 mix-blend-screen drop-shadow-xl"
-                style={{ 
-                    maskImage: 'radial-gradient(circle, black 70%, transparent 100%)',
-                    WebkitMaskImage: 'radial-gradient(circle, black 70%, transparent 100%)'
-                }}
-            />
+        <div className="space-y-6 relative z-10 flex flex-col items-center text-center">
+          <BrandLogo className="h-28 w-28 drop-shadow-xl" />
+          <div className="space-y-2">
+            <p className="text-3xl font-bold tracking-tight">{BRAND_NAME}</p>
+            <p className="text-blue-200 text-sm uppercase tracking-[0.2em]">{BRAND_TAGLINE}</p>
+          </div>
           <p className="text-blue-100 text-base leading-relaxed max-w-sm">
-            A centralised platform for sales, finance, and customer success teams to collaborate and grow.
+            One workspace for sales, customer success and finance teams, built for every organization that joins.
           </p>
         </div>
 
-        <p className="text-blue-200/60 text-sm relative z-10">© 2026 Nexuswave. All rights reserved.</p>
+        <p className="text-blue-200/60 text-sm relative z-10">© {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.</p>
       </div>
 
       {/* Right form panel */}
       <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
         <div className="w-full max-w-md space-y-8">
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-3 mb-4">
-            <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-              <img src="branding/logo_n.png" alt="N" className="h-full w-full object-cover" />
-            </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-white">Nexuswave</span>
-          </div>
+          <BrandMark className="lg:hidden mb-4" textClassName="text-lg text-gray-900 dark:text-white" />
 
           <div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back</h2>
@@ -180,7 +161,12 @@ export function Login() {
                   Remember me
                 </label>
               </div>
-              <Button variant="link" type="button" className="px-0 text-sm text-blue-600">
+              <Button
+                variant="link"
+                type="button"
+                className="px-0 text-sm text-blue-600"
+                onClick={() => toast.info('Ask your administrator to set a temporary password for you from Employee Management.')}
+              >
                 Forgot password?
               </Button>
             </div>
@@ -194,6 +180,13 @@ export function Login() {
               {!isLoggingIn && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            New to the platform?{' '}
+            <Link to="/signup" className="font-medium text-blue-600 hover:underline">
+              Create an organization
+            </Link>
+          </p>
 
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -46,58 +47,58 @@ export function MasterClientTable() {
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto max-h-[700px]">
-          <table className="w-full text-[11px] text-left border-collapse">
-            <thead className="bg-muted sticky top-0 z-20 shadow-sm">
-              <tr className="border-b border-border">
+          <Table className="w-full text-[11px] text-left border-collapse">
+            <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
+              <TableRow className="border-b border-border">
                 {[
                   'Status', 'Cin', 'Company Name', 'Customer Name', 'Service AREA', 
                   'Contact No.1', 'Contact No.2', 'Email', 
                   'Assigned To', 'Date', '$', 'Gateway', 
                   'SERVICES'
                 ].map(h => (
-                  <th key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
+                  <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
                     {h}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-background text-foreground">
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-border bg-background text-foreground">
               {filtered.map((c, idx) => (
-                <tr key={c.id} className={`hover:bg-muted/50 transition-colors ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
-                  <td className="px-4 py-3 border-r border-border">
+                <TableRow key={c.id} className={`hover:bg-muted/50 transition-colors ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
+                  <TableCell className="px-4 py-3 border-r border-border">
                     <Badge 
                         variant={c.status === 'active' ? 'default' : c.status === 'flagged' ? 'destructive' : 'secondary'} 
                         className="text-[9px] uppercase font-bold"
                     >
                         {c.status === 'flagged' && c.flag_type ? `${c.status}: ${c.flag_type.replace('-', ' ')}` : c.status}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</td>
-                  <td className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</td>
-                  <td className="px-4 py-3 border-r border-border">{c.customer_name}</td>
-                  <td className="px-4 py-3 border-r border-border">{c.service_area || '—'}</td>
-                  <td className="px-4 py-3 border-r border-border">{c.contact_no_1}</td>
-                  <td className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</td>
-                  <td className="px-4 py-3 border-r border-border">{c.email}</td>
-                  <td className="px-4 py-3 border-r border-border font-semibold text-blue-700 dark:text-blue-400">{c.assigned_name || 'Unassigned'}</td>
-                  <td className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</td>
-                  <td className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></td>
-                  <td className="px-4 py-3 border-r border-border">{c.client_services || '—'}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_1}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.email}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border font-semibold text-blue-700 dark:text-blue-400">{c.assigned_name || 'Unassigned'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
+                </TableRow>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={13} className="text-center py-24 text-muted-foreground bg-muted/20">
+                <TableRow>
+                  <TableCell colSpan={13} className="text-center py-24 text-muted-foreground bg-muted/20">
                     <div className="flex flex-col items-center gap-2">
                         <Search className="h-8 w-8 opacity-20" />
                         <p className="text-sm font-medium">No assigned clients found matching your search.</p>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>

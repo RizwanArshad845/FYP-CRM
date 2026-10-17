@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -19,6 +20,8 @@ import { getPortalTheme } from '../../styles/portal-themes';
 import { useFinance, Expense as FinanceExpense } from '../../context/FinanceContext';
 import { useClients } from '../../context/ClientContext';
 import { apiFetch } from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
+import { BRAND_NAME } from '../../components/shared/BrandMark';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -95,6 +98,7 @@ const getCurrentPayPeriod = () => {
 
 export function FinanceDashboard() {
   const { payrolls, expenses, isLoading, addExpense, updateExpense, deleteExpense, updatePayroll } = useFinance();
+  const { user } = useAuth();
   const { clients } = useClients();
   const [filterDept, setFilterDept] = useState('all');
   const [showCalc, setShowCalc] = useState(false);
@@ -190,7 +194,8 @@ export function FinanceDashboard() {
         
         pdf.setFontSize(10);
         pdf.setTextColor(0, 0, 0);
-        pdf.text('Nexuswave', 140, 25);
+        // The slip is issued by the employer organization, not the platform
+        pdf.text(user?.organization?.name ?? BRAND_NAME, 140, 25);
         pdf.text(`Date: ${new Date().toLocaleDateString()}`, 140, 30);
 
         pdf.setDrawColor(200, 200, 200);
@@ -250,7 +255,7 @@ export function FinanceDashboard() {
         pdf.setFontSize(8);
         pdf.setTextColor(150, 150, 150);
         pdf.text('This is a computer generated document and does not require a signature.', 105, 180, { align: 'center' });
-        pdf.text('© 2026 Nexuswave CRM. All rights reserved.', 105, 185, { align: 'center' });
+        pdf.text(`Generated with ${BRAND_NAME}`, 105, 185, { align: 'center' });
 
         const filename = `Salary_Slip_${currentSlip.employeeName.replace(/\s+/g, '_')}_${currentSlip.payPeriodStart}.pdf`;
         pdf.save(filename);
@@ -436,32 +441,32 @@ export function FinanceDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
+            <div className="overflow-x-auto">
+              <Table className="w-full text-sm">
+                <TableHeader className="bg-muted/50 sticky top-0">
+                  <TableRow>
                     {['Employee', 'ID', 'Dept', 'Status', 'Base', 'Advances', 'Bonus', 'Total', 'Payment', 'Actions'].map(h => (
-                      <th key={h} className={cls.tableHead}>{h}</th>
+                      <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y">
                   {displayed.map((emp, i) => (
-                    <tr key={emp.id} className={`${cls.tableRow} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
-                      <td className={`${cls.tableCell} ${cls.heading}`}>{emp.name}</td>
-                      <td className={`${cls.tableCell} ${cls.mono}`}>{emp.employee_id}</td>
-                      <td className={cls.tableCell}>{emp.department}</td>
-                      <td className={cls.tableCell}>
+                    <TableRow key={emp.id} className={`${cls.tableRow} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                      <TableCell className={`${cls.tableCell} ${cls.heading}`}>{emp.name}</TableCell>
+                      <TableCell className={`${cls.tableCell} ${cls.mono}`}>{emp.employee_id}</TableCell>
+                      <TableCell className={cls.tableCell}>{emp.department}</TableCell>
+                      <TableCell className={cls.tableCell}>
                         <Badge variant={emp.is_active ? 'default' : 'secondary'}>{emp.is_active ? 'Active' : 'Inactive'}</Badge>
-                      </td>
-                      <td className={cls.tableCell}>{PKR(emp.base_salary)}</td>
-                      <td className={`${cls.tableCell} text-orange-600`}>{PKR(emp.advance_payments)}</td>
-                      <td className={`${cls.tableCell} text-green-600`}>{PKR(emp.accrued_payments || 0)}</td>
-                      <td className={`${cls.tableCell} ${cls.heading}`}>{PKR(emp.total_salary)}</td>
-                      <td className={cls.tableCell}>
+                      </TableCell>
+                      <TableCell className={cls.tableCell}>{PKR(emp.base_salary)}</TableCell>
+                      <TableCell className={`${cls.tableCell} text-orange-600`}>{PKR(emp.advance_payments)}</TableCell>
+                      <TableCell className={`${cls.tableCell} text-green-600`}>{PKR(emp.accrued_payments || 0)}</TableCell>
+                      <TableCell className={`${cls.tableCell} ${cls.heading}`}>{PKR(emp.total_salary)}</TableCell>
+                      <TableCell className={cls.tableCell}>
                         <Badge className={PAYMENT_COLORS[emp.payment_status as PaymentStatus] || PAYMENT_COLORS.pending}>{emp.payment_status}</Badge>
-                      </td>
-                      <td className={cls.tableCell}>
+                      </TableCell>
+                      <TableCell className={cls.tableCell}>
                         <div className={cls.iconRow}>
                           <Button variant="outline" size="sm" onClick={() => openEdit({
                               id: emp.id,
@@ -475,11 +480,11 @@ export function FinanceDashboard() {
                             <FileText className="h-4 w-4 mr-1" />Slip
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
@@ -501,27 +506,27 @@ export function FinanceDashboard() {
             {expenses.length === 0 ? (
               <p className={`${cls.hint} text-center py-6`}>No expenses recorded yet.</p>
             ) : (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
+            <div className="overflow-x-auto">
+              <Table className="w-full text-sm">
+                <TableHeader className="bg-muted/50 sticky top-0">
+                  <TableRow>
                     {['Category', 'Amount (PKR)', 'Date', 'Status', 'Actions'].map(h => (
-                      <th key={h} className={cls.tableHead}>{h}</th>
+                      <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                     ))}
-                    </tr>
-                  </thead>
-                  <tbody>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {expenses.map(exp => (
-                      <tr key={exp.id} className={cls.tableRow}>
-                        <td className={`${cls.tableCell} ${cls.heading}`}>{exp.category}</td>
-                        <td className={`${cls.tableCell} font-mono`}>{PKR(Number(exp.amount))}</td>
-                        <td className={`${cls.tableCell} ${cls.mono} text-xs`}>{exp.expense_date?.split('T')[0]}</td>
-                        <td className={cls.tableCell}>
+                      <TableRow key={exp.id} className={cls.tableRow}>
+                        <TableCell className={`${cls.tableCell} ${cls.heading}`}>{exp.category}</TableCell>
+                        <TableCell className={`${cls.tableCell} font-mono`}>{PKR(Number(exp.amount))}</TableCell>
+                        <TableCell className={`${cls.tableCell} ${cls.mono} text-xs`}>{exp.expense_date?.split('T')[0]}</TableCell>
+                        <TableCell className={cls.tableCell}>
                           <Badge className={exp.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
                             {exp.status}
                           </Badge>
-                        </td>
-                        <td className={cls.tableCell}>
+                        </TableCell>
+                        <TableCell className={cls.tableCell}>
                           <div className="flex gap-2 items-center">
                             <Button variant="outline" size="sm" className="border-blue-500 text-blue-700 hover:bg-blue-50" onClick={() => openExpenseModal(exp as any)}>
                               <Edit className="h-4 w-4 mr-1" /> Edit
@@ -530,16 +535,16 @@ export function FinanceDashboard() {
                               <Trash2 className="h-4 w-4 mr-1" /> Delete
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                    <tr className="border-t-2 font-semibold">
-                      <td className={`${cls.tableCell} ${cls.heading}`}>Total</td>
-                      <td className={`${cls.tableCell} font-mono`}>{PKR(totalExpenses)}</td>
-                      <td colSpan={3} />
-                    </tr>
-                  </tbody>
-                </table>
+                    <TableRow className="border-t-2 font-semibold">
+                      <TableCell className={`${cls.tableCell} ${cls.heading}`}>Total</TableCell>
+                      <TableCell className={`${cls.tableCell} font-mono`}>{PKR(totalExpenses)}</TableCell>
+                      <TableCell colSpan={3} />
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>

@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -180,45 +181,45 @@ export function FollowUpLeads() {
                 {isLoading ? (
                     <LoadingScreen fullScreen={false} message="Fetching leads from Supabase..." />
                 ) : (
-                    <div className="overflow-x-auto rounded-lg border">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted/50 sticky top-0">
-                                <tr>
+                    <div className="overflow-x-auto">
+                        <Table className="w-full text-sm">
+                            <TableHeader className="bg-muted/50 sticky top-0">
+                                <TableRow>
                                     {['#', 'Client', 'Agent', 'Closer', 'Contact', 'Product', 'Area', 'Due Date', 'Time', 'Status', 'Actions'].map(h => (
-                                        <th key={h} className={cls.tableHead}>{h}</th>
+                                        <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                     ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y">
                                 {leads.filter(l => filterAgent === 'all' || l.agentName === filterAgent).map(l => (
-                                    <tr key={l.id} className={`${cls.tableRow} ${leads.indexOf(l) % 2 !== 0 ? 'bg-muted/20' : ''}`}>
-                                        <td className={cls.tableCell}>{l.followUpNumber || '-'}</td>
-                                        <td className={`${cls.tableCell} ${cls.heading}`}>{l.clientName || l.clientNameText}</td>
-                                        <td className={cls.tableCell}>{l.agentName}</td>
-                                        <td className={cls.tableCell}>{l.closerName || '-'}</td>
-                                        <td className={cls.tableCell}>
+                                    <TableRow key={l.id} className={`${cls.tableRow} ${leads.indexOf(l) % 2 !== 0 ? 'bg-muted/20' : ''}`}>
+                                        <TableCell className={cls.tableCell}>{l.followUpNumber || '-'}</TableCell>
+                                        <TableCell className={`${cls.tableCell} ${cls.heading}`}>{l.clientName || l.clientNameText}</TableCell>
+                                        <TableCell className={cls.tableCell}>{l.agentName}</TableCell>
+                                        <TableCell className={cls.tableCell}>{l.closerName || '-'}</TableCell>
+                                        <TableCell className={cls.tableCell}>
                                             <div className={cls.inline}><Phone className="h-3 w-3 text-muted-foreground" /><span>{l.contactNo || '-'}</span></div>
-                                        </td>
-                                        <td className={cls.tableCell}>{l.product || '-'}</td>
-                                        <td className={cls.tableCell}>{l.area || '-'}</td>
-                                        <td className={`${cls.tableCell} ${cls.mono} text-xs`}>{l.dueDate}</td>
-                                        <td className={`${cls.tableCell} ${cls.mono} text-xs`}>{l.contactTime || '-'}</td>
-                                        <td className={cls.tableCell}>
+                                        </TableCell>
+                                        <TableCell className={cls.tableCell}>{l.product || '-'}</TableCell>
+                                        <TableCell className={cls.tableCell}>{l.area || '-'}</TableCell>
+                                        <TableCell className={`${cls.tableCell} ${cls.mono} text-xs`}>{l.dueDate}</TableCell>
+                                        <TableCell className={`${cls.tableCell} ${cls.mono} text-xs`}>{l.contactTime || '-'}</TableCell>
+                                        <TableCell className={cls.tableCell}>
                                             <Badge className={`${STATUS_COLORS[l.status]} border-0`}>{l.status}</Badge>
-                                        </td>
-                                        <td className={cls.tableCell}>
+                                        </TableCell>
+                                        <TableCell className={cls.tableCell}>
                                             <div className={cls.iconRow}>
                                                 <Button variant="outline" size="sm" onClick={() => openEdit(l)}><Edit className="h-4 w-4" /></Button>
                                                 <Button variant="outline" size="sm" onClick={() => handleDelete(l.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
                                             </div>
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
                                 {leads.length === 0 && (
-                                    <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">No follow-ups yet</td></tr>
+                                    <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No follow-ups yet</TableCell></TableRow>
                                 )}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 )}
             </CardContent>

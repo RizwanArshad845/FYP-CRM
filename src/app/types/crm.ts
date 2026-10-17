@@ -25,6 +25,34 @@ export interface User {
   clockOutTime?: string;
   onBreak?: boolean;
   breakInTime?: string;
+  tier?: Tier;
+  mustChangePassword?: boolean;
+  onboardingCompleted?: boolean;
+  organization?: Organization;
+  portals?: PortalConfig[];
+}
+
+export type PortalKey = User['role'];
+export type Tier = 'Admin' | 'Manager' | 'Member';
+
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  industry?: string | null;
+  size?: string | null;
+}
+
+// One entry of the fixed portal catalog, as configured by this organization
+export interface PortalConfig {
+  key: PortalKey;
+  label: string;
+  defaultLabel: string;
+  customLabel: string | null;
+  description: string;
+  defaultTier: Tier;
+  enabled: boolean;
+  tierLabels: Partial<Record<Tier, string>>;
 }
 
 export interface Event {

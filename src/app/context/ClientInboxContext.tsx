@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
 import { useClients } from './ClientContext';
 
@@ -108,7 +108,7 @@ export function ClientInboxProvider({ children }: { children: ReactNode }) {
     const { fetchData: fetchActiveClients } = useClients();
 
     const fetchData = async () => {
-        const token = sessionStorage.getItem('crm_token');
+        const token = getToken();
         if (!token) {
             setIsLoading(false);
             return;

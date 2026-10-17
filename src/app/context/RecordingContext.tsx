@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
 
 export type RecordingStatus = 'available' | 'processing' | 'failed';
@@ -47,7 +47,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        const token = sessionStorage.getItem('crm_token');
+        const token = getToken();
         if (token) {
             fetchRecordings();
         } else {

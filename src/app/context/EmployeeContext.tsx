@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Employee } from '../types/crm';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 
@@ -8,7 +8,8 @@ interface EmployeeContextType {
     employees: Employee[];
     roles: { id: number, name: string }[];
     departments: { id: number, name: string }[];
-    addEmployee: (emp: any) => Promise<boolean>;
+    /** Resolves to the created result (with a one-time temp password if none was set), or null on failure */
+    addEmployee: (emp: any) => Promise<{ tempPassword?: string } | null>;
     updateEmployee: (emp: any) => Promise<boolean>;
     deleteEmployee: (id: number) => Promise<boolean>;
     isLoading: boolean;
@@ -58,7 +59,7 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        const token = sessionStorage.getItem('crm_token');
+        const token = getToken();
         if (token && user) {
             fetchData();
         } else {
@@ -74,24 +75,20 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({
                     first_name: emp.firstName,
                     last_name: emp.lastName,
+                    email: emp.email,
                     role_id: emp.roleId,
                     department_id: emp.departmentId,
-                    password: emp.password || 'welcome123',
+                    // Blank means the server generates a one-time temporary password
+                    ...(emp.password ? { password: emp.password } : {}),
                     base_salary: emp.baseSalary || 0
                 })
             });
-
-            if (res.success) {
-                await fetchData();
-                toast.success('Employee created with professional email');
-                return true;
-            } else {
-                toast.error(res.error || 'Failed to create employee');
-                return false;
-            }
+            await fetchData();
+            toast.success('Employee created');
+            return { tempPassword: res.tempPassword ?? undefined };
         } catch (error: any) {
             toast.error(error.message || 'Failed to create employee');
-            return false;
+            return null;
         }
     };
 

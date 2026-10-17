@@ -26,6 +26,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
 import { useEmployees } from '../../context/EmployeeContext';
+import { usePortals } from '../../hooks/usePortals';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { AlertCircle, ShieldAlert } from 'lucide-react';
@@ -41,20 +42,30 @@ export function EmployeeManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // One-time display of a server-generated temporary password
+  const [issuedPassword, setIssuedPassword] = useState<{ email: string; password: string } | null>(null);
+  const { labelFor } = usePortals();
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmp.firstName || !newEmp.lastName || !newEmp.roleId || !newEmp.departmentId) {
+    if (!newEmp.firstName || !newEmp.lastName || !newEmp.email || !newEmp.roleId || !newEmp.departmentId) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    if (newEmp.password && newEmp.password.length < 8) {
+      toast.error('Initial password must be at least 8 characters');
       return;
     }
     if (isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      const success = await addEmployee(newEmp);
-      if (success) {
+      const created = await addEmployee(newEmp);
+      if (created) {
         setIsAddDialogOpen(false);
+        if (created.tempPassword) {
+          setIssuedPassword({ email: newEmp.email, password: created.tempPassword });
+        }
         setNewEmp({ firstName: '', lastName: '', email: '', roleId: '', departmentId: '', password: '', baseSalary: '' });
       }
     } finally {
@@ -169,7 +180,7 @@ export function EmployeeManagement() {
                 <DialogHeader>
                   <DialogTitle>Add New Employee</DialogTitle>
                   <DialogDescription>
-                    Enter employee details. Professionals emails are generated automatically.
+                    Enter employee details. Leave the password blank to generate a one-time temporary password; they'll choose their own at first sign-in.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleAddEmployee} className="grid gap-4 py-4">
@@ -206,13 +217,14 @@ export function EmployeeManagement() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email (optional)</Label>
+                    <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
                       type="email"
+                      required
                       value={newEmp.email}
                       onChange={e => setNewEmp({ ...newEmp, email: e.target.value })}
-                      placeholder="Leave blank to generate automatically"
+                      placeholder="name@company.com"
                       autoComplete="off"
                     />
                   </div>
@@ -224,7 +236,7 @@ export function EmployeeManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map(r => (
-                          <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
+                          <SelectItem key={r.id} value={r.id.toString()}>{labelFor(r.name)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -243,7 +255,7 @@ export function EmployeeManagement() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password">Initial Password (optional)</Label>
+                    <Label htmlFor="password">Temporary Password (optional)</Label>
                     <Input
                       id="password"
                       name="password"
@@ -251,7 +263,7 @@ export function EmployeeManagement() {
                       autoComplete="new-password"
                       value={newEmp.password}
                       onChange={e => setNewEmp({ ...newEmp, password: e.target.value })}
-                      placeholder="Default: welcome123"
+                      placeholder="Blank = generate one"
                     />
                   </div>
                   <DialogFooter className="mt-4">
@@ -261,6 +273,26 @@ export function EmployeeManagement() {
                     </Button>
                   </DialogFooter>
                 </form>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={!!issuedPassword} onOpenChange={(open) => { if (!open) setIssuedPassword(null); }}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Temporary password</DialogTitle>
+                  <DialogDescription>
+                    Shown only once. Share it privately with {issuedPassword?.email}; they'll choose their own password at first sign-in.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="rounded-lg border bg-muted/50 p-4 font-mono text-lg text-center select-all">{issuedPassword?.password}</div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigator.clipboard.writeText(issuedPassword?.password ?? '').then(() => toast.success('Copied'))}
+                  >
+                    Copy
+                  </Button>
+                  <Button onClick={() => setIssuedPassword(null)}>Done</Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -315,7 +347,7 @@ export function EmployeeManagement() {
                       <Select value={editingEmp.roleId} onValueChange={v => setEditingEmp({ ...editingEmp, roleId: v })}>
                         <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
                         <SelectContent>
-                          {roles.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>)}
+                          {roles.map(r => <SelectItem key={r.id} value={r.id.toString()}>{labelFor(r.name)}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -329,14 +361,14 @@ export function EmployeeManagement() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="edit-password">New Password (optional)</Label>
+                      <Label htmlFor="edit-password">Reset Password (optional)</Label>
                       <Input
                         id="edit-password"
                         name="password"
                         type="password"
                         value={editingEmp.password}
                         onChange={e => setEditingEmp({ ...editingEmp, password: e.target.value })}
-                        placeholder="Leave blank to keep current"
+                        placeholder="Temporary; they must change it at next sign-in"
                         autoComplete="new-password"
                       />
                     </div>

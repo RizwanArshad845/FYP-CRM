@@ -1,11 +1,13 @@
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
 import { getPerformanceStats, getCompanyMetrics, getTaskDetails } from '../controllers/adminController.js';
 
-const router = express.Router();
+import { requireRole } from '../middleware/authMiddleware.js';
 
-router.get('/performance-stats', protect, getPerformanceStats);
-router.get('/company-metrics', protect, getCompanyMetrics);
-router.get('/task-details', protect, getTaskDetails);
+const router = express.Router();
+router.use(requireRole('admin'));
+
+router.get('/performance-stats', getPerformanceStats);
+router.get('/company-metrics', getCompanyMetrics);
+router.get('/task-details', getTaskDetails);
 
 export default router;

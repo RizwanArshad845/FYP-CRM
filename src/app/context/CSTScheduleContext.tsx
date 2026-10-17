@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
 
 export interface Schedule {
@@ -29,7 +29,7 @@ export function CSTScheduleProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchSchedules = async () => {
-        const token = sessionStorage.getItem('crm_token');
+        const token = getToken();
         if (!token) {
             setIsLoading(false);
             return;

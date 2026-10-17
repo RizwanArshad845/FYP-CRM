@@ -324,7 +324,7 @@ function ActiveClientsPanel() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50 sticky top-0">
                 <TableRow>
@@ -534,7 +534,7 @@ function NotesPanel() {
     return (
       <ul className="list-disc list-inside space-y-1 mt-1">
         {points.map((p, i) => (
-          <li key={i} className="text-sm whitespace-pre-wrap break-all sm:break-words">{p.replace(/^[•\-\*]\s*/, '')}</li>
+          <li key={i} className="text-sm whitespace-pre-wrap break-all sm:break-words">{p.replace(/^[•\-*]\s*/, '')}</li>
         ))}
       </ul>
     );
@@ -898,23 +898,23 @@ export function CSTDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto rounded-xl border shadow-sm max-h-[600px]">
-                    <table className="w-full text-xs text-left border-collapse">
-                      <thead className="bg-muted sticky top-0 z-20 shadow-sm">
-                        <tr className="border-b border-border">
+                  <div className="overflow-x-auto max-h-[600px]">
+                    <Table className="w-full text-xs text-left border-collapse">
+                      <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
+                        <TableRow className="border-b border-border">
                           {[
                             'Status', 'Flag', 'Cin', 'Company Name', 'Customer Name', 'Service AREA',
                             'Contact No.1', 'Contact No.2', 'Email',
                             'Tech Notes', 'Notes', 'Date', '$', 'Merchant',
                             'SERVICES'
                           ].map(h => (
-                            <th key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[120px] whitespace-nowrap bg-muted">
+                            <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[120px] whitespace-nowrap bg-muted">
                               {h}
-                            </th>
+                            </TableHead>
                           ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border bg-background text-foreground">
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-border bg-background text-foreground">
                         {clients
                           .filter(c =>
                             !portfolioSearch ||
@@ -926,16 +926,16 @@ export function CSTDashboard() {
                           .map((c, idx) => {
                             const isHighlighted = searchParams.get('client') === String(c.id);
                             return (
-                              <tr key={c.id} className={`hover:bg-muted/50 transition-colors ${isHighlighted ? 'ring-2 ring-yellow-400 bg-yellow-100/70 dark:bg-yellow-950/30' : 'bg-background'}`} id={isHighlighted ? 'highlighted-client' : undefined}>
-                                <td className="px-4 py-3 border-r border-border">
+                              <TableRow key={c.id} className={`hover:bg-muted/50 transition-colors ${isHighlighted ? 'ring-2 ring-yellow-400 bg-yellow-100/70 dark:bg-yellow-950/30' : 'bg-background'}`} id={isHighlighted ? 'highlighted-client' : undefined}>
+                                <TableCell className="px-4 py-3 border-r border-border">
                                   <Badge
                                     variant={c.status === 'active' ? 'default' : c.status === 'flagged' ? 'destructive' : 'secondary'}
                                     className="text-[10px] uppercase font-bold px-1.5 h-5"
                                   >
                                     {c.status === 'flagged' && c.flag_type ? `${c.status}: ${c.flag_type.replace('-', ' ')}` : c.status}
                                   </Badge>
-                                </td>
-                                <td className="px-4 py-3 border-r border-border">
+                                </TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">
                                   {c.flag_type ? (
                                     <Badge
                                       className={`text-[10px] uppercase font-bold px-1.5 h-5 ${c.flag_type === 'red-flag' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
@@ -946,32 +946,32 @@ export function CSTDashboard() {
                                       {c.flag_type === 'red-flag' ? '🔴 Red' : c.flag_type === 'yellow-flag' ? '🟡 Yellow' : c.flag_type === 'black-flag' ? '⚫ Black' : c.flag_type}
                                     </Badge>
                                   ) : '—'}
-                                </td>
-                                <td className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</td>
-                                <td className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</td>
-                                <td className="px-4 py-3 border-r border-border">{c.customer_name}</td>
-                                <td className="px-4 py-3 border-r border-border">{c.service_area || '—'}</td>
-                                <td className="px-4 py-3 border-r border-border">{c.contact_no_1}</td>
-                                <td className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</td>
-                                <td className="px-4 py-3 border-r border-border">
+                                </TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_1}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">
                                   <p>{c.email || '—'}</p>
                                   {c.email_2 && <p className="text-[10px] text-muted-foreground mt-0.5">{c.email_2}</p>}
-                                </td>
+                                </TableCell>
 
-                                <td className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.tips_for_tech}>{c.tips_for_tech || '—'}</td>
-                                <td className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</td>
-                                <td className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</td>
-                                <td className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</td>
-                                <td className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></td>
-                                <td className="px-4 py-3 border-r border-border">{c.client_services || '—'}</td>
-                              </tr>
+                                <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.tips_for_tech}>{c.tips_for_tech || '—'}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
+                              </TableRow>
                             );
                           })}
                         {clients.length === 0 && (
-                          <tr><td colSpan={15} className="text-center py-12 text-muted-foreground bg-muted/20">No clients found in portfolio.</td></tr>
+                          <TableRow><TableCell colSpan={15} className="text-center py-12 text-muted-foreground bg-muted/20">No clients found in portfolio.</TableCell></TableRow>
                         )}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

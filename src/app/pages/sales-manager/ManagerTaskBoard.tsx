@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -269,43 +270,43 @@ export function ManagerTaskBoard() {
                     {filtered.length === 0 ? (
                         <p className={`${cls.hint} text-center py-8`}>No tasks match the current filters.</p>
                     ) : (
-                        <div className="overflow-x-auto rounded-lg border">
-                            <table className="w-full text-sm">
-                                <thead className="bg-muted/50">
-                                    <tr>
+                        <div className="overflow-x-auto">
+                            <Table className="w-full text-sm">
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow>
                                         {['Task', 'Category', 'Priority', 'Due Date', 'Source', 'Status', 'Update Status', 'Actions'].map(h => (
-                                            <th key={h} className={cls.tableHead}>{h}</th>
+                                            <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                         ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody className="divide-y">
                                     {filtered.map(task => (
-                                        <tr key={task.id} className={cls.tableRow}>
-                                            <td className={`${cls.tableCell} max-w-[220px]`}>
+                                        <TableRow key={task.id} className={cls.tableRow}>
+                                            <TableCell className={`${cls.tableCell} max-w-[220px]`}>
                                                 <p className={cls.heading}>{task.title}</p>
                                                 {task.notes && <p className={cls.hintXs}>{task.notes}</p>}
-                                            </td>
-                                            <td className={cls.tableCell}>
+                                            </TableCell>
+                                            <TableCell className={cls.tableCell}>
                                                 <span className={cls.hintXs}>{task.category}</span>
-                                            </td>
-                                            <td className={cls.tableCell}>
+                                            </TableCell>
+                                            <TableCell className={cls.tableCell}>
                                                 <Badge className={`text-xs border ${PRIORITY_BADGE[task.priority]}`}>
                                                     {task.priority}
                                                 </Badge>
-                                            </td>
-                                            <td className={`${cls.tableCell} text-xs font-mono`}>{task.dueDate}</td>
-                                            <td className={cls.tableCell}>
+                                            </TableCell>
+                                            <TableCell className={`${cls.tableCell} text-xs font-mono`}>{task.dueDate}</TableCell>
+                                            <TableCell className={cls.tableCell}>
                                                 <Badge variant="outline" className="text-xs">
                                                     {task.assignedBy === 'admin' ? '👤 Admin' : '🙋 Self'}
                                                 </Badge>
-                                            </td>
-                                            <td className={cls.tableCell}>
+                                            </TableCell>
+                                            <TableCell className={cls.tableCell}>
                                                 <Badge className={`${STATUS_BADGE[task.status]} border text-xs flex items-center gap-1 w-fit`}>
                                                     {STATUS_ICON[task.status]}
                                                     {task.status}
                                                 </Badge>
-                                            </td>
-                                            <td className={cls.tableCell}>
+                                            </TableCell>
+                                            <TableCell className={cls.tableCell}>
                                                 <Select
                                                     value={task.status}
                                                     onValueChange={v => {
@@ -322,8 +323,8 @@ export function ManagerTaskBoard() {
                                                         <SelectItem value="missed">Missed</SelectItem>
                                                     </SelectContent>
                                                 </Select>
-                                            </td>
-                                            <td className={cls.tableCell}>
+                                            </TableCell>
+                                            <TableCell className={cls.tableCell}>
                                                 <div className="flex items-center gap-2">
                                                     <Button 
                                                         variant="ghost" 
@@ -348,11 +349,11 @@ export function ManagerTaskBoard() {
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
-                                </tbody>
-                            </table>
+                                </TableBody>
+                            </Table>
                         </div>
                     )}
                 </CardContent>

@@ -1,60 +1,49 @@
 import pool from '../config/db.js';
+import { ownerScope } from '../utils/tenant.js';
 
-// Get templates
+// Templates are shared in the org; changes are limited by tier: the author
+// (Member), anyone in their team (Manager) or anyone (Admin).
+const authorClause = (user, nextParam) => ownerScope(user, 'created_by', nextParam);
+
 export const getTemplates = async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT t.*, u.first_name || ' ' || u.last_name as created_by_name
-            FROM cst_templates t
-            LEFT JOIN users u ON t.created_by = u.id
-            ORDER BY t.created_at DESC
-        `);
-        res.json({ success: true, data: result.rows });
-    } catch (error) {
-        console.error('Error fetching templates:', error);
-        res.status(500).json({ success: false, error: 'Database error' });
-    }
+    const result = await pool.query(`
+        SELECT t.*, u.first_name || ' ' || u.last_name as created_by_name
+        FROM cst_templates t
+        LEFT JOIN users u ON t.created_by = u.id
+        WHERE t.tenant_id = $1
+        ORDER BY t.created_at DESC
+    `, [req.user.tenantId]);
+    res.json({ success: true, data: result.rows });
 };
 
-// Create template
 export const createTemplate = async (req, res) => {
-    try {
-        const { title, content, type, created_by } = req.body;
-        const result = await pool.query(
-            'INSERT INTO cst_templates (title, content, type, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-            [title, content, type || 'email', created_by || null]
-        );
-        res.status(201).json({ success: true, data: result.rows[0] });
-    } catch (error) {
-        console.error('Error creating template:', error);
-        res.status(500).json({ success: false, error: 'Database error' });
-    }
+    const { title, content, type } = req.body;
+    const result = await pool.query(
+        'INSERT INTO cst_templates (tenant_id, title, content, type, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [req.user.tenantId, title, content, type || 'email', req.user.id]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
 };
 
-// Update template
 export const updateTemplate = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { title, content, type } = req.body;
-        const result = await pool.query(
-            'UPDATE cst_templates SET title = COALESCE($1, title), content = COALESCE($2, content), type = COALESCE($3, type), updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *',
-            [title, content, type, id]
-        );
-        res.json({ success: true, data: result.rows[0] });
-    } catch (error) {
-        console.error('Error updating template:', error);
-        res.status(500).json({ success: false, error: 'Database error' });
-    }
+    const { title, content, type } = req.body;
+    const own = authorClause(req.user, 6);
+    const result = await pool.query(
+        `UPDATE cst_templates SET title = COALESCE($1, title), content = COALESCE($2, content), type = COALESCE($3, type),
+                updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4 AND tenant_id = $5${own.sql} RETURNING *`,
+        [title, content, type, req.params.id, req.user.tenantId, ...own.params]
+    );
+    if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Template not found' });
+    res.json({ success: true, data: result.rows[0] });
 };
 
-// Delete template
 export const deleteTemplate = async (req, res) => {
-    try {
-        const { id } = req.params;
-        await pool.query('DELETE FROM cst_templates WHERE id = $1', [id]);
-        res.json({ success: true, message: 'Template deleted' });
-    } catch (error) {
-        console.error('Error deleting template:', error);
-        res.status(500).json({ success: false, error: 'Database error' });
-    }
+    const own = authorClause(req.user, 3);
+    const result = await pool.query(
+        `DELETE FROM cst_templates WHERE id = $1 AND tenant_id = $2${own.sql} RETURNING id`,
+        [req.params.id, req.user.tenantId, ...own.params]
+    );
+    if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Template not found' });
+    res.json({ success: true, message: 'Template deleted' });
 };

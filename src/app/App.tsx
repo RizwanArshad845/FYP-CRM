@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { Toaster } from './components/ui/sonner';
-import { toast } from 'sonner';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth, pendingSetupRoute } from './context/AuthContext';
 import { EmployeeProvider } from './context/EmployeeContext';
 import { ManagerTaskProvider } from './context/ManagerTaskContext';
 import { CSTManagerTaskProvider } from './context/CSTManagerTaskContext';
@@ -19,63 +18,51 @@ import { ConcernProvider } from './context/ConcernContext';
 import { FollowUpProvider } from './context/FollowUpContext';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 
+// Data providers mount only for a fully set-up session (not during login,
+// password change or onboarding), and remount whenever the user changes so
+// no state from a previous session survives a logout/login.
+function SessionProviders({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user || pendingSetupRoute(user)) return <>{children}</>;
+  return (
+    <EmployeeProvider key={user.id}>
+      <ManagerTaskProvider>
+        <CSTManagerTaskProvider>
+          <AgentTargetProvider>
+            <FinanceProvider>
+              <RecordingProvider>
+                <CSTScheduleProvider>
+                  <PerformanceProvider>
+                    <AttendanceProvider>
+                      <ClientProvider>
+                        <ClientInboxProvider>
+                          <ConcernProvider>
+                            <FollowUpProvider>
+                              {children}
+                            </FollowUpProvider>
+                          </ConcernProvider>
+                        </ClientInboxProvider>
+                      </ClientProvider>
+                    </AttendanceProvider>
+                  </PerformanceProvider>
+                </CSTScheduleProvider>
+              </RecordingProvider>
+            </FinanceProvider>
+          </AgentTargetProvider>
+        </CSTManagerTaskProvider>
+      </ManagerTaskProvider>
+    </EmployeeProvider>
+  );
+}
+
 export default function App() {
-  // Auto-update notifications
-  // Listens for update events sent from electron/main.js via IPC.
-  // Shows a subtle toast — does NOT interrupt the user's workflow.
-  useEffect(() => {
-    if (!window.electronAPI?.onUpdateStatus) return;
-
-    window.electronAPI.onUpdateStatus((status) => {
-      if (status === 'downloading') {
-        toast.info('⬇ Downloading update in background…', {
-          duration: 4000,
-          description: 'The app will update automatically on next restart.',
-        });
-      } else if (status === 'ready') {
-        toast.success('✅ Update ready!', {
-          duration: 8000,
-          description: 'Restart the app to apply the latest version.',
-        });
-      }
-    });
-
-    return () => {
-      window.electronAPI?.removeUpdateListener();
-    };
-  }, []);
-
   return (
     <GlobalErrorBoundary>
       <AuthProvider>
-        <EmployeeProvider>
-          <ManagerTaskProvider>
-            <CSTManagerTaskProvider>
-              <AgentTargetProvider>
-                <FinanceProvider>
-                  <RecordingProvider>
-                    <CSTScheduleProvider>
-                      <PerformanceProvider>
-                        <AttendanceProvider>
-                          <ClientProvider>
-                            <ClientInboxProvider>
-                              <ConcernProvider>
-                                <FollowUpProvider>
-                                  <RouterProvider router={router} />
-                                  <Toaster />
-                                </FollowUpProvider>
-                              </ConcernProvider>
-                            </ClientInboxProvider>
-                          </ClientProvider>
-                        </AttendanceProvider>
-                      </PerformanceProvider>
-                    </CSTScheduleProvider>
-                  </RecordingProvider>
-                </FinanceProvider>
-              </AgentTargetProvider>
-            </CSTManagerTaskProvider>
-          </ManagerTaskProvider>
-        </EmployeeProvider>
+        <SessionProviders>
+          <RouterProvider router={router} />
+          <Toaster />
+        </SessionProviders>
       </AuthProvider>
     </GlobalErrorBoundary>
   );

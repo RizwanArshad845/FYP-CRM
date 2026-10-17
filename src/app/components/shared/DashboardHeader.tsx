@@ -3,6 +3,7 @@ import { Clock, Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { type PortalTheme } from '../../styles/portal-themes';
+import { Button } from '../ui/button';
 
 interface DashboardHeaderProps {
     title: string;
@@ -66,7 +67,9 @@ export function DashboardHeader({ title, theme }: DashboardHeaderProps) {
                     
                     {/* Global Actions: Dark Mode & Attendance */}
                     <div className="flex items-center gap-2 shrink-0">
-                        <button
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                                 const newIsDark = !document.documentElement.classList.contains('dark');
                                 if (!newIsDark) {
@@ -79,20 +82,22 @@ export function DashboardHeader({ title, theme }: DashboardHeaderProps) {
                                 setIsDark(newIsDark);
                                 window.dispatchEvent(new Event('theme-change'));
                             }}
-                            className="flex items-center justify-center h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/20"
+                            className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white hover:text-white border border-white/20"
                             title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                            aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
                         >
                             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                        </button>
-                        
-                        <button 
+                        </Button>
+
+                        <Button
+                            variant="ghost"
                             onClick={() => navigate('/clock-in')}
-                            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full border border-white/20 transition-colors"
+                            className="h-auto gap-2 bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full border border-white/20"
                         >
                             <Clock className="h-4 w-4 text-white" />
                             <span className="text-xs font-medium text-white">Attendance</span>
                             {user?.clockedIn && <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse ml-1" title="Clocked In" />}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

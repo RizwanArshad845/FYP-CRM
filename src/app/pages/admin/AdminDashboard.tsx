@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -16,7 +17,8 @@ import { TaskDelegation } from './TaskDelegation';
 import { ConcernsPanel } from './ConcernsPanel';
 import { usePerformance } from '../../context/PerformanceContext';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
-import { eventsApi } from '../../../api/client';
+import { eventsApi } from '../../utils/api';
+import { OrganizationSettings } from './OrganizationSettings';
 import { useClients } from '../../context/ClientContext';
 import { EVENT_TYPES } from '../../constants/crm';
 import { toast } from 'sonner';
@@ -72,32 +74,32 @@ function ActiveClientsPanel() {
           <CardDescription>View client active/inactive status across all departments</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 sticky top-0">
-                <tr>
+          <div className="overflow-x-auto">
+            <Table className="w-full text-sm">
+              <TableHeader className="bg-muted/50 sticky top-0">
+                <TableRow>
                   {['Client', 'Assigned Agent', 'Status'].map(h => (
-                    <th key={h} className={cls.tableHead}>{h}</th>
+                    <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y">
                 {clients.map((c, i) => (
-                  <tr key={c.id} className={`${cls.tableRow} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
-                    <td className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</td>
-                    <td className={cls.tableCell}>{c.assigned_name || '—'}</td>
-                    <td className={cls.tableCell}>
+                  <TableRow key={c.id} className={`${cls.tableRow} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                    <TableCell className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</TableCell>
+                    <TableCell className={cls.tableCell}>{c.assigned_name || '—'}</TableCell>
+                    <TableCell className={cls.tableCell}>
                       <Badge variant={c.is_active ? 'default' : 'secondary'}>
                         {c.is_active ? 'Active' : 'Inactive'}
                       </Badge>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {clients.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No clients found in database</td></tr>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No clients found in database</TableCell></TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -317,6 +319,7 @@ export function AdminDashboard() {
           {activeModule === 'performance' && <div className="animate-in fade-in slide-in-from-right-4 duration-300"><PerformanceReviews /></div>}
           {activeModule === 'tasks' && <div className="animate-in fade-in slide-in-from-right-4 duration-300"><TaskDelegation /></div>}
           {activeModule === 'clients' && <div className="animate-in fade-in slide-in-from-right-4 duration-300"><ActiveClientsPanel /></div>}
+          {activeModule === 'org-settings' && <div className="animate-in fade-in slide-in-from-right-4 duration-300"><OrganizationSettings /></div>}
           {activeModule === 'concerns' && <div className={`${cls.page} animate-in fade-in slide-in-from-right-4 duration-300`}><ConcernsPanel /></div>}
 
           {activeModule === 'events' && (

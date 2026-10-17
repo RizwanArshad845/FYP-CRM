@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchData = async () => {
-        const token = sessionStorage.getItem('crm_token');
+        const token = getToken();
         if (!token) {
             setIsLoading(false);
             return;

@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -37,29 +38,29 @@ export function AssignedPanel() {
             {assigned.length === 0 ? (
                 <p className={`${cls.hint} py-8 text-center`}>No clients assigned yet.</p>
             ) : (
-                <div className="overflow-x-auto rounded-lg border">
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                            <tr>
+                <div className="overflow-x-auto">
+                    <Table className="w-full text-sm">
+                        <TableHeader className="bg-muted/50">
+                            <TableRow>
                                 {['Company', 'Contact', 'Product', 'Payment', 'Submitted By', 'Assigned To', 'Date', 'Status', 'Action'].map(h => (
-                                    <th key={h} className={cls.tableHead}>{h}</th>
+                                    <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y">
                             {assigned.map(c => (
-                                <tr key={c.id} className={cls.tableRow}>
-                                    <td className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</td>
-                                    <td className={cls.tableCell}>{c.customer_name}</td>
-                                    <td className={cls.tableCell}>{c.product_sold}</td>
-                                    <td className={`${cls.tableCell} font-mono`}>${Number(c.payment_amount || 0).toLocaleString()}</td>
-                                    <td className={cls.tableCell}>{c.submitted_by_name}</td>
-                                    <td className={`${cls.tableCell} font-semibold text-primary`}>{c.assigned_name ?? '—'}</td>
-                                    <td className={`${cls.tableCell} text-xs font-mono`}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</td>
-                                    <td className={cls.tableCell}>
+                                <TableRow key={c.id} className={cls.tableRow}>
+                                    <TableCell className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</TableCell>
+                                    <TableCell className={cls.tableCell}>{c.customer_name}</TableCell>
+                                    <TableCell className={cls.tableCell}>{c.product_sold}</TableCell>
+                                    <TableCell className={`${cls.tableCell} font-mono`}>${Number(c.payment_amount || 0).toLocaleString()}</TableCell>
+                                    <TableCell className={cls.tableCell}>{c.submitted_by_name}</TableCell>
+                                    <TableCell className={`${cls.tableCell} font-semibold text-primary`}>{c.assigned_name ?? '—'}</TableCell>
+                                    <TableCell className={`${cls.tableCell} text-xs font-mono`}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</TableCell>
+                                    <TableCell className={cls.tableCell}>
                                         <Badge className={`border text-xs ${statusBadge(c.status)}`}>{c.status}</Badge>
-                                    </td>
-                                    <td className={cls.tableCell}>
+                                    </TableCell>
+                                    <TableCell className={cls.tableCell}>
                                         <Button
                                             size="sm"
                                             variant="outline"
@@ -71,11 +72,11 @@ export function AssignedPanel() {
                                         >
                                             ↩ Unassign
                                         </Button>
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
             )}
         </div>

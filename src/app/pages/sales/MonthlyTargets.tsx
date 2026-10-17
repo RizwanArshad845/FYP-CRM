@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Progress } from '../../components/ui/progress';
@@ -87,28 +88,28 @@ export function MonthlyTargets() {
           {myTargets.length === 0 ? (
             <p className={cls.hint}>No target assigned yet. Ask your Sales Manager to assign a target.</p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
+            <div className="overflow-x-auto">
+              <Table className="w-full text-sm">
+                <TableHeader className="bg-muted/50 sticky top-0">
+                  <TableRow>
                     {['Month', 'Target', 'Achieved', 'Remaining', '% Hit', 'Update'].map(h => (
-                      <th key={h} className={cls.tableHead}>{h}</th>
+                      <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y">
                   {myTargets.map(t => {
                     const pct = t.target > 0 ? Math.min(100, Math.round((t.achieved / t.target) * 100)) : 0;
                     const remaining = Math.max(0, t.target - t.achieved);
                     const isEditing = t.id in editDrafts;
 
                     return (
-                      <tr key={t.id} className={cls.tableRow}>
-                        <td className={`${cls.tableCell} ${cls.heading}`}>{t.month}</td>
-                        <td className={`${cls.tableCell} font-mono`}>$ {t.target.toLocaleString()}</td>
+                      <TableRow key={t.id} className={cls.tableRow}>
+                        <TableCell className={`${cls.tableCell} ${cls.heading}`}>{t.month}</TableCell>
+                        <TableCell className={`${cls.tableCell} font-mono`}>$ {t.target.toLocaleString()}</TableCell>
 
                         {/* Achieved — inline editable */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {isEditing ? (
                             <Input
                               type="number"
@@ -126,24 +127,24 @@ export function MonthlyTargets() {
                                 : <span className={cls.hint}>—</span>}
                             </span>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Remaining — auto calculated */}
-                        <td className={`${cls.tableCell} font-mono text-orange-600`}>
+                        <TableCell className={`${cls.tableCell} font-mono text-orange-600`}>
                           {t.achieved > 0
                             ? `$ ${remaining.toLocaleString()}`
                             : <span className={cls.hint}>—</span>}
-                        </td>
+                        </TableCell>
 
                         {/* % Hit */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {t.achieved > 0
                             ? <span className={`font-bold ${pctColor(pct)}`}>{pct}%</span>
                             : <span className={cls.hint}>In progress</span>}
-                        </td>
+                        </TableCell>
 
                         {/* Edit / Save button (ONLY for current month, restricted to sales_manager) */}
-                        <td className={cls.tableCell}>
+                        <TableCell className={cls.tableCell}>
                           {t.month === currentMonth && user?.role === 'sales_manager' ? (
                             isEditing ? (
                               <Button size="sm" onClick={() => saveEdit(t.id)} className="h-7 px-2">
@@ -157,12 +158,12 @@ export function MonthlyTargets() {
                           ) : (
                             <span className={cls.hint}>{t.month === currentMonth ? 'Assigned' : 'Closed'}</span>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

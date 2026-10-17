@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -211,21 +212,21 @@ export function TeamPerformance() {
                     ) : (
                         <>
                             {/* Desktop Table view of dynamic stats */}
-                            <div className="hidden lg:block overflow-x-auto rounded-lg border">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-muted/50 border-b">
-                                        <tr>
+                            <div className="hidden lg:block overflow-x-auto">
+                                <Table className="w-full text-sm">
+                                    <TableHeader className="bg-muted/50 border-b">
+                                        <TableRow>
                                             {['Agent Name', 'Month', 'Status', 'Targets', 'Achieved', 'Goal %'].map(h => (
-                                                <th key={h} className={cls.tableHead}>{h}</th>
+                                                <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                             ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody className="divide-y">
                                         {list.map((agent, idx) => {
                                             const pct = calcPercentage(agent.total_achieved, agent.total_target);
                                             return (
-                                                <tr key={`${agent.agent_id}-${idx}`} className={cls.tableRow}>
-                                                    <td className={cls.tableCell}>
+                                                <TableRow key={`${agent.agent_id}-${idx}`} className={cls.tableRow}>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={cls.inline}>
                                                             <div className={cls.avatar}>
                                                                 <span className={cls.avatarText}>
@@ -239,32 +240,32 @@ export function TeamPerformance() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <span className="font-medium">{formatTargetMonth(agent.target_month)}</span>
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <Badge variant={agent.user_status === 'active' ? 'default' : 'secondary'}>
                                                             {agent.user_status}
                                                         </Badge>
-                                                    </td>
-                                                    <td className={`${cls.tableCell} font-mono font-medium`}>
+                                                    </TableCell>
+                                                    <TableCell className={`${cls.tableCell} font-mono font-medium`}>
                                                         {formatCurrency(agent.total_target)}
-                                                    </td>
-                                                    <td className={`${cls.tableCell} font-mono font-bold text-green-600`}>
+                                                    </TableCell>
+                                                    <TableCell className={`${cls.tableCell} font-mono font-bold text-green-600`}>
                                                         {formatCurrency(agent.total_achieved)}
-                                                    </td>
-                                                    <td className={cls.tableCell}>
+                                                    </TableCell>
+                                                    <TableCell className={cls.tableCell}>
                                                         <div className={`px-2 py-1 rounded-md inline-flex font-bold text-sm items-center ${percentageColor(pct)}`}>
                                                             <TrendingUp className="w-3.5 h-3.5 mr-1" />
                                                             {pct}%
                                                         </div>
-                                                    </td>
-                                                </tr>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })}
-                                    </tbody>
-                                </table>
+                                    </TableBody>
+                                </Table>
                             </div>
 
                             {/* Mobile Cards View */}

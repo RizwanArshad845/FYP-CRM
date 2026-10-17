@@ -1,3 +1,4 @@
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -151,26 +152,26 @@ function AttendanceTable({ userId, employeeName }: { userId: number; employeeNam
 
       {/* Full table — toggled */}
       {showFull && (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>{['Date', 'Clock In', 'Clock Out', 'Hours', 'Status'].map(h => (
-                <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground">{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody className="divide-y">
+        <div className="overflow-x-auto">
+          <Table className="w-full text-sm">
+            <TableHeader className="bg-muted/50">
+              <TableRow>{['Date', 'Clock In', 'Clock Out', 'Hours', 'Status'].map(h => (
+                <TableHead key={h} className="px-3 py-2 text-left font-medium text-muted-foreground">{h}</TableHead>
+              ))}</TableRow>
+            </TableHeader>
+            <TableBody className="divide-y">
               {empRecords.map(r => (
-                <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-3 py-2 font-mono text-xs">{r.date}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.clock_in_time ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.clock_out_time ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.total_hours != null ? `${r.total_hours}h` : <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-3 py-2">{statusBadge(r.status)}</td>
-                </tr>
+                <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell className="px-3 py-2 font-mono text-xs">{r.date}</TableCell>
+                  <TableCell className="px-3 py-2 font-mono text-xs">{r.clock_in_time ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="px-3 py-2 font-mono text-xs">{r.clock_out_time ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="px-3 py-2 font-mono text-xs">{r.total_hours != null ? `${r.total_hours}h` : <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell className="px-3 py-2">{statusBadge(r.status)}</TableCell>
+                </TableRow>
               ))}
-              {empRecords.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No attendance records</td></tr>}
-            </tbody>
-          </table>
+              {empRecords.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No attendance records</TableCell></TableRow>}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
@@ -193,28 +194,28 @@ function TaskDetailTable({ employeeName, search, filterStatus, filterPriority }:
   return (
     <div className="space-y-2">
       <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Task Details</p>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>{['Task', 'Category', 'Priority', 'Status', 'Due Date'].map(h => (
-              <th key={h} className={cls.tableHead}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody className="divide-y">
+      <div className="overflow-x-auto">
+        <Table className="w-full text-sm">
+          <TableHeader className="bg-muted/50">
+            <TableRow>{['Task', 'Category', 'Priority', 'Status', 'Due Date'].map(h => (
+              <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
+            ))}</TableRow>
+          </TableHeader>
+          <TableBody className="divide-y">
             {tasks.map(t => (
-              <tr key={t.id} className={cls.tableRow}>
-                <td className={`${cls.tableCell} font-medium max-w-[200px]`}>{t.title}</td>
-                <td className={cls.tableCell}><Badge variant="outline" className="text-xs">{t.category}</Badge></td>
-                <td className={cls.tableCell}><Badge className={`${PRIORITY_STYLE[t.priority]} border text-xs`}>{t.priority}</Badge></td>
-                <td className={cls.tableCell}><Badge className={`${TASK_STATUS_STYLE[t.status]} border-0 text-xs`}>{t.status}</Badge></td>
-                <td className={`${cls.tableCell} font-mono text-xs`}>{t.due_date}</td>
-              </tr>
+              <TableRow key={t.id} className={cls.tableRow}>
+                <TableCell className={`${cls.tableCell} font-medium max-w-[200px]`}>{t.title}</TableCell>
+                <TableCell className={cls.tableCell}><Badge variant="outline" className="text-xs">{t.category}</Badge></TableCell>
+                <TableCell className={cls.tableCell}><Badge className={`${PRIORITY_STYLE[t.priority]} border text-xs`}>{t.priority}</Badge></TableCell>
+                <TableCell className={cls.tableCell}><Badge className={`${TASK_STATUS_STYLE[t.status]} border-0 text-xs`}>{t.status}</Badge></TableCell>
+                <TableCell className={`${cls.tableCell} font-mono text-xs`}>{t.due_date}</TableCell>
+              </TableRow>
             ))}
             {tasks.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No tasks match the current filters</td></tr>
+              <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No tasks match the current filters</TableCell></TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
@@ -295,22 +296,22 @@ function AttendanceGridView({ gridData, agentSearch }: { gridData: any[]; agentS
     if (users.length === 0) return <div className="p-8 text-center text-muted-foreground">No employees match your search.</div>;
 
     return (
-        <div className="overflow-x-auto rounded-xl border border-border/50 shadow-sm bg-card max-h-[600px]">
-            <table className="w-full text-[10px] border-collapse sticky-header">
-                <thead className="bg-muted/80 backdrop-blur sticky top-0 z-10 border-b border-border/50">
-                    <tr>
-                        <th className="px-3 py-2 text-left font-bold text-muted-foreground uppercase tracking-wider border-r bg-muted/90 min-w-[150px] sticky left-0 z-20">Employee</th>
-                        <th className="px-3 py-2 text-left font-bold text-muted-foreground uppercase tracking-wider border-r min-w-[100px]">Role</th>
+        <div className="overflow-x-auto max-h-[600px]">
+            <Table className="w-full text-[10px] border-collapse sticky-header">
+                <TableHeader className="bg-muted/80 backdrop-blur sticky top-0 z-10 border-b border-border/50">
+                    <TableRow>
+                        <TableHead className="px-3 py-2 text-left font-bold text-muted-foreground uppercase tracking-wider border-r bg-muted/90 min-w-[150px] sticky left-0 z-20">Employee</TableHead>
+                        <TableHead className="px-3 py-2 text-left font-bold text-muted-foreground uppercase tracking-wider border-r min-w-[100px]">Role</TableHead>
                         {sortedDates.map(date => (
-                            <th key={date} className="px-2 py-2 text-center font-bold text-muted-foreground uppercase tracking-wider border-r min-w-[50px]">{date}</th>
+                            <TableHead key={date} className="px-2 py-2 text-center font-bold text-muted-foreground uppercase tracking-wider border-r min-w-[50px]">{date}</TableHead>
                         ))}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
+                    </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-border/40">
                     {users.map((u: any, i: number) => (
-                        <tr key={u.id} className={`hover:bg-muted/30 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/5'}`}>
-                            <td className="px-3 py-2 font-medium text-foreground border-r bg-background/50 sticky left-0 z-10">{u.name}</td>
-                            <td className="px-3 py-2 text-muted-foreground border-r">{u.role.replace('_', ' ')}</td>
+                        <TableRow key={u.id} className={`hover:bg-muted/30 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/5'}`}>
+                            <TableCell className="px-3 py-2 font-medium text-foreground border-r bg-background/50 sticky left-0 z-10">{u.name}</TableCell>
+                            <TableCell className="px-3 py-2 text-muted-foreground border-r">{u.role.replace('_', ' ')}</TableCell>
                             {sortedDates.map(date => {
                                 const status = u.days[date];
                                 let color = 'bg-gray-100 text-gray-400';
@@ -319,7 +320,7 @@ function AttendanceGridView({ gridData, agentSearch }: { gridData: any[]; agentS
                                 else if (status === 'absent') color = 'bg-red-100 text-red-700';
                                 
                                 return (
-                                    <td key={date} className="px-1 py-1 text-center border-r">
+                                    <TableCell key={date} className="px-1 py-1 text-center border-r">
                                         {status ? (
                                             <div className={`rounded-sm py-0.5 font-bold uppercase text-[8px] ${color}`}>
                                                 {status === 'on-time' ? 'ON' : (status === 'tardy' ? 'TA' : 'AB')}
@@ -327,13 +328,13 @@ function AttendanceGridView({ gridData, agentSearch }: { gridData: any[]; agentS
                                         ) : (
                                             <span className="text-gray-200">—</span>
                                         )}
-                                    </td>
+                                    </TableCell>
                                 );
                             })}
-                        </tr>
+                        </TableRow>
                     ))}
-                </tbody>
-            </table>
+                </TableBody>
+            </Table>
         </div>
     );
 }
@@ -350,48 +351,48 @@ function MasterGridView({ stats, agentSearch }: { stats: any; agentSearch: strin
 
   return (
     <div className="space-y-8">
-        <div className="overflow-x-auto rounded-xl border border-border/50 shadow-sm bg-card">
-        <table className="w-full text-sm border-collapse">
-            <thead className="bg-muted/50 border-b border-border/50">
-            <tr>
+        <div className="overflow-x-auto">
+        <Table className="w-full text-sm border-collapse">
+            <TableHeader className="bg-muted/50 border-b border-border/50">
+            <TableRow>
                 {['#', 'Employee', 'Department', 'Role', 'Daily Att %', 'Weekly Att %', 'Monthly Att %', 'Revenue / Clients', 'Performance'].map(h => (
-                <th key={h} className="px-4 py-3 text-left font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">{h}</th>
+                <TableHead key={h} className="px-4 py-3 text-left font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">{h}</TableHead>
                 ))}
-            </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
+            </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-border/40">
             {all.map((m, i) => {
                 const target = m.target_revenue || 1;
                 const progress = Math.min(100, Math.round(((m.monthly_revenue || 0) / target) * 100));
                 
                 return (
-                    <tr key={`${m.id}-${m.dept}`} className={`hover:bg-muted/30 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/5'}`}>
-                    <td className="px-4 py-3 text-muted-foreground font-mono text-[10px]">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">{m.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{m.dept}</td>
-                    <td className="px-4 py-3"><Badge variant="outline" className="text-[10px] font-normal">{m.role}</Badge></td>
-                    <td className="px-4 py-3 font-mono text-xs">{m.daily_attendance_score}%</td>
-                    <td className="px-4 py-3 font-mono text-xs">{m.weekly_attendance_score}%</td>
-                    <td className="px-4 py-3 font-mono text-xs">{m.monthly_attendance_score}%</td>
-                    <td className="px-4 py-3 font-medium">
+                    <TableRow key={`${m.id}-${m.dept}`} className={`hover:bg-muted/30 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/5'}`}>
+                    <TableCell className="px-4 py-3 text-muted-foreground font-mono text-[10px]">{i + 1}</TableCell>
+                    <TableCell className="px-4 py-3 font-medium text-foreground">{m.name}</TableCell>
+                    <TableCell className="px-4 py-3 text-muted-foreground">{m.dept}</TableCell>
+                    <TableCell className="px-4 py-3"><Badge variant="outline" className="text-[10px] font-normal">{m.role}</Badge></TableCell>
+                    <TableCell className="px-4 py-3 font-mono text-xs">{m.daily_attendance_score}%</TableCell>
+                    <TableCell className="px-4 py-3 font-mono text-xs">{m.weekly_attendance_score}%</TableCell>
+                    <TableCell className="px-4 py-3 font-mono text-xs">{m.monthly_attendance_score}%</TableCell>
+                    <TableCell className="px-4 py-3 font-medium">
                         {m.dept === 'Sales' ? `$${(m.monthly_revenue || 0).toLocaleString()}` : (m.dept === 'CST' ? `${m.clients_managed} Clients` : '—')}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-2">
                         <Progress value={m.dept === 'Sales' ? progress : 85} className="h-1.5 w-16" />
                         <span className="text-[10px] font-bold text-muted-foreground">
                             {m.dept === 'Sales' ? `${progress}%` : 'Good'}
                         </span>
                         </div>
-                    </td>
-                    </tr>
+                    </TableCell>
+                    </TableRow>
                 );
             })}
             {all.length === 0 && (
-                <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">No employees found matching your search</td></tr>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No employees found matching your search</TableCell></TableRow>
             )}
-            </tbody>
-        </table>
+            </TableBody>
+        </Table>
         </div>
     </div>
   );

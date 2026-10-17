@@ -150,7 +150,7 @@ export function InternalConcerns() {
           {isLoading ? (
             <LoadingScreen fullScreen={false} message="Loading concerns..." />
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
