@@ -1,11 +1,11 @@
 import express from 'express';
 import { updateAchieved, getFollowUps, createFollowUp, updateFollowUp, deleteFollowUp, uploadRecording, deleteRecording, getRecordings, updateRecording, getMonthlyReview, getImportantRecordings, addImportantRecording, deleteImportantRecording, updateImportantRecording } from '../controllers/salesController.js';
 
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 
 const router = express.Router();
 
-router.patch('/targets/:id/achieved', requireRole('sales', 'sales_manager', 'admin'), updateAchieved);
+router.patch('/targets/:id/achieved', allow('sales_target.update_achieved'), updateAchieved);
 
 router.get('/follow-ups', getFollowUps);
 router.post('/follow-ups', createFollowUp);

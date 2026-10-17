@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { TIER_RANK } from '../policy/catalog.js';
 
 // --- Row scope by tier --------------------------------------------------------
 // Portal (role) decides which features a user has; tier decides whose records:
@@ -7,8 +8,6 @@ import pool from '../config/db.js';
 //   Admin   -> the whole organization
 // This meaning is fixed and identical for every organization.
 
-export const TIERS = ['Admin', 'Manager', 'Member'];
-const TIER_RANK = { Member: 1, Manager: 2, Admin: 3 };
 
 export const PORTAL_FAMILY = {
     admin: ['admin'],

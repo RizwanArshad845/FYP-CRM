@@ -1,4 +1,5 @@
 import pool, { withTransaction } from '../config/db.js';
+import { applyFieldVisibility } from '../policy/index.js';
 import {
     assertClientAccess, assertUserInScope, getClientInTenant, httpError, isManager, ownerScope,
 } from '../utils/tenant.js';
@@ -17,7 +18,7 @@ export const getActiveClients = async (req, res) => {
         WHERE c.status = 'active' AND c.tenant_id = $1
         ORDER BY c.updated_at DESC
     `, [req.user.tenantId]);
-    res.json({ success: true, data: result.rows });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows) });
 };
 
 // Request client deactivation (CST Agent)

@@ -1,7 +1,7 @@
 import express from 'express';
 import { clockIn, clockOut, getStatus, getHistory, getAttendanceAll, breakIn, breakOut, getPerformanceGrid } from '../controllers/attendanceController.js';
 
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 
 const router = express.Router();
 
@@ -12,8 +12,8 @@ router.get('/status', getStatus);
 router.get('/history', getHistory);
 
 // Admin/Reports view all
-router.get('/all', getAttendanceAll);
-router.get('/performance-grid', requireRole('admin'), getPerformanceGrid);
+router.get('/all', allow('attendance.view_all'), getAttendanceAll);
+router.get('/performance-grid', allow('admin.dashboard'), getPerformanceGrid);
 
 // Break management
 router.post('/break-in', breakIn);

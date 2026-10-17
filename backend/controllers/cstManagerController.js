@@ -1,4 +1,5 @@
 import pool, { withTransaction } from '../config/db.js';
+import { applyFieldVisibility } from '../policy/index.js';
 import { assertUsersInTenant, getClientInTenant } from '../utils/tenant.js';
 import { getAgentPerformance, updateTargetAchieved } from '../services/metrics.js';
 
@@ -11,7 +12,7 @@ export const assignCstAgent = async (req, res) => {
         [cst_agent_id, req.params.id, req.user.tenantId]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 export const unassignCstAgent = async (req, res) => {
@@ -20,7 +21,7 @@ export const unassignCstAgent = async (req, res) => {
         [req.params.id, req.user.tenantId]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 // All CST agent targets in the organization

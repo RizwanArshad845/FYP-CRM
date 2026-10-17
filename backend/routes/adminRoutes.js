@@ -1,10 +1,10 @@
 import express from 'express';
 import { getPerformanceStats, getCompanyMetrics, getTaskDetails } from '../controllers/adminController.js';
 
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 
 const router = express.Router();
-router.use(requireRole('admin'));
+router.use(allow('admin.dashboard'));
 
 router.get('/performance-stats', getPerformanceStats);
 router.get('/company-metrics', getCompanyMetrics);

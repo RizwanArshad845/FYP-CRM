@@ -67,6 +67,21 @@ interface ClientContextType {
     isLoading: boolean;
 }
 
+const CLIENT_UPDATE_KEYS: Record<string, string> = {
+    company_name: 'companyName',
+    customer_name: 'customerName',
+    payment_amount: 'paymentAmount',
+    product_sold: 'productSold',
+    service_area: 'serviceArea',
+    contact_no_1: 'contactNo1',
+    contact_no_2: 'contactNo2',
+    client_concerns: 'clientConcerns',
+    tips_for_tech: 'tipsForTech',
+    digital_presence: 'digitalPresence',
+    client_services: 'clientServices',
+    payment_gateway: 'paymentGateway',
+};
+
 // ── Context ────────────────────────────────────────────────────────────────────
 const ClientContext = createContext<ClientContextType | null>(null);
 
@@ -219,9 +234,13 @@ export function ClientProvider({ children }: { children: ReactNode }) {
 
     const updateClient = async (id: number, data: any) => {
         try {
+            // Edit forms hold DB column names; PUT /clients/:id reads camelCase (like POST).
+            const body = Object.fromEntries(
+                Object.entries(data).map(([key, value]) => [CLIENT_UPDATE_KEYS[key] ?? key, value])
+            );
             const res = await apiFetch(`/clients/${id}`, {
                 method: 'PUT',
-                body: JSON.stringify(data)
+                body: JSON.stringify(body)
             });
             if (res.success) {
                 toast.success('Client updated successfully');

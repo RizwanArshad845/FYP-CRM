@@ -6,13 +6,13 @@ import {
     deleteEvent
 } from '../controllers/eventController.js';
 
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 
 const router = express.Router();
 
 router.get('/', getEvents);
-router.post('/', requireRole('admin'), createEvent);
-router.put('/:id', requireRole('admin'), updateEvent);
-router.delete('/:id', requireRole('admin'), deleteEvent);
+router.post('/', allow('event.manage'), createEvent);
+router.put('/:id', allow('event.manage'), updateEvent);
+router.delete('/:id', allow('event.manage'), deleteEvent);
 
 export default router;

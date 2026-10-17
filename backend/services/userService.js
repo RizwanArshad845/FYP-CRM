@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { TIERS } from '../policy/catalog.js';
 
 export const BCRYPT_ROUNDS = 10;
 
@@ -39,7 +40,6 @@ export const portalKeyForRoleId = async (client, roleId) => {
     return rows[0].name;
 };
 
-export const TIERS = ['Admin', 'Manager', 'Member'];
 
 // The tier for a portal assignment: the Admin portal is always Admin tier;
 // elsewhere the chosen tier, or the portal's default.

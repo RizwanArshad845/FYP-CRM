@@ -24,10 +24,12 @@ export const protect = async (req, res, next) => {
     try {
         const result = await pool.query(`
             SELECT u.id, u.email, u.role_id, u.status, u.tenant_id, u.must_change_password, r.name as role,
-                   COALESCE(upa.tier, pt.default_tier, 'Member') AS tier
+                   COALESCE(upa.tier, pt.default_tier, 'Member') AS tier,
+                   upa.organization_portal_id, COALESCE(op.enabled, true) AS portal_enabled
             FROM users u
             JOIN roles r ON u.role_id = r.id
             LEFT JOIN user_portal_access upa ON upa.user_id = u.id
+            LEFT JOIN organization_portals op ON op.id = upa.organization_portal_id
             LEFT JOIN portal_types pt ON pt.key = r.name
             WHERE u.id = $1
         `, [decoded.id]);
@@ -46,6 +48,15 @@ export const protect = async (req, res, next) => {
             });
         }
 
+        // A portal the organization switched off grants nothing beyond the session itself.
+        if (!user.portal_enabled && !PASSWORD_CHANGE_ALLOWED.has(req.baseUrl + req.path)) {
+            return res.status(403).json({
+                success: false,
+                code: 'PORTAL_DISABLED',
+                error: 'Your portal is disabled for this organization',
+            });
+        }
+
         req.user = {
             id: user.id,
             email: user.email,
@@ -53,27 +64,10 @@ export const protect = async (req, res, next) => {
             role: user.role,
             tier: user.tier,
             tenantId: user.tenant_id,
+            organizationPortalId: user.organization_portal_id,
         };
         next();
     } catch (error) {
         next(error);
     }
-};
-
-const TIER_RANK = { Member: 1, Manager: 2, Admin: 3 };
-
-// Require at least the given tier (Member < Manager < Admin). Must run after `protect`.
-export const requireTier = (minTier) => (req, res, next) => {
-    if (!req.user || (TIER_RANK[req.user.tier] ?? 0) < TIER_RANK[minTier]) {
-        return res.status(403).json({ success: false, error: `This action requires the ${minTier} tier or above` });
-    }
-    next();
-};
-
-// Restrict a route to specific role names. Must run after `protect`.
-export const requireRole = (...roles) => (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-        return res.status(403).json({ success: false, error: 'You do not have permission to perform this action' });
-    }
-    next();
 };

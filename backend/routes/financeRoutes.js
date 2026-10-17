@@ -4,19 +4,18 @@ import {
     getExpenses, createExpense, updateExpense, deleteExpense
 } from '../controllers/financeController.js';
 
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 
 const router = express.Router();
-router.use(requireRole('finance', 'admin'));
 
 // Employee Salary Management (used by Finance Dashboard salary table)
-router.get('/employees', getEmployeesWithPayroll);
-router.patch('/salary/:id', updateEmployeeSalary);
-router.get('/salary-slip/:id', generateSalarySlip);
+router.get('/employees', allow('payroll.manage'), getEmployeesWithPayroll);
+router.patch('/salary/:id', allow('payroll.manage'), updateEmployeeSalary);
+router.get('/salary-slip/:id', allow('payroll.manage'), generateSalarySlip);
 // Expenses CRUD
-router.get('/expenses', getExpenses);
-router.post('/expenses', createExpense);
-router.put('/expenses/:id', updateExpense);
-router.delete('/expenses/:id', deleteExpense);
+router.get('/expenses', allow('expense.manage'), getExpenses);
+router.post('/expenses', allow('expense.manage'), createExpense);
+router.put('/expenses/:id', allow('expense.manage'), updateExpense);
+router.delete('/expenses/:id', allow('expense.manage'), deleteExpense);
 
 export default router;

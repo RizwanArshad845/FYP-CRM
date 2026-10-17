@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { applyFieldVisibility } from '../policy/index.js';
 import {
     assertClientAccess, assertUsersInTenant, getClientInTenant, isManager, memberClientColumn,
 } from '../utils/tenant.js';
@@ -24,7 +25,7 @@ export const getClients = async (req, res) => {
     query += ' ORDER BY c.created_at DESC';
 
     const result = await pool.query(query, params);
-    res.json({ success: true, data: result.rows });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows) });
 };
 
 // Create a new client (Sales Manager entry form or CST Manager existing-client form)
@@ -62,7 +63,7 @@ export const createClient = async (req, res) => {
             sales_agent_id || null, cst_agent_id || null, initialStatus, clientServices || null, cin || null, paymentGateway || null,
         ]
     );
-    res.status(201).json({ success: true, data: result.rows[0] });
+    res.status(201).json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 // Assign a CST Agent to a client and mark as 'active'
@@ -74,7 +75,7 @@ export const assignClient = async (req, res) => {
         [agentId, req.params.id, req.user.tenantId]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 // Unassign a CST Agent and move back to 'onboarding'
@@ -84,7 +85,7 @@ export const unassignClient = async (req, res) => {
         [req.params.id, req.user.tenantId]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 // General update to a client
@@ -124,7 +125,7 @@ export const updateClient = async (req, res) => {
         ]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 // Status / flag changes. CST agents may only change their own clients.
@@ -137,7 +138,7 @@ export const toggleClientStatus = async (req, res) => {
         'UPDATE clients SET status = $1, flag_type = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4 RETURNING *',
         [status, flag_type || null, client.id, req.user.tenantId]
     );
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 export const discardClient = async (req, res) => {
@@ -147,7 +148,7 @@ export const discardClient = async (req, res) => {
         [req.body.reason, req.params.id, req.user.tenantId]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
 // Pending deactivation requests from CST agents

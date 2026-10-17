@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch, getToken } from '../utils/api';
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { apiFetch } from '../utils/api';
 import { toast } from 'sonner';
 
 export interface AttendanceRecord {
@@ -24,7 +24,8 @@ const AttendanceContext = createContext<AttendanceContextType | undefined>(undef
 
 export function AttendanceProvider({ children }: { children: ReactNode }) {
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Admin-only data: loaded on demand by the pages that need it, not on mount.
+    const [isLoading, setIsLoading] = useState(false);
 
     const fetchRecords = async (params?: { department?: string; date?: string }) => {
         setIsLoading(true);
@@ -57,15 +58,6 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
         }
     };
-
-    useEffect(() => {
-        const token = getToken();
-        if (token) {
-            fetchRecords();
-        } else {
-            setIsLoading(false);
-        }
-    }, []);
 
     return (
         <AttendanceContext.Provider value={{ records, isLoading, fetchRecords }}>

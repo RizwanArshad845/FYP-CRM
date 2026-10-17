@@ -3,7 +3,8 @@ import {
     signup, getState, updatePortals, updateLabels, addEmployees, skipEmployees, complete,
     requireOnboardingIncomplete, signupSchema, portalsSchema, labelsSchema, employeesSchema,
 } from '../controllers/onboardingController.js';
-import { protect, requireRole } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
@@ -12,7 +13,7 @@ const router = express.Router();
 router.post('/organization', validate(signupSchema), signup);
 
 // Wizard steps: the org's admin, until onboarding is completed
-const wizard = [protect, requireRole('admin'), requireOnboardingIncomplete];
+const wizard = [protect, allow('org.settings'), requireOnboardingIncomplete];
 router.get('/state', ...wizard, getState);
 router.put('/portals', ...wizard, validate(portalsSchema), updatePortals);
 router.put('/labels', ...wizard, validate(labelsSchema), updateLabels);

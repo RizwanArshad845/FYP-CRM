@@ -13,7 +13,7 @@ import {
     updateUserSchema,
     statusSchema,
 } from '../controllers/userController.js';
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
@@ -23,10 +23,10 @@ router.get('/roles', getRoles);
 router.get('/departments', getDepartments);
 
 router.get('/', getUsers);
-router.post('/', requireRole('admin'), validate(createUserSchema), createUser);
+router.post('/', allow('user.manage'), validate(createUserSchema), createUser);
 router.get('/:id', getUserById);
-router.put('/:id', requireRole('admin'), validate(updateUserSchema), updateUser);
-router.delete('/:id', requireRole('admin'), deleteUser);
-router.patch('/:id/status', requireRole('admin'), validate(statusSchema), updateUserStatus);
+router.put('/:id', allow('user.manage'), validate(updateUserSchema), updateUser);
+router.delete('/:id', allow('user.manage'), deleteUser);
+router.patch('/:id/status', allow('user.manage'), validate(statusSchema), updateUserStatus);
 
 export default router;

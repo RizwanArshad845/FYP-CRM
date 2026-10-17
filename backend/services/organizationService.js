@@ -1,8 +1,8 @@
 import { httpError } from '../utils/tenant.js';
+import { TIERS } from '../policy/catalog.js';
 
 export const DEFAULT_DEPARTMENTS = ['Administration', 'Sales', 'Customer Success', 'Finance', 'Human Resources'];
 export const ONBOARDING_STEPS = ['portals', 'labels', 'employees', 'review', 'done'];
-export const TIERS = ['Admin', 'Manager', 'Member'];
 
 const slugify = (name) => name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'org';
 

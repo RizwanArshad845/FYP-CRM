@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import pool, { withTransaction } from '../config/db.js';
+import { applyFieldVisibility } from '../policy/index.js';
 import {
     BCRYPT_ROUNDS, createUserRecord, portalKeyForRoleId, syncPortalAccess,
 } from '../services/userService.js';
 
-const SALARY_ROLES = ['admin', 'finance'];
 
 const optionalId = z.coerce.number().int().positive().nullable().optional()
     .or(z.literal('').transform(() => null));
@@ -44,11 +44,8 @@ export const getUsers = async (req, res) => {
         ORDER BY u.first_name, u.last_name
     `, [req.user.tenantId]);
 
-    // Salaries are only visible to admin and finance.
-    const rows = SALARY_ROLES.includes(req.user.role)
-        ? result.rows
-        : result.rows.map(({ base_salary: _salary, ...rest }) => rest);
-    res.json({ success: true, data: rows });
+    // Salaries: only portals the policy lets see the user.compensation group.
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'user', result.rows) });
 };
 
 export const getUserById = async (req, res) => {
@@ -60,8 +57,7 @@ export const getUserById = async (req, res) => {
     `, [req.params.id, req.user.tenantId]);
     const user = result.rows[0];
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-    if (!SALARY_ROLES.includes(req.user.role)) delete user.base_salary;
-    res.json({ success: true, data: user });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'user', user) });
 };
 
 export const updateUserStatus = async (req, res) => {

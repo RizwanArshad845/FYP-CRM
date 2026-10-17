@@ -3,9 +3,10 @@ import pool, { withTransaction } from '../config/db.js';
 import { createUserRecord } from '../services/userService.js';
 import { buildSession, getOrganizationPortals } from '../services/sessionService.js';
 import {
-    advanceStep, createOrganization, setPortalLabels, setPortalsEnabled, TIERS,
+    advanceStep, createOrganization, setPortalLabels, setPortalsEnabled,
 } from '../services/organizationService.js';
 import { signToken } from './authController.js';
+import { TIERS } from '../policy/catalog.js';
 
 const portalKey = z.string().trim().min(1).max(50);
 

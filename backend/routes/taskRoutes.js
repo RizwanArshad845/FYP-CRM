@@ -1,10 +1,10 @@
 import express from 'express';
 import { getTasks, createTask, updateTaskStatus, submitTask, deleteTask, updateTask } from '../controllers/taskController.js';
-import { requireRole, requireTier } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 
 const router = express.Router();
-// Delegating needs a manager-type portal and Manager tier or above
-const delegators = [requireRole('admin', 'sales_manager', 'cst_manager'), requireTier('Manager')];
+// Delegating needs a manager-type portal and Manager tier or above (see policy catalog)
+const delegators = allow('task.delegate');
 
 router.get('/', getTasks);
 router.post('/', delegators, createTask);

@@ -3,11 +3,11 @@ import {
     getOrganization, updateOrganization, updatePortals, updateLabels, updateOrganizationSchema,
 } from '../controllers/organizationController.js';
 import { portalsSchema, labelsSchema } from '../controllers/onboardingController.js';
-import { requireRole } from '../middleware/authMiddleware.js';
+import { allow } from '../policy/index.js';
 import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
-router.use(requireRole('admin'));
+router.use(allow('org.settings'));
 
 router.get('/', getOrganization);
 router.put('/', validate(updateOrganizationSchema), updateOrganization);
