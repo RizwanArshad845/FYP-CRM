@@ -41,6 +41,7 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
                     email: u.email,
                     role: u.role,
                     role_id: u.role_id,
+                    tier: u.tier,
                     department: u.department,
                     department_id: u.department_id,
                     status: u.status,
@@ -77,6 +78,8 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
                     last_name: emp.lastName,
                     email: emp.email,
                     role_id: emp.roleId,
+                    // Blank means the portal's default tier
+                    ...(emp.tier ? { tier: emp.tier } : {}),
                     department_id: emp.departmentId,
                     // Blank means the server generates a one-time temporary password
                     ...(emp.password ? { password: emp.password } : {}),
@@ -103,6 +106,7 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
                     last_name: emp.lastName || names.slice(1).join(' ') || '',
                     email: emp.email,
                     role_id: emp.role_id,
+                    ...(emp.tier ? { tier: emp.tier } : {}),
                     department_id: emp.department_id,
                     password: emp.password,
                     status: emp.status,

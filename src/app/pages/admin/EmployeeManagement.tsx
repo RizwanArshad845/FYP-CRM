@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from '../../components/ui/label';
 import { useEmployees } from '../../context/EmployeeContext';
 import { usePortals } from '../../hooks/usePortals';
+import { TierSelect } from '../../components/shared/TierSelect';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { AlertCircle, ShieldAlert } from 'lucide-react';
@@ -36,7 +37,7 @@ export function EmployeeManagement() {
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', roleId: '', departmentId: '', password: '', baseSalary: '' });
+  const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', roleId: '', tier: '', departmentId: '', password: '', baseSalary: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingEmp, setEditingEmp] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -44,7 +45,8 @@ export function EmployeeManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
   // One-time display of a server-generated temporary password
   const [issuedPassword, setIssuedPassword] = useState<{ email: string; password: string } | null>(null);
-  const { labelFor } = usePortals();
+  const { labelFor, tierLabel } = usePortals();
+  const roleKey = (roleId: string) => roles.find(r => r.id.toString() === roleId)?.name;
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +68,7 @@ export function EmployeeManagement() {
         if (created.tempPassword) {
           setIssuedPassword({ email: newEmp.email, password: created.tempPassword });
         }
-        setNewEmp({ firstName: '', lastName: '', email: '', roleId: '', departmentId: '', password: '', baseSalary: '' });
+        setNewEmp({ firstName: '', lastName: '', email: '', roleId: '', tier: '', departmentId: '', password: '', baseSalary: '' });
       }
     } finally {
       setIsSubmitting(false);
@@ -80,6 +82,7 @@ export function EmployeeManagement() {
       lastName: emp.last_name,
       email: emp.email,
       roleId: emp.role_id?.toString() || '',
+      tier: emp.tier || '',
       departmentId: emp.department_id?.toString() || '',
       password: '',
       status: emp.status,
@@ -104,6 +107,7 @@ export function EmployeeManagement() {
         lastName: editingEmp.lastName,
         email: editingEmp.email,
         role_id: parseInt(editingEmp.roleId),
+        tier: editingEmp.tier,
         department_id: parseInt(editingEmp.departmentId),
         password: editingEmp.password,
         status: editingEmp.status,
@@ -242,6 +246,11 @@ export function EmployeeManagement() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
+                    <Label htmlFor="tier">Tier</Label>
+                    <TierSelect id="tier" portalKey={roleKey(newEmp.roleId)} value={newEmp.tier} onChange={tier => setNewEmp({ ...newEmp, tier })} />
+                    <p className="text-xs text-muted-foreground">Member: own records · Manager: their team · Admin: whole organization</p>
+                  </div>
+                  <div className="grid gap-2">
                     <Label htmlFor="dept">Department *</Label>
                     <Select value={newEmp.departmentId} onValueChange={v => setNewEmp({ ...newEmp, departmentId: v })}>
                       <SelectTrigger>
@@ -344,12 +353,16 @@ export function EmployeeManagement() {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="edit-role">Role *</Label>
-                      <Select value={editingEmp.roleId} onValueChange={v => setEditingEmp({ ...editingEmp, roleId: v })}>
+                      <Select value={editingEmp.roleId} onValueChange={v => setEditingEmp({ ...editingEmp, roleId: v, tier: '' })}>
                         <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
                         <SelectContent>
                           {roles.map(r => <SelectItem key={r.id} value={r.id.toString()}>{labelFor(r.name)}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-tier">Tier</Label>
+                      <TierSelect id="edit-tier" portalKey={roleKey(editingEmp.roleId)} value={editingEmp.tier} onChange={tier => setEditingEmp({ ...editingEmp, tier })} />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="edit-dept">Department *</Label>
@@ -417,7 +430,7 @@ export function EmployeeManagement() {
                       <p className={cls.hintXs}>Role</p>
                       <div className={`${cls.inline} font-semibold text-xs mt-0.5`}>
                         <Shield className="h-3 w-3 text-blue-500" />
-                        <span>{emp.role}</span>
+                        <span>{labelFor(emp.role)}{emp.tier ? ` · ${tierLabel(emp.role, emp.tier)}` : ''}</span>
                       </div>
                     </div>
                     <div className={cls.muted}>

@@ -85,6 +85,7 @@ export interface Employee {
   email: string;
   department: string;
   role: string;
+  tier?: Tier;
   status: string;
   base_salary: number;
   advance_payments: number;

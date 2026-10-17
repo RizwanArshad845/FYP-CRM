@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { type PortalTheme } from '../../styles/portal-themes';
 import { BrandLogo, BRAND_NAME } from './BrandMark';
+import { usePortals } from '../../hooks/usePortals';
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +43,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ theme }: AppSidebarProps) {
   const { user, logout } = useAuth();
+  const { tierLabel } = usePortals();
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = useSidebar();
@@ -177,7 +179,9 @@ export function AppSidebar({ theme }: AppSidebarProps) {
             {!collapsed && (
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate text-sidebar-foreground">{user?.organization?.name ?? BRAND_NAME}</p>
-                <p className="text-xs text-muted-foreground truncate opacity-80">{theme.label}</p>
+                <p className="text-xs text-muted-foreground truncate opacity-80">
+                  {theme.label}{user?.tier ? ` · ${tierLabel(user.role, user.tier)}` : ''}
+                </p>
               </div>
             )}
           </div>
