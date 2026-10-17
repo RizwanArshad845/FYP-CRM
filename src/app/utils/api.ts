@@ -123,7 +123,11 @@ async function executeNetworkFetch(
                 clearToken();
                 window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
             }
-            throw new ApiError(data?.error || `Request failed (${response.status})`, response.status, data?.code, data);
+            // An empty 5xx comes from the dev proxy / platform, not our API (which always sends JSON)
+            const fallback = !data && response.status >= 500
+                ? 'Cannot reach the API server. Is it running?'
+                : `Request failed (${response.status})`;
+            throw new ApiError(data?.error || fallback, response.status, data?.code, data);
         }
 
         if (isGet) {

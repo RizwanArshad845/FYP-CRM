@@ -11,6 +11,8 @@
     "preview": "vite preview",
     "migrate": "node backend/scripts/migrate.js",
     "db:local": "node backend/scripts/localDb.js",
+    "dev:local": "node backend/scripts/devLocal.js",
+    "dev:supabase": "node backend/scripts/devLocal.js --supabase",
     "db:info": "node backend/scripts/dbInfo.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
