@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import pool, { withTransaction } from '../config/db.js';
 import { getOrganizationPortals } from '../services/sessionService.js';
-import { setPortalLabels, setPortalsEnabled } from '../services/organizationService.js';
+import {
+    getPermissions, setPermissions, setPortalLabels, setPortalsEnabled,
+} from '../services/organizationService.js';
 
 // Organization Settings (admin, after onboarding): same portal/label rules as the wizard.
 
@@ -37,4 +39,24 @@ export const updatePortals = async (req, res) => {
 export const updateLabels = async (req, res) => {
     await withTransaction((db) => setPortalLabels(db, req.user.tenantId, req.body.portals));
     res.json({ success: true, data: await settings(req.user.tenantId) });
+};
+
+// Permission dials: overrides are restrictions only; the catalog is the ceiling.
+const flags = z.record(z.string().max(100), z.boolean());
+export const permissionsSchema = z.object({
+    permissions: z.array(z.object({
+        portalKey: z.string().trim().min(1).max(50),
+        tier: z.enum(['Manager', 'Member']),
+        actions: flags.optional(),
+        fields: flags.optional(),
+    })).min(1).max(50),
+});
+
+export const getPermissionSettings = async (req, res) => {
+    res.json({ success: true, data: await getPermissions(pool, req.user.tenantId) });
+};
+
+export const updatePermissionSettings = async (req, res) => {
+    await withTransaction((db) => setPermissions(db, req.user.tenantId, req.body.permissions));
+    res.json({ success: true, data: await getPermissions(pool, req.user.tenantId) });
 };

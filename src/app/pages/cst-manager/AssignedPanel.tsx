@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useClientInbox, type InboxClient } from '../../context/ClientInboxContext';
 import { useClients, ManagedClient } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
+import { usePortals } from '../../hooks/usePortals';
 
 function statusBadge(status: InboxClient['status']) {
     if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -19,6 +20,7 @@ function statusBadge(status: InboxClient['status']) {
 
 export function AssignedPanel() {
     const { inboxClients, unassignClient } = useClientInbox();
+    const { can } = usePortals();
     const [search, setSearch] = useState('');
 
     const assigned = inboxClients.filter(c => c.status === 'active' || c.status === 'flagged')
@@ -61,17 +63,19 @@ export function AssignedPanel() {
                                         <Badge className={`border text-xs ${statusBadge(c.status)}`}>{c.status}</Badge>
                                     </TableCell>
                                     <TableCell className={cls.tableCell}>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs"
-                                            onClick={() => {
-                                                unassignClient(c.id);
-                                                toast.success(`${c.company_name} moved back to inbox`);
-                                            }}
-                                        >
-                                            ↩ Unassign
-                                        </Button>
+                                        {can('client.assign') && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs"
+                                                onClick={() => {
+                                                    unassignClient(c.id);
+                                                    toast.success(`${c.company_name} moved back to inbox`);
+                                                }}
+                                            >
+                                                ↩ Unassign
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

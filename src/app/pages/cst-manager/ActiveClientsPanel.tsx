@@ -9,9 +9,11 @@ import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClients, ManagedClient } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
+import { usePortals } from '../../hooks/usePortals';
 
 export function ActiveClientsPanel() {
     const { clients, deactivationRequests, toggleActive, resolveDeactivationRequest } = useClients();
+    const { can } = usePortals();
     const [search, setSearch] = useState('');
 
     return (
@@ -38,7 +40,7 @@ export function ActiveClientsPanel() {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className={`${cls.actions} flex-wrap`}>
+                                    {can('deactivation.resolve') && <div className={`${cls.actions} flex-wrap`}>
                                         <Button
                                             size="sm"
                                             variant="destructive"
@@ -59,7 +61,7 @@ export function ActiveClientsPanel() {
                                         >
                                             Dismiss
                                         </Button>
-                                    </div>
+                                    </div>}
                                 </div>
                         ))}
                     </CardContent>

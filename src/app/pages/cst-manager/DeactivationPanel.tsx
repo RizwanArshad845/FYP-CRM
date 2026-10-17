@@ -5,9 +5,11 @@ import { AlertTriangle, CheckCircle2, XCircle, Clock, User, Building2 } from 'lu
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClients } from '../../context/ClientContext';
+import { usePortals } from '../../hooks/usePortals';
 
 export function DeactivationPanel() {
     const { deactivationRequests, resolveDeactivationRequest } = useClients();
+    const { can } = usePortals();
 
     return (
         <div className={cls.page}>
@@ -75,7 +77,7 @@ export function DeactivationPanel() {
                                     </div>
 
                                     {/* Action buttons */}
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    {can('deactivation.resolve') && <div className="flex items-center gap-2 shrink-0">
                                         <Button
                                             size="sm"
                                             variant="destructive"
@@ -100,7 +102,7 @@ export function DeactivationPanel() {
                                             <XCircle className="h-3.5 w-3.5" />
                                             Dismiss
                                         </Button>
-                                    </div>
+                                    </div>}
                                 </div>
                             ))}
                         </div>

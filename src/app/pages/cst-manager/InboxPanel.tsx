@@ -13,6 +13,7 @@ import { useClientInbox, type InboxClient } from '../../context/ClientInboxConte
 import { useEmployees } from '../../context/EmployeeContext';
 import { useClients } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
+import { usePortals } from '../../hooks/usePortals';
 
 function statusBadge(status: InboxClient['status']) {
     if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -24,6 +25,7 @@ function statusBadge(status: InboxClient['status']) {
 export function InboxPanel() {
     const { inboxClients, assignClient, discardInboxClient } = useClientInbox();
     const { employees } = useEmployees();
+    const { can } = usePortals();
     const [search, setSearch] = useState('');
 
     // Filter for all unassigned clients (except discarded and deactivated) to show in inbox
@@ -152,15 +154,21 @@ export function InboxPanel() {
                                     </div>
                                 )}
                                 <div className="flex gap-2">
-                                    <Button variant="outline" className="flex-1" onClick={() => openEdit(client)}>
-                                        <Edit className="h-4 w-4 mr-2" />Edit Info
-                                    </Button>
-                                    <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => openDiscard(client)}>
-                                        <XCircle className="h-4 w-4 mr-2" />Discard
-                                    </Button>
-                                    <Button className="flex-1" onClick={() => openAssign(client)}>
-                                        <UserCheck className="h-4 w-4 mr-2" />Assign
-                                    </Button>
+                                    {can('client.update') && (
+                                        <Button variant="outline" className="flex-1" onClick={() => openEdit(client)}>
+                                            <Edit className="h-4 w-4 mr-2" />Edit Info
+                                        </Button>
+                                    )}
+                                    {can('client.discard') && (
+                                        <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => openDiscard(client)}>
+                                            <XCircle className="h-4 w-4 mr-2" />Discard
+                                        </Button>
+                                    )}
+                                    {can('client.assign') && (
+                                        <Button className="flex-1" onClick={() => openAssign(client)}>
+                                            <UserCheck className="h-4 w-4 mr-2" />Assign
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

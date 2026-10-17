@@ -30,6 +30,7 @@ export interface User {
   onboardingCompleted?: boolean;
   organization?: Organization;
   portals?: PortalConfig[];
+  allowedActions?: string[]; // policy action keys (UI hint; the server re-checks)
 }
 
 export type PortalKey = User['role'];
@@ -53,6 +54,26 @@ export interface PortalConfig {
   defaultTier: Tier;
   enabled: boolean;
   tierLabels: Partial<Record<Tier, string>>;
+}
+
+// Permission dials for one (portal, tier): fixed catalog entries with this org's values
+export interface TierPermissions {
+  tier: Tier;
+  actions: { key: string; label: string; allowed: boolean }[];
+  fields: { key: string; label: string; visible: boolean }[];
+}
+
+export interface PortalPermissions {
+  key: PortalKey;
+  label: string;
+  tiers: TierPermissions[];
+}
+
+export interface PermissionChange {
+  portalKey: string;
+  tier: Tier;
+  actions: Record<string, boolean>;
+  fields: Record<string, boolean>;
 }
 
 export interface Event {

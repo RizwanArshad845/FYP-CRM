@@ -1,4 +1,5 @@
 import pool from '../config/db.js';
+import { allowedActions } from '../policy/index.js';
 
 // Portal config for an org: fixed catalog + the org's enable flag and labels.
 export const getOrganizationPortals = async (tenantId, db = pool) => {
@@ -26,7 +27,7 @@ export const buildSession = async (userId, db = pool) => {
     const { rows } = await db.query(`
         SELECT u.id, u.first_name, u.last_name, u.email, u.status, u.role_id, u.department_id,
                u.tenant_id, u.must_change_password,
-               r.name AS role, d.name AS department, upa.tier,
+               r.name AS role, d.name AS department, upa.tier, upa.organization_portal_id,
                o.id AS org_id, o.name AS org_name, o.slug AS org_slug,
                COALESCE(os.completed, true) AS onboarding_completed, os.current_step
         FROM users u
@@ -56,5 +57,9 @@ export const buildSession = async (userId, db = pool) => {
         onboardingStep: u.current_step,
         organization: { id: u.org_id, name: u.org_name, slug: u.org_slug },
         portals: await getOrganizationPortals(u.tenant_id, db),
+        // UI hint only: the server re-checks every action.
+        allowedActions: await allowedActions({
+            role: u.role, tier: u.tier || 'Member', organizationPortalId: u.organization_portal_id,
+        }),
     };
 };

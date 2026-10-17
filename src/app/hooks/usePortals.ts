@@ -27,5 +27,10 @@ export function usePortals() {
     [byKey],
   );
 
-  return { portals, enabledPortals: portals.filter((p) => p.enabled), isEnabled, labelFor, tierLabel };
+  // Policy action check for showing/hiding controls. Before the session lists
+  // actions, allow everything and let the server decide.
+  const allowed = useMemo(() => (user?.allowedActions ? new Set(user.allowedActions) : null), [user?.allowedActions]);
+  const can = useCallback((action: string) => !allowed || allowed.has(action), [allowed]);
+
+  return { portals, enabledPortals: portals.filter((p) => p.enabled), isEnabled, labelFor, tierLabel, can };
 }

@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
-import type { Organization, PortalConfig } from '../../types/crm';
+import type { Organization, PermissionChange, PortalConfig, PortalPermissions } from '../../types/crm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
-import { LabelsEditor, PortalsEditor } from '../onboarding/PortalEditors';
+import { LabelsEditor, PermissionsEditor, PortalsEditor } from '../onboarding/PortalEditors';
 
 // Re-exposes the onboarding portal and naming steps after setup.
 export function OrganizationSettings() {
@@ -15,7 +15,8 @@ export function OrganizationSettings() {
   const [org, setOrg] = useState<Organization | null>(null);
   const [portals, setPortals] = useState<PortalConfig[]>([]);
   const [details, setDetails] = useState({ name: '', industry: '', size: '' });
-  const [saving, setSaving] = useState<'details' | 'portals' | 'labels' | null>(null);
+  const [permissions, setPermissions] = useState<PortalPermissions[]>([]);
+  const [saving, setSaving] = useState<'details' | 'portals' | 'labels' | 'permissions' | null>(null);
 
   const apply = (data: { organization: Organization; portals: PortalConfig[] }) => {
     setOrg(data.organization);
@@ -25,10 +26,16 @@ export function OrganizationSettings() {
     applySession({ ...user, organization: data.organization, portals: data.portals });
   };
 
+  const loadPermissions = () =>
+    apiFetch('/organization/permissions')
+      .then((res) => setPermissions(res.data))
+      .catch((error) => toast.error(error.message || 'Could not load permissions'));
+
   useEffect(() => {
     apiFetch('/organization')
       .then((res) => apply(res.data))
       .catch((error) => toast.error(error.message || 'Could not load organization settings'));
+    loadPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -37,9 +44,24 @@ export function OrganizationSettings() {
     try {
       const res = await apiFetch(url, { method: 'PUT', body: JSON.stringify(body) });
       apply(res.data);
+      // Enabling/disabling portals changes which permission cards exist
+      if (kind === 'portals') loadPermissions();
       toast.success('Saved');
     } catch (error: any) {
       toast.error(error.message || 'Could not save');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const savePermissions = async (changes: PermissionChange[]) => {
+    setSaving('permissions');
+    try {
+      const res = await apiFetch('/organization/permissions', { method: 'PUT', body: JSON.stringify({ permissions: changes }) });
+      setPermissions(res.data);
+      toast.success('Permissions saved');
+    } catch (error: any) {
+      toast.error(error.message || 'Could not save permissions');
     } finally {
       setSaving(null);
     }
@@ -109,6 +131,16 @@ export function OrganizationSettings() {
             submitLabel="Save names"
             onSave={(changes) => save('labels', '/organization/labels', { portals: changes })}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Permissions</CardTitle>
+          <CardDescription>What each tier can see and do in its portal.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PermissionsEditor permissions={permissions} saving={saving === 'permissions'} onSave={savePermissions} />
         </CardContent>
       </Card>
     </div>

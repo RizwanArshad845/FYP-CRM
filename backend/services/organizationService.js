@@ -1,5 +1,7 @@
 import { httpError } from '../utils/tenant.js';
-import { TIERS } from '../policy/catalog.js';
+import {
+    ACTIONS, FIELD_GROUPS, TIERS, eligibleAction, eligibleFieldGroup, isConfigurable,
+} from '../policy/index.js';
 
 export const DEFAULT_DEPARTMENTS = ['Administration', 'Sales', 'Customer Success', 'Finance', 'Human Resources'];
 export const ONBOARDING_STEPS = ['portals', 'labels', 'employees', 'review', 'done'];
@@ -82,5 +84,79 @@ export const setPortalLabels = async (db, tenantId, portals) => {
             WHERE op.portal_type_id = pt.id AND op.tenant_id = $1 AND pt.key = $2
         `, [tenantId, key, (custom_label || '').trim(), JSON.stringify(cleanTiers)]);
         if (!result.rowCount) throw httpError(400, `Unknown portal "${key}"`);
+    }
+};
+
+// --- Permission dials ---------------------------------------------------------
+// Per (portal, tier) restrictions on top of the fixed policy catalog. Only
+// non-admin portals and Manager/Member tiers are configurable.
+
+const CONFIGURABLE_TIERS = TIERS.filter((t) => isConfigurable('sales', t));
+
+const orgPortals = async (db, tenantId) => {
+    const { rows } = await db.query(`
+        SELECT op.id, pt.key, COALESCE(op.custom_label, pt.label) AS label, op.enabled
+        FROM organization_portals op JOIN portal_types pt ON pt.id = op.portal_type_id
+        WHERE op.tenant_id = $1 ORDER BY pt.sort_order
+    `, [tenantId]);
+    return rows;
+};
+
+export const getPermissions = async (db, tenantId) => {
+    const portals = (await orgPortals(db, tenantId)).filter((p) => p.enabled && p.key !== 'admin');
+    const ids = portals.map((p) => p.id);
+    const [actionRows, fieldRows] = await Promise.all([
+        db.query('SELECT organization_portal_id, tier, action_key, allowed FROM portal_action_permissions WHERE organization_portal_id = ANY($1::int[])', [ids]),
+        db.query('SELECT organization_portal_id, tier, field_group, visible FROM portal_field_visibility WHERE organization_portal_id = ANY($1::int[])', [ids]),
+    ]);
+    const lookup = (rows, keyCol, valCol) => new Map(rows.map((r) => [`${r.organization_portal_id}|${r.tier}|${r[keyCol]}`, r[valCol]]));
+    const actionMap = lookup(actionRows.rows, 'action_key', 'allowed');
+    const fieldMap = lookup(fieldRows.rows, 'field_group', 'visible');
+
+    return portals.map((p) => ({
+        key: p.key,
+        label: p.label,
+        tiers: CONFIGURABLE_TIERS.map((tier) => ({
+            tier,
+            actions: Object.entries(ACTIONS)
+                .filter(([key]) => eligibleAction(key, p.key, tier))
+                .map(([key, a]) => ({ key, label: a.label, allowed: actionMap.get(`${p.id}|${tier}|${key}`) !== false })),
+            fields: Object.entries(FIELD_GROUPS)
+                .filter(([key]) => eligibleFieldGroup(key, p.key))
+                .map(([key, g]) => ({ key, label: g.label, visible: fieldMap.get(`${p.id}|${tier}|${key}`) !== false })),
+        })),
+    }));
+};
+
+// Upserts overrides. Rejects anything outside the catalog ceiling.
+export const setPermissions = async (db, tenantId, entries) => {
+    const byKey = new Map((await orgPortals(db, tenantId)).map((p) => [p.key, p]));
+    for (const { portalKey, tier, actions = {}, fields = {} } of entries) {
+        const portal = byKey.get(portalKey);
+        if (!portal) throw httpError(400, `Unknown portal "${portalKey}"`);
+        if (!isConfigurable(portalKey, tier)) throw httpError(400, `Permissions for ${portalKey} / ${tier} are fixed`);
+
+        for (const [key, allowed] of Object.entries(actions)) {
+            if (!eligibleAction(key, portalKey, tier)) {
+                throw httpError(400, `Action "${key}" is not available to ${portalKey} / ${tier}`);
+            }
+            await db.query(`
+                INSERT INTO portal_action_permissions (organization_portal_id, tier, action_key, allowed)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (organization_portal_id, tier, action_key)
+                DO UPDATE SET allowed = EXCLUDED.allowed, updated_at = CURRENT_TIMESTAMP
+            `, [portal.id, tier, key, allowed]);
+        }
+        for (const [key, visible] of Object.entries(fields)) {
+            if (!eligibleFieldGroup(key, portalKey)) {
+                throw httpError(400, `Field group "${key}" is not available to ${portalKey}`);
+            }
+            await db.query(`
+                INSERT INTO portal_field_visibility (organization_portal_id, tier, field_group, visible)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (organization_portal_id, tier, field_group)
+                DO UPDATE SET visible = EXCLUDED.visible, updated_at = CURRENT_TIMESTAMP
+            `, [portal.id, tier, key, visible]);
+        }
     }
 };

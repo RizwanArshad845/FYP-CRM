@@ -39,6 +39,7 @@ const sessionFields = (u: any) => ({
     onboardingCompleted: u.onboardingCompleted !== false,
     organization: u.organization,
     portals: u.portals ?? [],
+    allowedActions: u.allowedActions,
 });
 
 // Builds the client-side user from a session profile plus the attendance status response.

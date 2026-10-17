@@ -30,22 +30,24 @@ export const signupOrg = async (name = unique('Org ')) => {
 };
 
 // Creates employees through the wizard and activates them (password changed).
-// Returns a map portal_key -> { id, email, token }
-export const addActiveEmployees = async (adminToken, portalKeys) => {
-    const employees = portalKeys.map((portal_key) => ({
-        first_name: portal_key, last_name: 'Tester', email: `${unique(portal_key)}@example.com`, portal_key,
+// Each entry is a portal key, or { key, portal_key, tier } for a specific tier.
+// Returns a map key (default: portal_key) -> { id, email, token }
+export const addActiveEmployees = async (adminToken, entries) => {
+    const specs = entries.map((e) => (typeof e === 'string' ? { key: e, portal_key: e } : { key: e.portal_key, ...e }));
+    const employees = specs.map(({ key, portal_key, tier }) => ({
+        first_name: key, last_name: 'Tester', email: `${unique(portal_key)}@example.com`, portal_key, ...(tier && { tier }),
     }));
     const res = await as(adminToken).post('/api/onboarding/employees', { employees });
     if (res.status !== 201) throw new Error(`addEmployees failed: ${res.status} ${JSON.stringify(res.body)}`);
 
     const out = {};
-    for (const emp of res.body.data.created) {
+    for (const [i, emp] of res.body.data.created.entries()) {
         const login = await http().post('/api/auth/login').send({ email: emp.email, password: emp.tempPassword });
         const change = await as(login.body.token).post('/api/auth/change-password', {
             currentPassword: emp.tempPassword, newPassword: EMPLOYEE_PASSWORD,
         });
         if (change.status !== 200) throw new Error(`activate failed: ${JSON.stringify(change.body)}`);
-        out[emp.portal_key] = { id: emp.id, email: emp.email, token: login.body.token };
+        out[specs[i].key] = { id: emp.id, email: emp.email, token: login.body.token };
     }
     return out;
 };
