@@ -27,6 +27,10 @@ import {
   DialogDescription, DialogFooter,
 } from '../ui/dialog';
 
+// Mockup nav item: 14px #cfd8ea, 10px 22px; active navy-active with a 3px accent line (plan 9.2).
+// Shared with the platform admin shell.
+export const NAV_ITEM_CLASS = 'h-auto rounded-none px-[22px] py-[10px] text-[14px] text-sidebar-foreground hover:bg-navy-active/60 hover:text-white data-[active=true]:bg-navy-active data-[active=true]:font-normal data-[active=true]:text-white data-[active=true]:border-l-[3px] data-[active=true]:border-accent-line data-[active=true]:pl-[19px]';
+
 export function AppSidebar() {
   const { user, logout } = useAuth();
   const { tierLabel, labelFor, can } = usePortals();
@@ -97,8 +101,7 @@ export function AppSidebar() {
   const tierName = portal && user?.tier ? tierLabel(portal, user.tier) : '';
   const portalCaption = portal ? `${labelFor(portal)}${tierName && tierName !== user?.tier ? ` · ${tierName}` : ''}` : '';
 
-  // Mockup nav item: 14px #cfd8ea, 10px 22px; active navy-active with a 3px accent line (plan 9.2)
-  const navClass = 'h-auto rounded-none px-[22px] py-[10px] text-[14px] text-sidebar-foreground hover:bg-navy-active/60 hover:text-white data-[active=true]:bg-navy-active data-[active=true]:font-normal data-[active=true]:text-white data-[active=true]:border-l-[3px] data-[active=true]:border-accent-line data-[active=true]:pl-[19px]';
+  const navClass = NAV_ITEM_CLASS;
 
   const toggleDark = () => {
     setIsDark((d) => !d);

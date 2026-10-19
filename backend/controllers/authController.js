@@ -7,7 +7,7 @@ import { buildSession } from '../services/sessionService.js';
 import { BCRYPT_ROUNDS } from '../services/userService.js';
 
 // Compared against when the email is unknown, so response time doesn't reveal which emails exist.
-const DUMMY_HASH = bcrypt.hashSync('timing-equalizer', BCRYPT_ROUNDS);
+export const DUMMY_HASH = bcrypt.hashSync('timing-equalizer', BCRYPT_ROUNDS);
 
 export const loginSchema = z.object({
     email: z.string().trim().min(1).max(255),

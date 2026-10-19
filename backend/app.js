@@ -22,6 +22,7 @@ import templatesRoutes from './routes/templatesRoutes.js';
 import boardRoutes from './routes/boardRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
 import organizationRoutes from './routes/organizationRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
@@ -63,6 +64,8 @@ app.use('/api/auth/organization', rateLimit({
 app.use('/api/auth', authRoutes);
 app.use('/api/onboarding/organization', authLimiter);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/platform/auth/login', authLimiter);
+app.use('/api/platform', platformRoutes);
 
 // Everything below requires a valid token
 app.use('/api/organization', protect, organizationRoutes);

@@ -7,6 +7,8 @@ import { Signup } from './pages/onboarding/Signup';
 import { OnboardingWizard } from './pages/onboarding/OnboardingWizard';
 import { ChangePassword } from './pages/onboarding/ChangePassword';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PlatformLogin } from './pages/platform/PlatformLogin';
+import { PlatformOrganizationDetail, PlatformOrganizations, PlatformOverview } from './pages/platform/PlatformAdmin';
 import { useAuth } from './context/AuthContext';
 import { orgPath } from './utils/orgPath';
 
@@ -36,6 +38,10 @@ export const router = createBrowserRouter([
   page('/', Login),
   page('/login', Login),
   page('/signup', Signup),
+  page('/platform/login', PlatformLogin),
+  page('/platform', PlatformOverview),
+  page('/platform/organizations', PlatformOrganizations),
+  page('/platform/organizations/:id', PlatformOrganizationDetail),
   page('/onboarding', ToOrgUrl),
   page('/change-password', ToOrgUrl),
   page('/clock-in', ToOrgUrl),
