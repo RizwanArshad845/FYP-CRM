@@ -20,6 +20,7 @@ import { ImportantRecordings } from '../sales/ImportantRecordings';
 import { ClientEntryForm } from './ClientEntryForm';
 import { useAgentTargets } from '../../context/AgentTargetContext';
 import { useEmployees } from '../../context/EmployeeContext';
+import { useOrgPath } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import { getPortalTheme } from '../../styles/portal-themes';
 import { Notepad } from '../../components/shared/Notepad';
@@ -141,6 +142,7 @@ export function SalesManagerDashboard() {
     const { employees } = useEmployees();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const to = useOrgPath();
     const activeModule = searchParams.get('module') || 'overview';
     const activeTab = searchParams.get('tab');
 
@@ -175,7 +177,7 @@ export function SalesManagerDashboard() {
                             </WelcomeHero>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=team&tab=performance')}>
+                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=team&tab=performance'))}>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                                             Team Performance
@@ -187,7 +189,7 @@ export function SalesManagerDashboard() {
                                         <p className="text-xs text-muted-foreground mt-1">Average agent score</p>
                                     </CardContent>
                                 </Card>
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=mytasks')}>
+                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=mytasks'))}>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                                             Manager Tasks
@@ -199,7 +201,7 @@ export function SalesManagerDashboard() {
                                         <p className="text-xs text-muted-foreground mt-1">Manage pending actions</p>
                                     </CardContent>
                                 </Card>
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=concerns')}>
+                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=concerns'))}>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                                             Team Concerns

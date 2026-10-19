@@ -51,6 +51,15 @@ app.get('/api/health', (req, res) => {
 // Public (each router protects its own non-public routes)
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/change-password', authLimiter);
+// Organization lookup for /<slug>/login pages: public, so limit enumeration
+app.use('/api/auth/organization', rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: () => env.NODE_ENV === 'test',
+    message: { success: false, error: 'Too many requests, please try again later' },
+}));
 app.use('/api/auth', authRoutes);
 app.use('/api/onboarding/organization', authLimiter);
 app.use('/api/onboarding', onboardingRoutes);

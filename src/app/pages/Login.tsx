@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { BRAND_NAME, BRAND_TAGLINE } from '../components/shared/BrandMark';
 import { useAuth, nextRouteFor } from '../context/AuthContext';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
+import { apiFetch } from '../utils/api';
 
 // Older builds remembered the email (and once the password); remember me now keeps the token.
 const LEGACY_REMEMBER_KEYS = ['crm_remember_me', 'crm_remember_email'];
 
-// Login page, Figure 4.1 (plan 9.3; docs/design/gui/login.html)
+// Login page, Figure 4.1 (plan 9.3; docs/design/gui/login.html). On an organization's
+// own URL (/<slug>/login) it shows that organization's name instead of AICRE.
 export function Login() {
+  const { slug } = useParams();
+  const [orgName, setOrgName] = useState<string | null>(null);
+  const [orgMissing, setOrgMissing] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -25,6 +30,15 @@ export function Login() {
   }, [user, isLoading, navigate]);
 
   useEffect(() => {
+    setOrgName(null);
+    setOrgMissing(false);
+    if (!slug) return;
+    apiFetch(`/auth/organization/${encodeURIComponent(slug)}`)
+      .then((res) => setOrgName(res.data.name))
+      .catch(() => setOrgMissing(true));
+  }, [slug]);
+
+  useEffect(() => {
     try {
       LEGACY_REMEMBER_KEYS.forEach((k) => localStorage.removeItem(k));
     } catch {
@@ -36,7 +50,7 @@ export function Login() {
     e.preventDefault();
     if (isLoggingIn) return;
     setIsLoggingIn(true);
-    const signedIn = await login(email, password, rememberMe);
+    const signedIn = await login(email, password, rememberMe, slug);
     if (signedIn) navigate(nextRouteFor(signedIn));
     setIsLoggingIn(false);
   };
@@ -49,8 +63,16 @@ export function Login() {
       style={{ background: 'linear-gradient(135deg,#1e2a44 0%,#2f4170 55%,#3b6fe0 100%)' }}
     >
       <div className="w-full max-w-[420px] rounded-[14px] bg-white px-10 py-[38px] text-[#1f2937] shadow-[0_20px_50px_rgba(0,0,0,.25)]">
-        <div className="text-center text-[28px] font-bold leading-tight text-[#1e2a44]">{BRAND_NAME}</div>
+        <div className="text-center text-[28px] font-bold leading-tight text-[#1e2a44]">{slug && !orgMissing ? orgName ?? ' ' : BRAND_NAME}</div>
         <div className="mt-[6px] mb-[26px] text-center text-[13px] text-[#6b7383]">{BRAND_TAGLINE}</div>
+
+        {orgMissing ? (
+          <p className="text-center text-[13px] text-[#5b6475]">
+            We could not find this organization. Check the link or{' '}
+            <Link to="/login" className="font-bold text-[#3b6fe0] hover:underline">sign in here</Link>.
+          </p>
+        ) : (
+        <>
 
         <form id="login-form" name="login" onSubmit={handleSubmit} autoComplete="on">
           <label htmlFor="email" className="mt-[14px] mb-[6px] block text-[13px] font-semibold">Email</label>
@@ -107,6 +129,8 @@ export function Login() {
           New to AICRE?{' '}
           <Link to="/signup" className="font-bold text-[#3b6fe0] hover:underline">Register your organization</Link>
         </p>
+        </>
+        )}
       </div>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>

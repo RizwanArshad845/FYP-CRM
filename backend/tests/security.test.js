@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { http, as, setupOrg } from './helpers.js';
+import { http, as, setupOrg, EMPLOYEE_PASSWORD } from './helpers.js';
 
 const PROTECTED_GETS = [
     '/api/users', '/api/clients', '/api/tasks', '/api/cst/active-clients', '/api/sales/follow-ups',
@@ -46,6 +46,35 @@ describe('login', () => {
         const res = await http().post('/api/auth/login').send({ email: 'nobody@example.com', password: 'whatever1' });
         expect(res.status).toBe(401);
         expect(res.body.error).toBe('Invalid email or password');
+    });
+
+    it('the token carries user, organization, portal and tier', async () => {
+        const res = await http().post('/api/auth/login').send({ email: org.sales.email, password: EMPLOYEE_PASSWORD });
+        expect(res.status).toBe(200);
+        const claims = jwt.decode(res.body.token);
+        expect(claims).toMatchObject({ id: org.sales.id, tenantId: res.body.user.organization.id, portal: 'sales', tier: 'Member' });
+        expect(claims.organizationPortalId).toEqual(expect.any(Number));
+    });
+
+    it("an organization's login URL only accepts its own users, with the generic message", async () => {
+        const slug = (await as(org.admin).get('/api/auth/me')).body.data.organization.slug;
+        const ok = await http().post('/api/auth/login').send({ email: org.sales.email, password: EMPLOYEE_PASSWORD, organization: slug });
+        expect(ok.status).toBe(200);
+
+        const other = await setupOrg();
+        const otherSlug = (await as(other.admin).get('/api/auth/me')).body.data.organization.slug;
+        const wrong = await http().post('/api/auth/login').send({ email: org.sales.email, password: EMPLOYEE_PASSWORD, organization: otherSlug });
+        expect(wrong.status).toBe(401);
+        expect(wrong.body.error).toBe('Invalid email or password');
+        expect(wrong.body).not.toHaveProperty('token');
+    });
+
+    it('the public organization lookup returns only name and slug', async () => {
+        const me = (await as(org.admin).get('/api/auth/me')).body.data.organization;
+        const res = await http().get(`/api/auth/organization/${me.slug}`);
+        expect(res.status).toBe(200);
+        expect(res.body.data).toEqual({ name: me.name, slug: me.slug });
+        expect((await http().get('/api/auth/organization/no-such-org-x')).status).toBe(404);
     });
 
     it('missing fields get 400', async () => {

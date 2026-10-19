@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
-import { useAuth, nextRouteFor } from '../../context/AuthContext';
+import { useAuth, nextRouteFor, useOrgPath } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
 import type { Organization, PortalConfig } from '../../types/crm';
 import { Button } from '../../components/ui/button';
@@ -33,16 +33,17 @@ type StepKey = typeof STEPS[number]['key'];
 export function OnboardingWizard() {
   const { user, isLoading, applySession } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const [state, setState] = useState<WizardState | null>(null);
   const [view, setView] = useState<StepKey>('portals');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) { navigate('/login'); return; }
+    if (!user) { navigate(to('/login')); return; }
     const next = nextRouteFor(user);
-    if (next !== '/onboarding') navigate(next);
-  }, [user, isLoading, navigate]);
+    if (next !== to('/onboarding')) navigate(next);
+  }, [user, isLoading, navigate, to]);
 
   const load = useCallback(async (resume: boolean) => {
     try {
@@ -79,7 +80,7 @@ export function OnboardingWizard() {
       const res = await apiFetch('/onboarding/complete', { method: 'POST' });
       applySession(res.data);
       toast.success('Your organization is ready');
-      navigate('/clock-in');
+      navigate(to('/clock-in'));
     } catch (error: any) {
       toast.error(error.message || 'Could not finish setup');
     } finally {

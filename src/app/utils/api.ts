@@ -1,23 +1,34 @@
+import { slugFromPath } from './orgPath';
+
 // Same-origin `/api` by default (Vercel and the Vite dev proxy).
 // Set VITE_API_URL only when the API lives on a different origin.
 const API_BASE: string = import.meta.env.VITE_API_URL || '/api';
 
-const TOKEN_KEY = 'crm_token';
+// One token per organization (crm_token:<slug>), so tabs of different
+// organizations in the same browser never log each other out.
+// The slug comes from the URL; right after login/signup on an app-level page
+// (/login, /signup) it comes from the session that was just started.
+let activeSlug: string | null = null;
+const tokenKey = () => `crm_token:${slugFromPath() ?? activeSlug ?? ''}`;
 
 // "Remember me" keeps the token in localStorage (survives a browser restart);
 // otherwise it lives in sessionStorage and ends with the tab.
 export const getToken = (): string | null =>
-    sessionStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(TOKEN_KEY);
+    sessionStorage.getItem(tokenKey()) ?? localStorage.getItem(tokenKey());
 
-export const setToken = (token: string, remember = false) => {
-    (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
-    (remember ? sessionStorage : localStorage).removeItem(TOKEN_KEY);
+export const setToken = (token: string, slug: string, remember = false) => {
+    activeSlug = slug;
+    const key = tokenKey();
+    (remember ? localStorage : sessionStorage).setItem(key, token);
+    (remember ? sessionStorage : localStorage).removeItem(key);
     clearApiCache();
 };
 
 export const clearToken = () => {
-    sessionStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(TOKEN_KEY);
+    const key = tokenKey();
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+    activeSlug = null;
     clearApiCache();
 };
 

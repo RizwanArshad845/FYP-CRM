@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { useAuth, nextRouteFor } from '../../context/AuthContext';
+import { useAuth, nextRouteFor, useOrgPath } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -13,14 +13,15 @@ import { SetupShell } from './SetupShell';
 export function ChangePassword() {
   const { user, isLoading, applySession, logout } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) navigate('/login');
-  }, [user, isLoading, navigate]);
+    if (!isLoading && !user) navigate(to('/login'));
+  }, [user, isLoading, navigate, to]);
 
   if (!user) return null;
   const forced = user.mustChangePassword;

@@ -12,6 +12,8 @@ const DUMMY_HASH = bcrypt.hashSync('timing-equalizer', BCRYPT_ROUNDS);
 export const loginSchema = z.object({
     email: z.string().trim().min(1).max(255),
     password: z.string().min(1).max(128),
+    // Slug from an organization's own login URL (/<slug>/login); optional on /login
+    organization: z.string().trim().min(1).max(100).optional(),
 });
 
 export const changePasswordSchema = z.object({
@@ -19,31 +21,52 @@ export const changePasswordSchema = z.object({
     newPassword: z.string().min(8, 'must be at least 8 characters').max(128),
 });
 
-export const signToken = (user) => jwt.sign(
-    { id: user.id, tenantId: user.tenant_id },
-    env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN }
-);
+// Claims carry user, organization, portal and tier (plan 5.1). They are informational:
+// protect still reloads the user from the database on every request.
+export const signToken = async (userId, db = pool) => {
+    const { rows } = await db.query(`
+        SELECT u.id, u.tenant_id, r.name AS portal, upa.tier, upa.organization_portal_id
+        FROM users u
+        JOIN roles r ON r.id = u.role_id
+        LEFT JOIN user_portal_access upa ON upa.user_id = u.id
+        WHERE u.id = $1
+    `, [userId]);
+    const u = rows[0];
+    return jwt.sign(
+        { id: u.id, tenantId: u.tenant_id, portal: u.portal, tier: u.tier, organizationPortalId: u.organization_portal_id },
+        env.JWT_SECRET,
+        { expiresIn: env.JWT_EXPIRES_IN }
+    );
+};
+
+// Public: the organization behind a /<slug>/login URL. Name and slug only.
+export const getOrganizationBySlug = async (req, res) => {
+    const { rows } = await pool.query('SELECT name, slug FROM organizations WHERE slug = $1', [req.params.slug]);
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Organization not found' });
+    res.json({ success: true, data: rows[0] });
+};
 
 // Login user and return JWT plus the session profile
 export const login = async (req, res) => {
-    const { email, password } = req.body;
-    const result = await pool.query(
-        'SELECT id, tenant_id, status, password_hash FROM users WHERE LOWER(email) = LOWER($1)',
-        [email]
-    );
+    const { email, password, organization } = req.body;
+    const result = await pool.query(`
+        SELECT u.id, u.tenant_id, u.status, u.password_hash, o.slug
+        FROM users u JOIN organizations o ON o.id = u.tenant_id
+        WHERE LOWER(u.email) = LOWER($1)
+    `, [email]);
     const user = result.rows[0];
 
-    // Same message and similar timing for unknown email and wrong password
+    // Same message and similar timing for unknown email, wrong password, or an account
+    // that belongs to a different organization than the login URL's.
     const valid = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
-    if (!user || !valid) {
+    if (!user || !valid || (organization && organization !== user.slug)) {
         return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
     if (user.status !== 'active') {
         return res.status(403).json({ success: false, error: 'Account is deactivated. Please contact your administrator.' });
     }
 
-    res.json({ success: true, token: signToken(user), user: await buildSession(user.id) });
+    res.json({ success: true, token: await signToken(user.id), user: await buildSession(user.id) });
 };
 
 // Current user profile from token

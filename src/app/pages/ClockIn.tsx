@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth, pendingSetupRoute } from '../context/AuthContext';
+import { useAuth, pendingSetupRoute, useOrgPath } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Clock, CheckCircle, LogOut, User, AlertTriangle, CalendarDays, Timer } from 'lucide-react';
@@ -28,6 +28,7 @@ const STATUS_DOT = {
 export function ClockIn() {
   const { user, isLoading, clockIn, clockOut, breakIn, breakOut, logout, staleSession, clearStaleSession } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursWorked, setHoursWorked] = useState(0);
   const [breakHours, setBreakHours] = useState(0);
@@ -37,7 +38,7 @@ export function ClockIn() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) { navigate('/login'); return; }
+    if (!user) { navigate(to('/login')); return; }
     const setup = pendingSetupRoute(user);
     if (setup) { navigate(setup); return; }
 
@@ -81,7 +82,7 @@ export function ClockIn() {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, to]);
 
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading your profile...</div></div>;
   if (!user) return null;
@@ -125,7 +126,7 @@ export function ClockIn() {
   };
 
   const handleAccessPortal = () => {
-    navigate('/dashboard');
+    navigate(to('/dashboard'));
   };
 
   const handleLogout = () => setLogoutOpen(true);
@@ -133,7 +134,7 @@ export function ClockIn() {
   const doLogout = async (clockOutAlso: boolean) => {
     setLogoutOpen(false);
     await logout(clockOutAlso);
-    navigate('/login');
+    navigate(to('/login'));
   };
 
   const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -229,7 +230,7 @@ export function ClockIn() {
                 </Button>
               ) : (
                 <>
-                  <Button onClick={() => navigate('/dashboard')} className="w-full h-14 text-lg" size="lg" disabled={user.onBreak}>
+                  <Button onClick={() => navigate(to('/dashboard'))} className="w-full h-14 text-lg" size="lg" disabled={user.onBreak}>
                     Access Portal
                   </Button>
 

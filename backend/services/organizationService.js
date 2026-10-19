@@ -6,13 +6,18 @@ import {
 export const DEFAULT_DEPARTMENTS = ['Administration', 'Sales', 'Customer Success', 'Finance', 'Human Resources'];
 export const ONBOARDING_STEPS = ['portals', 'labels', 'employees', 'review', 'done'];
 
+// First path segments the app uses itself; an organization slug must never equal one.
+export const RESERVED_SLUGS = new Set([
+    'api', 'login', 'signup', 'platform', 'onboarding', 'change-password', 'clock-in', 'dashboard', 'assets',
+]);
+
 const slugify = (name) => name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'org';
 
 // Unique slug: "acme", then "acme-2", "acme-3", ...
 export const uniqueSlug = async (db, name) => {
     const base = slugify(name);
     const { rows } = await db.query("SELECT slug FROM organizations WHERE slug = $1 OR slug LIKE $1 || '-%'", [base]);
-    const taken = new Set(rows.map((r) => r.slug));
+    const taken = new Set([...rows.map((r) => r.slug), ...RESERVED_SLUGS]);
     if (!taken.has(base)) return base;
     for (let i = 2; ; i++) if (!taken.has(`${base}-${i}`)) return `${base}-${i}`;
 };

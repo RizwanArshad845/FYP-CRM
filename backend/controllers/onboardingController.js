@@ -76,7 +76,7 @@ export const signup = async (req, res) => {
 
     res.status(201).json({
         success: true,
-        token: signToken({ id: user.id, tenant_id: org.id }),
+        token: await signToken(user.id),
         user: await buildSession(user.id),
     });
 };

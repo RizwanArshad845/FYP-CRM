@@ -21,7 +21,7 @@ import { InternalConcerns } from './InternalConcerns';
 import { CSTMonthlyTargets } from './CSTMonthlyTargets';
 
 import { useClients } from '../../context/ClientContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, useOrgPath } from '../../context/AuthContext';
 import { useCSTSchedule, Schedule as CSTSchedule } from '../../context/CSTScheduleContext';
 import { useConcerns } from '../../context/ConcernContext';
 import { toast } from 'sonner';
@@ -725,6 +725,7 @@ export function CSTDashboard() {
   const [portfolioSearch, setPortfolioSearch] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const { clients, unflagClient, isLoading: clientsLoading } = useClients();
   const { schedules, addSchedule, updateSchedule, deleteSchedule, isLoading: scheduleLoading } = useCSTSchedule();
   const { internalConcerns } = useConcerns();
@@ -853,7 +854,7 @@ export function CSTDashboard() {
               </WelcomeHero> */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=clients&tab=onboarding')}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=clients&tab=onboarding'))}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                       Pending Onboarding
@@ -865,7 +866,7 @@ export function CSTDashboard() {
                     <p className="text-xs text-muted-foreground mt-1">Clients awaiting setup</p>
                   </CardContent>
                 </Card>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=clients&tab=flagged')}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=clients&tab=flagged'))}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                       Flagged Issues

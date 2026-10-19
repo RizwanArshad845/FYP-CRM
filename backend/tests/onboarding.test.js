@@ -27,6 +27,11 @@ describe('organization signup', () => {
         expect(a.user.organization.slug).not.toBe(b.user.organization.slug);
     });
 
+    it('never gives an organization a slug the app uses as a route', async () => {
+        const org = await signupOrg('Login');
+        expect(org.user.organization.slug).toBe('login-2');
+    });
+
     it('rejects a duplicate admin email with 409', async () => {
         const { adminEmail } = await signupOrg();
         const res = await http().post('/api/onboarding/organization').send({
