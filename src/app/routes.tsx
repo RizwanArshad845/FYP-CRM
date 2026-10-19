@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, createBrowserRouter, useLocation, useNavigate, useParams } from 'react-router';
 import { Login } from './pages/Login';
+import { Landing } from './pages/landing/Landing';
 import { ClockIn } from './pages/ClockIn';
 import { Dashboard } from './pages/Dashboard';
 import { Signup } from './pages/onboarding/Signup';
@@ -35,7 +36,7 @@ const page = (path: string, Component: React.ComponentType) => ({ path, Componen
 
 // Each organization has its own URLs: /<slug>/login, /<slug>/dashboard, ...
 export const router = createBrowserRouter([
-  page('/', Login),
+  page('/', Landing),
   page('/login', Login),
   page('/signup', Signup),
   page('/platform/login', PlatformLogin),
