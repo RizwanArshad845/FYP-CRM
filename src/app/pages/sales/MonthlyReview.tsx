@@ -4,9 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { DollarSign, Clock, Target, CalendarDays } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { useClients } from '../../context/ClientContext';
+import { fieldLookup } from '../../utils/clientFields';
 
 export function MonthlyReview() {
   const [data, setData] = useState<any>(null);
+  // The two breakdowns follow the client layout's names, and hide with their field
+  const field = fieldLookup(useClients().clientFields);
+  const servicesField = field('client_services');
+  const areaField = field('service_area');
   const [loading, setLoading] = useState(true);
   
   const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -100,15 +106,15 @@ export function MonthlyReview() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        {servicesField && <Card>
           <CardHeader>
-            <CardTitle>Client Services Sold</CardTitle>
+            <CardTitle>{servicesField.label}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Service</TableHead>
+                  <TableHead>{servicesField.label}</TableHead>
                   <TableHead className="text-right">Count</TableHead>
                 </TableRow>
               </TableHeader>
@@ -125,17 +131,17 @@ export function MonthlyReview() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card>
+        {areaField && <Card>
           <CardHeader>
-            <CardTitle>Service Areas Sold</CardTitle>
+            <CardTitle>{areaField.label}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Area</TableHead>
+                  <TableHead>{areaField.label}</TableHead>
                   <TableHead className="text-right">Count</TableHead>
                 </TableRow>
               </TableHeader>
@@ -152,7 +158,7 @@ export function MonthlyReview() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
     </div>
   );

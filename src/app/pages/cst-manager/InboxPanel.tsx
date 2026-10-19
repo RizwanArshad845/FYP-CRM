@@ -15,6 +15,7 @@ import { useClients } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
 import { apiFetch } from '../../utils/api';
+import { fieldLookup, formatValue } from '../../utils/clientFields';
 
 type Suggestion = { id: number; name: string; active_count: number };
 
@@ -42,8 +43,11 @@ export function InboxPanel() {
     const [agentId, setAgentId] = useState<number | null>(null);
 
     const [editDialogOpen, setEditDialogOpen] = useState(false);
-    const [editForm, setEditForm] = useState<any>(null);
-    const { updateClient, fetchData: fetchClients } = useClients();
+    const { fetchData: fetchClients, clientFields } = useClients();
+    const field = fieldLookup(clientFields);
+    // Fields of the layout shown on each inbox card, when switched on
+    const cardFields = ['product_sold', 'payment_amount', 'service_area', 'contact_no_1'].map(field).filter((f) => f !== undefined);
+    const noteFields = ['client_concerns', 'tips_for_tech'].map(field).filter((f) => f !== undefined);
     const { fetchData: fetchInbox } = useClientInbox();
 
     // UC4: the least loaded CST agent for each unassigned client (server-side)
@@ -95,19 +99,6 @@ export function InboxPanel() {
         setSelected(null);
     };
 
-    const handleUpdate = async () => {
-        if (!selected || !editForm) return;
-        const data = {
-            ...editForm,
-            product_sold: editForm.product_sold.join(', ')
-        };
-        const success = await updateClient(selected.id, data);
-        if (success) {
-            setEditDialogOpen(false);
-            fetchInbox(); // Refresh inbox list
-        }
-    };
-
     const handleDiscard = async () => {
         if (!selected || !discardReason.trim()) {
             toast.error('Please provide a reason for discarding');
@@ -157,25 +148,18 @@ export function InboxPanel() {
                             </CardHeader>
                             <CardContent className={cls.list}>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div><p className={cls.hintXs}>Product</p><p className={cls.heading}>{client.product_sold}</p></div>
-                                    <div><p className={cls.hintXs}>Payment</p><p className={cls.heading}>${Number(client.payment_amount || 0).toLocaleString()}</p></div>
-                                    <div><p className={cls.hintXs}>Area</p><p className={cls.heading}>{client.service_area}</p></div>
+                                    {cardFields.map((f) => (
+                                        <div key={f.key}><p className={cls.hintXs}>{f.label}</p><p className={cls.heading}>{formatValue(f, client)}</p></div>
+                                    ))}
                                     <div><p className={cls.hintXs}>Submitted By</p><p className={cls.heading}>{client.submitted_by_name}</p></div>
-                                    <div><p className={cls.hintXs}>Contact</p><p className={cls.heading}>{client.contact_no_1}</p></div>
                                     <div><p className={cls.hintXs}>Date</p><p className={cls.heading}>{client.created_at ? new Date(client.created_at).toLocaleDateString() : 'N/A'}</p></div>
                                 </div>
-                                {client.client_concerns && (
-                                    <div className={cls.muted}>
-                                        <p className={cls.hintXs}>Client Concerns</p>
-                                        <p className="text-sm mt-1">{client.client_concerns}</p>
+                                {noteFields.filter((f) => formatValue(f, client) !== '—').map((f) => (
+                                    <div key={f.key} className={cls.muted}>
+                                        <p className={cls.hintXs}>{f.label}</p>
+                                        <p className="text-sm mt-1">{formatValue(f, client)}</p>
                                     </div>
-                                )}
-                                {client.tips_for_tech && (
-                                    <div className={`${cls.muted} bg-primary-soft`}>
-                                        <p className={cls.hintXs}>Tips for Tech</p>
-                                        <p className="text-sm mt-1">{client.tips_for_tech}</p>
-                                    </div>
-                                )}
+                                ))}
                                 {canAssign && suggestions[client.id] && (
                                     <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-primary-soft px-3 py-2 text-[13px]">
                                         <span>Suggested: <strong>{suggestions[client.id]!.name}</strong> ({suggestions[client.id]!.active_count} active)</span>
@@ -217,7 +201,7 @@ export function InboxPanel() {
                         {selected && (
                             <div className={cls.muted}>
                                 <p className={cls.label}>{selected.company_name}</p>
-                                <p className={cls.hintXs}>Product: {selected.product_sold} · Payment: ${Number(selected.payment_amount || 0).toLocaleString()}</p>
+                                <p className={cls.hintXs}>{cardFields.slice(0, 2).map((f) => `${f.label}: ${formatValue(f, selected)}`).join(' · ')}</p>
                             </div>
                         )}
                         <div className={cls.field}>

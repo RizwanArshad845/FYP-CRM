@@ -64,6 +64,33 @@ export interface FieldDefinition {
   field_type: 'text' | 'number' | 'dropdown' | 'date' | 'checkbox';
   options: string[] | null;
   display_order: number;
+  hidden?: boolean;
+  required?: boolean;
+}
+
+// One field of the organization's client layout (plan 6.1). `key` never changes:
+// the column name for standard fields, `cf_<id>` for custom ones (value under `name`).
+export type ClientFieldKind = 'core' | 'standard' | 'custom';
+export type ClientFieldType =
+  | 'text' | 'email' | 'phone' | 'number' | 'textarea' | 'dropdown' | 'multiselect' | 'date' | 'checkbox';
+export type ClientSection = 'client' | 'contact' | 'online' | 'notes' | 'custom';
+
+export interface ClientField {
+  key: string;
+  /** Request key for standard fields (POST /clients) */
+  body?: string;
+  /** Custom fields: definition id and the key inside custom_fields */
+  id?: number;
+  name?: string;
+  kind: ClientFieldKind;
+  label: string;
+  default_label: string;
+  type: ClientFieldType;
+  section: ClientSection;
+  hidden: boolean;
+  required: boolean;
+  options: string[] | null;
+  display_order: number;
 }
 
 // Organization-defined pipeline stage (plan 6.2)

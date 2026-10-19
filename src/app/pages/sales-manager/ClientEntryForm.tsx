@@ -1,93 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from 'sonner';
 import { Download, Save, Send, Upload, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { usePortals } from '../../hooks/usePortals';
 import { parseCsvFile, SkippedRows } from '../onboarding/EmployeesStep';
-import type { FieldDefinition } from '../../types/crm';
+import type { ClientField } from '../../types/crm';
 import { cls } from '../../styles/classes';
 import { useAuth } from '../../context/AuthContext';
 import { useClients } from '../../context/ClientContext';
-import { CustomFieldInputs, type CustomFieldValues } from '../../components/shared/CustomFieldInputs';
+import { ClientFieldsForm } from '../../components/shared/ClientFieldsForm';
 import { useClientInbox } from '../../context/ClientInboxContext';
 import { apiFetch } from '../../utils/api';
-import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
-type FormData = {
-  companyName: string; customerName: string; paymentAmount: string; productsSold: string[]; otherProduct: string;
-  email: string; email2: string; serviceArea: string; contactNo1: string; contactNo2: string; gbpLink: string;
-  websiteLink: string; yelpLink: string; facebook: string; twitter: string;
-  linkedin: string; instagram: string; clientConcerns: string; tipsForTech: string; notes: string;
-  clientServices: string; cin: string; paymentGateway: string;
-};
+import { formatValue, missingRequired, toClientBody, visibleFields, type ClientFormValues } from '../../utils/clientFields';
 
-const EMPTY_FORM: FormData = {
-  companyName: '', customerName: '', paymentAmount: '', productsSold: [], otherProduct: '',
-  email: '', email2: '', serviceArea: '', contactNo1: '', contactNo2: '', gbpLink: '',
-  websiteLink: '', yelpLink: '', facebook: '', twitter: '',
-  linkedin: '', instagram: '', clientConcerns: '', tipsForTech: '', notes: '',
-  clientServices: '', cin: '', paymentGateway: '',
-};
-
-const TEXT_AREAS: { id: keyof FormData; label: string; placeholder: string }[] = [
-  { id: 'clientConcerns', label: 'Client Concerns', placeholder: 'Any specific concerns or requirements...' },
-  { id: 'tipsForTech', label: 'Tips for CST Team', placeholder: 'Important information for the CST team...' },
-  { id: 'notes', label: 'General Notes', placeholder: 'Any additional notes...' },
-];
-
-// Field component defined OUTSIDE the parent to prevent React from
-// re-mounting inputs on every keystroke (which caused the 1-letter glitch).
-function Field({ id, label, type = 'text', required = false, placeholder = '', value, onChange }: {
-  id: string; label: string; type?: string; required?: boolean; placeholder?: string;
-  value: string; onChange: (val: string) => void;
-}) {
-  return (
-    <div className={cls.field}>
-      <Label htmlFor={id}>{label}{required && ' *'}</Label>
-      <Input id={id} type={type} required={required} placeholder={placeholder}
-        value={value} onChange={e => onChange(e.target.value)} />
-    </div>
-  );
-}
-
+// Client entry for the Sales Manager. The fields, their names, order and required
+// marks come from the organization's client layout (Organization settings > Client fields).
 export function ClientEntryForm() {
-  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const [values, setValues] = useState<ClientFormValues>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingClients, setPendingClients] = useState<any[]>([]);
   const { user } = useAuth();
-  const { fetchData, fieldDefinitions } = useClients();
-  const [customFields, setCustomFields] = useState<CustomFieldValues>({});
+  const { fetchData, clientFields } = useClients();
   const [importOpen, setImportOpen] = useState(false);
   const { can } = usePortals();
   const { fetchData: fetchInbox } = useClientInbox();
-  const [states, setStates] = useState<string[]>([]);
-  const [stateSearch, setStateSearch] = useState('');
-  const [showStates, setShowStates] = useState(false);
-
-  // Fetch US States on mount
-  useEffect(() => {
-    fetch('https://countriesnow.space/api/v0.1/countries/states', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ country: 'United States' })
-    })
-      .then(r => r.json())
-      .then(res => {
-        if (res.data && res.data.states) {
-          setStates(res.data.states.map((s: any) => s.name));
-        }
-      })
-      .catch(err => console.error('Failed to fetch states', err));
-  }, []);
-
-  const set = (field: keyof FormData, value: string) =>
-    setFormData(prev => ({ ...prev, [field]: value }));
 
   // Fetch pending submissions on mount — show all onboarding clients
   useEffect(() => {
@@ -102,8 +41,9 @@ export function ClientEntryForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.companyName || !formData.customerName || (formData.productsSold.length === 0 && !formData.otherProduct.trim())) {
-      toast.error('Please fill required fields (Company, Customer, Product)');
+    const missing = missingRequired(clientFields, values);
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(', ')}`);
       return;
     }
 
@@ -111,32 +51,12 @@ export function ClientEntryForm() {
     try {
       const res = await apiFetch('/clients', {
         method: 'POST',
-        body: JSON.stringify({
-          companyName: formData.companyName,
-          customerName: formData.customerName,
-          email: formData.email,
-          email_2: formData.email2 || null,
-          paymentAmount: parseFloat(formData.paymentAmount),
-          productSold: [...formData.productsSold, formData.otherProduct.trim()].filter(Boolean).join(', '),
-          serviceArea: formData.serviceArea,
-          contactNo1: formData.contactNo1,
-          contactNo2: formData.contactNo2,
-          clientConcerns: formData.clientConcerns,
-          tipsForTech: formData.tipsForTech,
-          notes: formData.notes,
-          clientServices: formData.clientServices,
-          digitalPresence: formData.websiteLink || formData.gbpLink || formData.yelpLink || formData.facebook || formData.twitter || formData.linkedin || formData.instagram,
-          cin: formData.cin,
-          paymentGateway: formData.paymentGateway,
-          sales_agent_id: user?.id,
-          customFields,
-        })
+        body: JSON.stringify({ ...toClientBody(clientFields, values), sales_agent_id: user?.id }),
       });
 
       if (res.success) {
         toast.success('Client submitted successfully!');
-        setFormData(EMPTY_FORM);
-      setCustomFields({});
+        setValues({});
         setPendingClients(prev => [res.data, ...prev]);
 
         // Trigger global refresh so CST Manager or Admin dashboards see it instantly
@@ -155,11 +75,13 @@ export function ClientEntryForm() {
 
   const handleClear = () => {
     if (confirm('Clear the form?')) {
-      setFormData(EMPTY_FORM);
-      setCustomFields({});
+      setValues({});
       toast.info('Form cleared');
     }
   };
+
+  // Two fields of the layout shown on each pending card, when switched on
+  const summary = visibleFields(clientFields).filter((f) => ['product_sold', 'payment_amount'].includes(f.key));
 
   return (
     <form onSubmit={handleSubmit}>
@@ -176,157 +98,7 @@ export function ClientEntryForm() {
           )}
         </CardHeader>
         <CardContent className={cls.page}>
-          {/* Client Information */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-success" />
-              Client Information
-            </h3>
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4`}>
-              <Field id="companyName" label="Company Name" required placeholder="ABC Corporation" value={formData.companyName} onChange={v => set('companyName', v)} />
-              <Field id="customerName" label="Customer Name" required placeholder="John Doe" value={formData.customerName} onChange={v => set('customerName', v)} />
-              <Field id="paymentAmount" label="Payment Amount ($)" type="number" required placeholder="5000" value={formData.paymentAmount} onChange={v => set('paymentAmount', v)} />
-              <Field id="email" label="Email 1" type="email" required placeholder="contact@company.com" value={formData.email} onChange={v => set('email', v)} />
-              <Field id="email2" label="Email 2" type="email" placeholder="secondary@company.com" value={formData.email2} onChange={v => set('email2', v)} />
-              <div className={cls.field + " relative"}>
-                <Label htmlFor="serviceArea">Service Area (USA State) *</Label>
-                <Input
-                  id="serviceArea"
-                  placeholder="Search state..."
-                  value={formData.serviceArea}
-                  onChange={e => {
-                    set('serviceArea', e.target.value);
-                    setShowStates(true);
-                  }}
-                  onFocus={() => setShowStates(true)}
-                  onBlur={() => setTimeout(() => setShowStates(false), 200)}
-                />
-                {showStates && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-lg ">
-                    {states
-                      .filter(s => s.toLowerCase().includes(formData.serviceArea.toLowerCase()))
-                      .map(s => (
-                        <div
-                          key={s}
-                          className="px-4 py-2 cursor-pointer hover:bg-primary-soft text-sm"
-                          onMouseDown={() => {
-                            set('serviceArea', s);
-                            setShowStates(false);
-                          }}
-                        >
-                          {s}
-                        </div>
-                      ))}
-                    {states.filter(s => s.toLowerCase().includes(formData.serviceArea.toLowerCase())).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-muted-foreground italic">No states found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <Field id="clientServices" label="Client Services" placeholder="Handyman, General Contractor..." value={formData.clientServices} onChange={v => set('clientServices', v)} />
-              <div className={cls.field}>
-                <Label>Products / Categories *</Label>
-                <div className="flex flex-col gap-2 mt-2">
-                  {PRODUCTS.map(p => (
-                    <div key={p} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`product-${p}`}
-                        checked={formData.productsSold.includes(p)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setFormData(prev => ({ ...prev, productsSold: [...prev.productsSold, p] }));
-                          } else {
-                            setFormData(prev => ({ ...prev, productsSold: prev.productsSold.filter(item => item !== p) }));
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={`product-${p}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {p}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className={cls.field}>
-                <Label htmlFor="otherProduct">Other / Additional Demand</Label>
-                <Input
-                  id="otherProduct"
-                  placeholder="Enter any other product or demand"
-                  value={formData.otherProduct}
-                  onChange={e => set('otherProduct', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <Field id="cin" label="CIN (Client ID/Number)" placeholder="e.g. 12345678" value={formData.cin} onChange={v => set('cin', v)} />
-              <div className={cls.field}>
-                <Label htmlFor="paymentGateway">Payment Gateway</Label>
-                <Select value={formData.paymentGateway} onValueChange={v => set('paymentGateway', v)}>
-                  <SelectTrigger id="paymentGateway">
-                    <SelectValue placeholder="Select gateway" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Zelle">Zelle</SelectItem>
-                    <SelectItem value="Cash App">Cash App</SelectItem>
-                    <SelectItem value="Stripe">Stripe</SelectItem>
-                    <SelectItem value="Square">Square</SelectItem>
-                    <SelectItem value="Card Charge">Card Charge</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Which payment provider was used for this transaction?</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Contact Details */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-primary" />
-              Contact Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field id="contactNo1" label="Contact No. 1 (Primary)" type="tel" required placeholder="+1 (555) 123-4567" value={formData.contactNo1} onChange={v => set('contactNo1', v)} />
-              <Field id="contactNo2" label="Contact No. 2 (Secondary)" type="tel" placeholder="+1 (555) 987-6543" value={formData.contactNo2} onChange={v => set('contactNo2', v)} />
-            </div>
-          </section>
-
-          {/* Digital Presence */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-primary" />
-              Digital Presence
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field id="websiteLink" label="Website" type="url" placeholder="https://www.company.com" value={formData.websiteLink} onChange={v => set('websiteLink', v)} />
-              <Field id="gbpLink" label="Google Business Profile" type="url" placeholder="https://g.page/..." value={formData.gbpLink} onChange={v => set('gbpLink', v)} />
-              <Field id="yelpLink" label="Yelp" type="url" placeholder="https://www.yelp.com/..." value={formData.yelpLink} onChange={v => set('yelpLink', v)} />
-              <Field id="facebook" label="Facebook" type="url" placeholder="https://facebook.com/..." value={formData.facebook} onChange={v => set('facebook', v)} />
-              <Field id="twitter" label="Twitter/X" type="url" placeholder="https://twitter.com/..." value={formData.twitter} onChange={v => set('twitter', v)} />
-              <Field id="linkedin" label="LinkedIn" type="url" placeholder="https://linkedin.com/..." value={formData.linkedin} onChange={v => set('linkedin', v)} />
-              <Field id="instagram" label="Instagram" type="url" placeholder="https://instagram.com/..." value={formData.instagram} onChange={v => set('instagram', v)} />
-            </div>
-          </section>
-
-          {/* Additional Information */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-warning" />
-              Additional Information
-            </h3>
-            {TEXT_AREAS.map(({ id, label, placeholder }) => (
-              <div key={id} className={cls.field}>
-                <Label htmlFor={id}>{label}</Label>
-                <Textarea id={id} rows={3} placeholder={placeholder}
-                  value={formData[id]} onChange={e => set(id, e.target.value)} />
-              </div>
-            ))}
-          </section>
-
-          <CustomFieldInputs definitions={fieldDefinitions} values={customFields} onChange={setCustomFields} />
+          <ClientFieldsForm fields={clientFields} values={values} onChange={setValues} />
 
           {/* Actions */}
           <div className={`${cls.actions} pt-4`}>
@@ -363,15 +135,13 @@ export function ClientEntryForm() {
                     <CardDescription className="text-xs">{client.customer_name}</CardDescription>
                   </CardHeader>
                   <CardContent className="text-sm">
-                    <div className="flex justify-between mb-1">
-                      <span className={cls.hint}>Product:</span>
-                      <span className="font-medium truncate max-w-[120px]">{client.product_sold}</span>
-                    </div>
-                    <div className="flex justify-between mb-3">
-                      <span className={cls.hint}>Amount:</span>
-                      <span className="font-medium">${client.payment_amount}</span>
-                    </div>
-                    <div className="flex justify-end">
+                    {summary.map((f) => (
+                      <div key={f.key} className="flex justify-between gap-3 mb-1">
+                        <span className={cls.hint}>{f.label}:</span>
+                        <span className="font-medium truncate max-w-[140px]">{formatValue(f, client)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-end mt-2">
                       <span className="text-xs font-semibold px-2 py-1 bg-warning-bg text-warning rounded-full">
                         ONBOARDING PENDING
                       </span>
@@ -386,30 +156,25 @@ export function ClientEntryForm() {
       <ClientImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        definitions={fieldDefinitions}
+        fields={clientFields}
         onImported={() => { fetchData(); fetchInbox(); }}
       />
     </form>
   );
 }
 
-// CSV column -> client field (the same names the client form posts)
-const CLIENT_CSV_COLUMNS: Record<string, string> = {
-  company_name: 'companyName', customer_name: 'customerName', email: 'email', email_2: 'email_2',
-  payment_amount: 'paymentAmount', product_sold: 'productSold', service_area: 'serviceArea',
-  contact_no_1: 'contactNo1', contact_no_2: 'contactNo2', cin: 'cin', payment_gateway: 'paymentGateway',
-  client_services: 'clientServices', client_concerns: 'clientConcerns', tips_for_tech: 'tipsForTech', notes: 'notes',
-};
+const asCustomValue = (field: ClientField, value: string) =>
+  field.type === 'checkbox' ? ['true', 'yes', '1'].includes(value.toLowerCase()) : value;
 
-const asCustomValue = (def: FieldDefinition, value: string) =>
-  def.field_type === 'checkbox' ? ['true', 'yes', '1'].includes(value.toLowerCase()) : value;
+// A CSV column matches a field by its key (e.g. company_name) or its label.
+const csvHeader = (f: ClientField) => (f.kind === 'custom' ? f.label : f.key);
 
 // Client CSV import (plan 7.5): template download, then the server validates every row
 // with the client form's rules and reports the rows it skipped.
-function ClientImportDialog({ open, onOpenChange, definitions, onImported }: {
+function ClientImportDialog({ open, onOpenChange, fields, onImported }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  definitions: FieldDefinition[];
+  fields: ClientField[];
   onImported: () => void;
 }) {
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
@@ -419,7 +184,7 @@ function ClientImportDialog({ open, onOpenChange, definitions, onImported }: {
   useEffect(() => { if (!open) { setRows([]); setResult(null); } }, [open]);
 
   const downloadTemplate = () => {
-    const headers = [...Object.keys(CLIENT_CSV_COLUMNS), ...definitions.map((d) => d.field_name)];
+    const headers = visibleFields(fields).map(csvHeader);
     const csv = headers.map((h) => (/[",\n]/.test(h) ? `"${h.replace(/"/g, '""')}"` : h)).join(',') + '\n';
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const a = document.createElement('a');
@@ -430,15 +195,21 @@ function ClientImportDialog({ open, onOpenChange, definitions, onImported }: {
   };
 
   const handleFile = (file: File) => parseCsvFile(file, (data) => {
-    const byName = new Map(definitions.map((d) => [d.field_name.toLowerCase(), d]));
+    const byHeader = new Map<string, ClientField>();
+    for (const f of visibleFields(fields)) {
+      byHeader.set(f.key.toLowerCase(), f);
+      byHeader.set(f.label.toLowerCase(), f);
+    }
     const parsed = data.map((raw) => {
       const row: Record<string, unknown> = {};
       const custom: Record<string, unknown> = {};
       for (const [header, rawValue] of Object.entries(raw)) {
         const value = String(rawValue ?? '').trim();
         if (!value) continue;
-        if (CLIENT_CSV_COLUMNS[header]) row[CLIENT_CSV_COLUMNS[header]] = value;
-        else if (byName.has(header)) { const def = byName.get(header)!; custom[def.field_name] = asCustomValue(def, value); }
+        const f = byHeader.get(header);
+        if (!f) continue;
+        if (f.kind === 'custom') custom[f.name!] = asCustomValue(f, value);
+        else row[f.body!] = value;
       }
       if (Object.keys(custom).length) row.customFields = custom;
       return row;

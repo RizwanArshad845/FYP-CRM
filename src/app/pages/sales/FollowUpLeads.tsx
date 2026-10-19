@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { cls } from '../../styles/classes';
 import { apiFetch, ApiError } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
+import { useClients } from '../../context/ClientContext';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { useFollowUps } from '../../context/FollowUpContext';
 
@@ -72,6 +72,12 @@ export function FollowUpLeads() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editing, setEditing] = useState<FollowUpLead | null>(null);
     const [form, setForm] = useState<Omit<FollowUpLead, 'id'>>(EMPTY);
+    // Product and area names and choices come from the client layout
+    const { clientFields } = useClients();
+    const productField = clientFields.find((f) => f.key === 'product_sold');
+    const areaField = clientFields.find((f) => f.key === 'service_area');
+    const productLabel = productField?.label ?? 'Product';
+    const areaLabel = areaField?.label ?? 'Area';
     const [filterAgent, setFilterAgent] = useState('all');
 
     const fetchData = async () => {
@@ -201,7 +207,7 @@ export function FollowUpLeads() {
                         <Table className="w-full text-sm">
                             <TableHeader className="bg-muted/50 sticky top-0">
                                 <TableRow>
-                                    {['#', 'Client', 'Agent', 'Closer', 'Contact', 'Product', 'Area', 'Due Date', 'Time', 'Status', 'Actions'].map(h => (
+                                    {['#', 'Client', 'Agent', 'Closer', 'Contact', productLabel, areaLabel, 'Due Date', 'Time', 'Status', 'Actions'].map(h => (
                                         <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
                                     ))}
                                 </TableRow>
@@ -292,17 +298,17 @@ export function FollowUpLeads() {
                         </div>
 
                         <div className={cls.field}>
-                            <Label>Product</Label>
+                            <Label>{productLabel}</Label>
                             <Select value={form.product} onValueChange={v => set('product', v)}>
                                 <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
-                                <SelectContent>{[...new Set([form.product, ...PRODUCTS].filter(Boolean))].map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                                <SelectContent>{[...new Set([form.product, ...(productField?.options ?? [])].filter(Boolean))].map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div className={cls.field}>
-                            <Label>Area</Label>
+                            <Label>{areaLabel}</Label>
                             <Select value={form.area} onValueChange={v => set('area', v)}>
                                 <SelectTrigger><SelectValue placeholder="Select area" /></SelectTrigger>
-                                <SelectContent>{[...new Set([form.area, ...SERVICE_AREAS].filter(Boolean))].map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                                <SelectContent>{[...new Set([form.area, ...(areaField?.options ?? [])].filter(Boolean))].map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
 

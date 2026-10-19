@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
-import type { FieldDefinition, PipelineStage } from '../types/crm';
+import type { ClientField, PipelineStage } from '../types/crm';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface ManagedClient {
@@ -74,8 +74,8 @@ interface ClientContextType {
     updateClientNote: (noteId: number, noteText: string) => Promise<boolean>;
     deleteClientNote: (noteId: number) => Promise<boolean>;
     fetchData: () => Promise<void>;
-    /** The organization's custom client fields and pipeline stages */
-    fieldDefinitions: FieldDefinition[];
+    /** The organization's client layout (standard and custom fields) and pipeline stages */
+    clientFields: ClientField[];
     pipelineStages: PipelineStage[];
     isLoading: boolean;
 }
@@ -103,7 +103,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     const [clients, setClients] = useState<ManagedClient[]>([]);
     const [deactivationRequests, setDeactivationRequests] = useState<DeactivationRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [fieldDefinitions, setFieldDefinitions] = useState<FieldDefinition[]>([]);
+    const [clientFields, setClientFields] = useState<ClientField[]>([]);
     const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>([]);
 
     const fetchData = async () => {
@@ -117,10 +117,10 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             const [clientsRes, requestsRes, fieldsRes, stagesRes] = await Promise.all([
                 apiFetch('/clients'),
                 apiFetch('/clients/deactivation-requests'),
-                apiFetch('/clients/custom-fields'),
+                apiFetch('/clients/fields'),
                 apiFetch('/clients/pipeline-stages'),
             ]);
-            setFieldDefinitions(fieldsRes.data ?? []);
+            setClientFields(fieldsRes.data ?? []);
             setPipelineStages(stagesRes.data ?? []);
 
             if (clientsRes.success) {
@@ -353,7 +353,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             clients, deactivationRequests, toggleActive, requestDeactivation,
             resolveDeactivationRequest, resolveDeactivationRequests, flagClient, unflagClient, updateClient,
             getClientNotes, addClientNote, updateClientNote, deleteClientNote,
-            fetchData, fieldDefinitions, pipelineStages, isLoading
+            fetchData, clientFields, pipelineStages, isLoading
         }}>
             {children}
         </ClientContext.Provider>

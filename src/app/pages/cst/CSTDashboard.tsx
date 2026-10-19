@@ -14,6 +14,8 @@ import {
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { WelcomeHero } from '../../components/shared/WelcomeHero';
 import { StatCard } from '../../components/shared/StatCard';
+import { ClientFieldCell, tableFields } from '../../components/shared/ClientFieldCell';
+import { fieldsBySection, formatValue, visibleFields } from '../../utils/clientFields';
 import { cls } from '../../styles/classes';
 import { getPortalTheme } from '../../styles/portal-themes';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
@@ -131,8 +133,12 @@ function FlagDialog({ clientName, clientId, open, onClose }: FlagDialogProps) {
 
 // ── Client Details Dialog ───────────────────────────────────────────────────────
 function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, open: boolean, onClose: () => void }) {
-  const { clients, getClientNotes } = useClients();
+  const { clients, getClientNotes, clientFields } = useClients();
   const client = clients.find(c => c.id === clientId);
+  // Short values grouped by section on the left, long text on the right
+  const shown = visibleFields(clientFields);
+  const shortSections = fieldsBySection(shown.filter((f) => f.type !== 'textarea'));
+  const longFields = shown.filter((f) => f.type === 'textarea');
   const [notes, setNotes] = useState<any[]>([]);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -183,60 +189,42 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">General Info</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Status</h3>
               <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Customer Name:</span> <span className="font-medium text-right">{client.customer_name}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">CIN:</span> <span className="font-medium text-right">{client.cin || 'N/A'}</span></div>
                 <div className="flex justify-between items-center gap-4"><span className="text-muted-foreground whitespace-nowrap">Status:</span> <Badge variant="outline" className="capitalize px-3 py-1">{client.status}</Badge></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Service Area:</span> <span className="text-right break-words">{client.service_area || 'N/A'}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Assigned To:</span> <span className="text-right">{client.assigned_name || 'Unassigned'}</span></div>
               </div>
             </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Contact Info</h3>
-              <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4"><span className="text-muted-foreground whitespace-nowrap">Email 1:</span> <span className="text-left sm:text-right break-all">{client.email}</span></div>
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4"><span className="text-muted-foreground whitespace-nowrap">Email 2:</span> <span className="text-left sm:text-right break-all">{client.email_2 || 'N/A'}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Phone 1:</span> <span className="text-right">{client.contact_no_1}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Phone 2:</span> <span className="text-right">{client.contact_no_2 || 'N/A'}</span></div>
+            {shortSections.map(({ section, title, fields }) => (
+              <div key={section}>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{title}</h3>
+                <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
+                  {fields.map((f) => (
+                    <div key={f.key} className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4">
+                      <span className="text-muted-foreground whitespace-nowrap">{f.label}:</span>
+                      <span className={`text-left sm:text-right break-words ${f.key === 'payment_amount' ? 'font-bold text-success' : ''}`}>{formatValue(f, client)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Payment & Services</h3>
-              <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Amount:</span> <span className="font-bold text-success ">${client.payment_amount}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Gateway:</span> <span>{client.payment_gateway || 'N/A'}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Services:</span> <span className="text-right break-words">{client.client_services || 'N/A'}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Product Sold:</span> <span className="text-right break-words">{client.product_sold || 'N/A'}</span></div>
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div className="space-y-6">
-            <div className="h-full">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Technical Details</h3>
-              <div className="bg-muted/30 p-5 rounded-xl space-y-5 text-base border shadow-sm h-[calc(100%-28px)]">
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Digital Presence:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed">{client.digital_presence || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Tips for Tech:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed">{client.tips_for_tech || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Client Concerns:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed">{client.client_concerns || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Initial Notes:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed whitespace-pre-wrap">{client.notes || 'N/A'}</p>
+          {longFields.length > 0 && (
+            <div className="space-y-6">
+              <div className="h-full">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Details</h3>
+                <div className="bg-muted/30 p-5 rounded-xl space-y-5 text-base border shadow-sm h-[calc(100%-28px)]">
+                  {longFields.map((f) => (
+                    <div key={f.key}>
+                      <span className="text-muted-foreground font-medium block mb-2">{f.label}:</span>
+                      <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed whitespace-pre-wrap">{formatValue(f, client)}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-6">
@@ -281,7 +269,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
 // ── Active Clients panel (role-aware) ─────────────────────────────────────────
 function ActiveClientsPanel() {
   const { user } = useAuth();
-  const { clients, deactivationRequests, toggleActive, requestDeactivation, resolveDeactivationRequest } = useClients();
+  const { clients, deactivationRequests, toggleActive, requestDeactivation, resolveDeactivationRequest, clientFields } = useClients();
   const isCSTManager = user?.role === 'cst_manager';
   const isCSTAgent = user?.role === 'cst';
 
@@ -300,6 +288,8 @@ function ActiveClientsPanel() {
   };
 
   const activeClients = clients.filter(c => c.is_active && c.status === 'active');
+  const cinField = visibleFields(clientFields).find((f) => f.key === 'cin');
+  const gatewayField = visibleFields(clientFields).find((f) => f.key === 'payment_gateway');
   const [view, setView] = useState<ClientView>('table');
   const shownClients = activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase()));
 
@@ -335,9 +325,9 @@ function ActiveClientsPanel() {
               <TableHeader className="bg-muted/50 sticky top-0">
                 <TableRow>
                   <TableHead>Client Name</TableHead>
-                  <TableHead>CIN / Details</TableHead>
+                  {cinField && <TableHead>{cinField.label}</TableHead>}
                   <TableHead>Contact Info</TableHead>
-                  <TableHead>Gateway</TableHead>
+                  {gatewayField && <TableHead>{gatewayField.label}</TableHead>}
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -351,17 +341,16 @@ function ActiveClientsPanel() {
                       <p className="text-xs text-muted-foreground">Person: {c.customer_name}</p>
                       <p className="text-xs text-muted-foreground italic">Added: {c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</p>
                     </TableCell>
-                    <TableCell>
-                      <p className="text-sm"><span className="font-semibold">CIN:</span> {c.cin || 'N/A'}</p>
-                      <p className="text-xs text-muted-foreground">Gateway: {c.payment_gateway || 'N/A'}</p>
-                    </TableCell>
+                    {cinField && <TableCell className="text-sm">{formatValue(cinField, c)}</TableCell>}
                     <TableCell>
                       <p className="text-sm">{c.contact_no_1 || 'N/A'}</p>
                       <p className="text-xs text-muted-foreground">{c.email || 'N/A'}</p>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.payment_gateway || 'N/A'}</Badge>
-                    </TableCell>
+                    {gatewayField && (
+                      <TableCell>
+                        <Badge variant="outline">{formatValue(gatewayField, c)}</Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <p className="text-sm">{c.assigned_name || 'Unassigned'}</p>
                     </TableCell>
@@ -733,7 +722,8 @@ export function CSTDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const to = useOrgPath();
-  const { clients, unflagClient, isLoading: clientsLoading } = useClients();
+  const { clients, unflagClient, isLoading: clientsLoading, clientFields } = useClients();
+  const portfolioColumns = tableFields(clientFields);
   const { schedules, addSchedule, updateSchedule, deleteSchedule, isLoading: scheduleLoading } = useCSTSchedule();
   const { internalConcerns } = useConcerns();
   const [searchParams] = useSearchParams();
@@ -892,13 +882,8 @@ export function CSTDashboard() {
                     <Table className="w-full text-xs text-left border-collapse">
                       <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
                         <TableRow className="border-b border-border">
-                          {[
-                            'Status', 'Flag', 'Cin', 'Company Name', 'Customer Name', 'Service AREA',
-                            'Contact No.1', 'Contact No.2', 'Email',
-                            'Tech Notes', 'Notes', 'Date', '$', 'Merchant',
-                            'SERVICES'
-                          ].map(h => (
-                            <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[120px] whitespace-nowrap bg-muted">
+                          {['Status', 'Flag', ...portfolioColumns.map((f) => f.label), 'Date'].map((h, i) => (
+                            <TableHead key={i} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[120px] whitespace-nowrap bg-muted">
                               {h}
                             </TableHead>
                           ))}
@@ -937,28 +922,13 @@ export function CSTDashboard() {
                                     </Badge>
                                   ) : '—'}
                                 </TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-medium text-primary ">{c.cin || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_1}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">
-                                  <p>{c.email || '—'}</p>
-                                  {c.email_2 && <p className="text-[10px] text-muted-foreground mt-0.5">{c.email_2}</p>}
-                                </TableCell>
-
-                                <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.tips_for_tech}>{c.tips_for_tech || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</TableCell>
+                                {portfolioColumns.map((f) => <ClientFieldCell key={f.key} field={f} client={c} className="px-4 py-3 border-r border-border" />)}
                                 <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-bold text-success ">${c.payment_amount}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
                               </TableRow>
                             );
                           })}
                         {clients.length === 0 && (
-                          <TableRow><TableCell colSpan={15} className="text-center py-12 text-muted-foreground bg-muted/20">No clients found in portfolio.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={portfolioColumns.length + 3} className="text-center py-12 text-muted-foreground bg-muted/20">No clients found in portfolio.</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>

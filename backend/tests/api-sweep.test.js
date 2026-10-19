@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import request from 'supertest';
 import app from '../app.js';
 import pool from '../config/db.js';
-import { as, http, setupOrg, signupOrg, unique, EMPLOYEE_PASSWORD } from './helpers.js';
+import { as, clientBody, http, setupOrg, signupOrg, unique, EMPLOYEE_PASSWORD } from './helpers.js';
 
 // Whole-API sweep. Part 1 calls every route once as a user who may use it, with a
 // valid body, and expects success. Part 2 throws bad ids, other organizations' ids
@@ -44,7 +44,7 @@ const send = (token, method, url, body) => {
 
 // Data both organizations need so ids exist for every resource
 const seed = async (o, store) => {
-    const client = (await as(o.sales_manager.token).post('/api/clients', { companyName: 'Sweep Co', customerName: 'Sam', sales_agent_id: o.sales.id })).body.data;
+    const client = (await as(o.sales_manager.token).post('/api/clients', clientBody('Sweep Co', { customerName: 'Sam', sales_agent_id: o.sales.id }))).body.data;
     store.client = client.id;
     await as(o.cst_manager.token).patch(`/api/clients/${client.id}/assign`, { agentId: o.cst.id });
     store.followUp = (await as(o.sales.token).post('/api/sales/follow-ups', { client_id: client.id, due_date: '2026-12-01' })).body.data.id;
@@ -111,6 +111,9 @@ describe('part 1: every route succeeds for a user allowed to use it', () => {
             ['put', '/api/organization/labels', 'admin', { portals: [{ key: 'sales', custom_label: 'Revenue', tier_labels: { Member: 'Rep' } }] }],
             ['get', '/api/organization/permissions', 'admin'],
             ['put', '/api/organization/permissions', 'admin', { permissions: [{ portalKey: 'cst', tier: 'Member', fields: { 'client.financial': true } }] }],
+            ['get', '/api/organization/client-fields', 'admin'],
+            ['put', '/api/organization/client-fields/cin', 'admin', { label: 'Tax ID' }],
+            ['put', '/api/organization/client-fields/order', 'admin', { keys: ['digital_presence'] }],
             ['get', '/api/organization/custom-fields', 'admin'],
             ['put', '/api/organization/custom-fields/order', 'admin', { ids: [ids.field] }],
             ['post', '/api/organization/custom-fields', 'admin', { field_name: 'Seats', field_type: 'number' }],
@@ -133,10 +136,11 @@ describe('part 1: every route succeeds for a user allowed to use it', () => {
             // Clients
             ['get', '/api/clients', 'cst_manager'],
             ['get', '/api/clients/custom-fields', 'sales'],
+            ['get', '/api/clients/fields', 'sales'],
             ['get', '/api/clients/pipeline-stages', 'cst'],
             ['get', '/api/clients/deactivation-requests', 'cst_manager'],
-            ['post', '/api/clients', 'sales_manager', { companyName: 'Fresh Co', customFields: { Plan: 'A' } }],
-            ['post', '/api/clients/import', 'sales_manager', { clients: [{ companyName: 'Imported Co' }] }],
+            ['post', '/api/clients', 'sales_manager', clientBody('Fresh Co', { customFields: { Plan: 'A' } })],
+            ['post', '/api/clients/import', 'sales_manager', { clients: [clientBody('Imported Co')] }],
             ['put', `/api/clients/${c}`, 'sales_manager', { notes: 'updated' }],
             ['patch', `/api/clients/${c}/status`, 'cst', { status: 'flagged', flag_type: 'red-flag' }],
             ['patch', `/api/clients/${c}/stage`, 'cst', { stage_id: ids.stage }],
@@ -257,7 +261,7 @@ describe('part 1: every route succeeds for a user allowed to use it', () => {
         org.fresh = (await signupOrg(unique('Fresh '))).token;
         org.spare = (await as(org.admin).post('/api/users', { first_name: 'Spare', last_name: 'User', email: `${unique('spare')}@example.com`, role_id: org.roles.sales })).body.data.id;
         org.tag = (await pool.query("INSERT INTO tags (tenant_id, name) VALUES ((SELECT tenant_id FROM users WHERE id = $1), 'VIP') RETURNING id", [org.sales.id])).rows[0].id;
-        const extra = (await as(org.sales_manager.token).post('/api/clients', { companyName: 'Bulk Co', sales_agent_id: org.sales.id })).body.data;
+        const extra = (await as(org.sales_manager.token).post('/api/clients', clientBody('Bulk Co', { sales_agent_id: org.sales.id }))).body.data;
         await as(org.cst_manager.token).patch(`/api/clients/${extra.id}/assign`, { agentId: org.cst.id });
         org.pendingRequest = (await as(org.cst.token).post('/api/cst/deactivation-requests', { client_id: extra.id, reason: 'bulk' })).body.data.id;
     });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { as, setupOrg } from './helpers.js';
+import { as, clientBody, setupOrg } from './helpers.js';
 
 // Custom client fields (plan 6.1) and pipeline stages (plan 6.2)
 describe('custom client fields', () => {
@@ -44,7 +44,7 @@ describe('custom client fields', () => {
 
     it('saves valid values into clients.custom_fields', async () => {
         const res = await as(org.sales_manager.token).post('/api/clients', {
-            companyName: 'Custom Co', customerName: 'Cara',
+            ...clientBody('Custom Co'), customerName: 'Cara',
             customFields: { Website: 'custom.example', Seats: '12', Plan: 'Pro', Renewal: '2026-12-01', VIP: true },
         });
         expect(res.status).toBe(201);
@@ -62,12 +62,12 @@ describe('custom client fields', () => {
         [{ Seats: 'many' }], [{ Plan: 'Gold' }], [{ Renewal: '01/12/2026' }], [{ VIP: 'yes' }],
         [{ Website: 'x'.repeat(1001) }], [{ Unknown: 'value' }],
     ])('rejects invalid values %j', async (customFields) => {
-        const res = await as(org.sales_manager.token).post('/api/clients', { companyName: 'Bad Co', customFields });
+        const res = await as(org.sales_manager.token).post('/api/clients', clientBody('Bad Co', { customFields }));
         expect(res.status).toBe(400);
     });
 
     it('renaming a field keeps the stored values', async () => {
-        const created = await as(org.sales_manager.token).post('/api/clients', { companyName: 'Rename Co', customFields: { Website: 'keep.me' } });
+        const created = await as(org.sales_manager.token).post('/api/clients', clientBody('Rename Co', { customFields: { Website: 'keep.me' } }));
         const rename = await as(org.admin).put(`/api/organization/custom-fields/${fields[0].id}`, { field_name: 'Web address' });
         expect(rename.status).toBe(200);
         const clients = await as(org.sales_manager.token).get('/api/clients');
@@ -132,7 +132,7 @@ describe('kanban stage moves', () => {
         org = await setupOrg();
         for (const stage_name of ['New Lead', 'Contacted']) await as(org.admin).post('/api/organization/pipeline-stages', { stage_name });
         stages = (await as(org.admin).get('/api/organization/pipeline-stages')).body.data;
-        const create = async (companyName) => (await as(org.sales_manager.token).post('/api/clients', { companyName, customerName: 'C' })).body.data;
+        const create = async (companyName) => (await as(org.sales_manager.token).post('/api/clients', clientBody(companyName, { customerName: 'C' }))).body.data;
         mine = await create('Mine Co');
         theirs = await create('Theirs Co');
         await as(org.cst_manager.token).patch(`/api/clients/${mine.id}/assign`, { agentId: org.cst.id });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { as, http, setupOrg, unique } from './helpers.js';
+import { as, clientBody, http, setupOrg, unique } from './helpers.js';
 
 // Same organization, different people: agents may only touch their own records.
 let org;
@@ -73,7 +73,7 @@ describe('notepads and concerns', () => {
 describe('clients and targets', () => {
     let clientId;
     beforeAll(async () => {
-        clientId = (await as(org.cst_manager.token).post('/api/clients', { companyName: 'Assigned Co' })).body.data.id;
+        clientId = (await as(org.sales_manager.token).post('/api/clients', clientBody('Assigned Co'))).body.data.id;
         await as(org.cst_manager.token).patch(`/api/clients/${clientId}/assign`, { agentId: org.cst.id });
     });
 

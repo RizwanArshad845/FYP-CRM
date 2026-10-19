@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import pool from '../config/db.js';
-import { as, addActiveEmployees, setupOrg, signupOrg } from './helpers.js';
+import { as, addActiveEmployees, clientBody, setupOrg, signupOrg } from './helpers.js';
 
 // Policy chokepoint: catalog ceiling + per-org restriction dials.
 let org;
@@ -19,7 +19,7 @@ beforeAll(async () => {
     await as(admin).post('/api/onboarding/complete');
     other = await setupOrg();
     const res = await as(org.sales_manager.token).post('/api/clients', {
-        companyName: 'Policy Co', customerName: 'Pat', email: 'pat@policy.co', contactNo1: '123',
+        ...clientBody('Policy Co'), customerName: 'Pat', email: 'pat@policy.co', contactNo1: '123',
         paymentAmount: 500, sales_agent_id: org.sales.id,
     });
     clientId = res.body.data.id;

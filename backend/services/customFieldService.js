@@ -5,10 +5,10 @@ export const FIELD_TYPES = ['text', 'number', 'dropdown', 'date', 'checkbox'];
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** The organization's active client field definitions, in display order. */
+/** The organization's client field definitions in display order, switched-off ones included. */
 export const getFieldDefinitions = async (tenantId, objectType = 'client', db = pool) => {
     const { rows } = await db.query(
-        `SELECT id, field_name, field_type, options, display_order FROM field_definitions
+        `SELECT id, field_name, field_type, options, display_order, hidden, required FROM field_definitions
          WHERE tenant_id = $1 AND object_type = $2 ORDER BY display_order, id`,
         [tenantId, objectType]
     );

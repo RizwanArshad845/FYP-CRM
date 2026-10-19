@@ -5,6 +5,7 @@ import {
     listCustomFields, createCustomField, updateCustomField, reorderCustomFields,
     listPipelineStages, createPipelineStage, renamePipelineStage, reorderPipelineStages,
     customFieldSchema, customFieldUpdateSchema, orderSchema, stageSchema,
+    listClientFields, updateClientField, reorderClientFields, clientFieldUpdateSchema, clientFieldOrderSchema,
 } from '../controllers/organizationController.js';
 import { portalsSchema, labelsSchema } from '../controllers/onboardingController.js';
 import { allow } from '../policy/index.js';
@@ -19,6 +20,10 @@ router.put('/portals', validate(portalsSchema), updatePortals);
 router.put('/labels', validate(labelsSchema), updateLabels);
 router.get('/permissions', getPermissionSettings);
 router.put('/permissions', validate(permissionsSchema), updatePermissionSettings);
+
+router.get('/client-fields', listClientFields);
+router.put('/client-fields/order', validate(clientFieldOrderSchema), reorderClientFields);
+router.put('/client-fields/:key', validate(clientFieldUpdateSchema), updateClientField);
 
 router.get('/custom-fields', listCustomFields);
 router.post('/custom-fields', validate(customFieldSchema), createCustomField);

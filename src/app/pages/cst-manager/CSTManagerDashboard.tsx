@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Inbox, Users, BookOpen, Target, Globe, ClipboardCheck, AlertTriangle, UserPlus, Table } from 'lucide-react';
+import { Inbox, Users, BookOpen, Target, Globe, ClipboardCheck, AlertTriangle, Table } from 'lucide-react';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { WelcomeHero } from '../../components/shared/WelcomeHero';
 import { useClientInbox } from '../../context/ClientInboxContext';
@@ -30,7 +30,6 @@ import { DiscardedPanel }     from './DiscardedPanel';
 import { TemplatesPanel }     from './TemplatesPanel';
 import { ResourceBoard }      from './ResourceBoard';
 import { CSTAgentPerformance} from './CSTAgentPerformance';
-import { ExistingClientForm } from './ExistingClientForm';
 import { MasterClientTable } from './MasterClientTable';
 
 const theme = getPortalTheme('cst_manager');
@@ -186,10 +185,8 @@ export function CSTManagerDashboard() {
                                         <AlertTriangle className="h-4 w-4 mr-2" /> Deactivations
                                         {deactivationCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-warning text-white text-[10px] font-bold">{deactivationCount}</span>}
                                     </TabsTrigger>
-                                    <TabsTrigger value="existing-entry" className="rounded-lg data-[state=active]:shadow-sm"><UserPlus className="h-4 w-4 mr-2" />Add Existing</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="deactivation"><DeactivationPanel /></TabsContent>
-                                <TabsContent value="existing-entry"><ExistingClientForm /></TabsContent>
                             </Tabs>
                         )}
 

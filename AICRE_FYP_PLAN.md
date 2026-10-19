@@ -382,9 +382,26 @@ Reuse `Signup`, `OnboardingWizard`, `PortalEditors`, `EmployeesStep` and `SetupS
 
 ## 6. Customization (Phase 1)
 
-### 6.1 Custom client fields
+### 6.1 Client fields (layout and custom fields)
 
 The report: "define custom fields of type text, number, dropdown, date or checkbox on client records."
+
+AICRE goes further, in the way of Salesforce, HubSpot and Zoho: the admin sees **every** field of the client record, not only the ones they add, and shapes the client form to the organization's needs. Every field has a fixed key that never changes and a label the admin can edit, so renaming a field never breaks reports, permissions or automations.
+
+**Kinds of field.**
+
+| Kind | Fields | What the admin can do |
+|---|---|---|
+| Core | Company name, customer name, email, contact no. 1, payment amount | Rename, make optional (company name is always required), reorder. Never switched off: AICRE uses them for names, contact, revenue and the field permissions. |
+| Standard | Products sold, service area, client services, CIN, payment gateway, email 2, contact no. 2, online presence, client concerns, tips for the CST team, general notes | Rename, require, reorder, edit the options of products sold, payment gateway and the suggestions of service area, and switch off |
+| Custom | The organization's own fields (text, number, dropdown, date, checkbox) | Add, rename, edit options, require, reorder and switch off |
+| System | Status, sales agent, CST agent, pipeline stage, created on | Listed read-only. Set by AICRE as the client moves through the teams. |
+
+Standard fields stay real columns of `clients`. **Switching a field off** removes it from the client forms, tables, details and CSV template of that organization only. Its data is kept, new values for it are ignored, and switching it on again brings everything back. Nothing is ever deleted.
+
+Defaults reproduce the original form: company name, customer name, email, contact no. 1, payment amount and products sold are required; everything is shown.
+
+Only the Sales Manager adds clients (`client.create` and `client.import`): through the Client Entry form or the CSV import. The CST Manager's former "Add existing client" form is removed.
 
 **Migration `006_customization.sql`** (data dictionary Table "Field Definitions"):
 
@@ -405,18 +422,46 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS custom_fields JSONB;
 ALTER TABLE field_definitions ENABLE ROW LEVEL SECURITY;
 ```
 
-* **`field_name`** is the label shown in forms and also the key inside `clients.custom_fields`.
+* **`field_name`** is the label shown in forms and also the key inside `clients.custom_fields`. Renaming a custom field renames that key in every client, so no value is lost.
 * **`options`** holds the allowed values for dropdowns, as a JSON array of strings.
 
-**API** (`organizationController`, guard `org.settings`):
+**Migration `008_client_fields.sql`:**
 
-* `GET /organization/custom-fields`
-* `POST /organization/custom-fields`
-* `PUT /organization/custom-fields/:id`, which edits the name, options and order.
-* `PUT /organization/custom-fields/order`
-* Reading the definitions for forms is allowed for any authenticated user in the tenant: `GET /clients/custom-fields`.
+```sql
+CREATE TABLE IF NOT EXISTS client_field_settings (
+  tenant_id INT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  field_key VARCHAR(50) NOT NULL,      -- the clients column
+  label VARCHAR(100),                  -- NULL = default name
+  hidden BOOLEAN NOT NULL DEFAULT false,
+  required BOOLEAN,                    -- NULL = default
+  display_order INT,
+  options JSONB,                       -- picklist values or suggestions
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, field_key)
+);
+ALTER TABLE client_field_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE field_definitions ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE field_definitions ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT false;
+```
 
-**Validation.** A shared helper `validateCustomFields(definitions, values)` in `backend/services/customFieldService.js`:
+An organization only stores what it changed; the defaults live in the standard field catalog in `backend/services/clientFieldService.js` (key, request key, default name, type, section, kind, default required, default options). Sections, in form order: Client information, Contact details, Online presence, Notes, Additional fields (custom).
+
+**API.**
+
+* `GET /clients/fields`: the whole layout in form order (standard fields with the organization's settings, then custom fields as `cf_<id>`), switched-off fields flagged. Any authenticated user in the tenant; every client screen reads it.
+* Guard `org.settings`:
+  * `GET /organization/client-fields`: the layout plus the system fields.
+  * `PUT /organization/client-fields/:key`: `label` (empty = default), `hidden`, `required`, `options`. Refuses switching off a core field, making company name optional and options on a field without them.
+  * `PUT /organization/client-fields/order`: `keys` lists every field of one section once.
+  * `GET`, `POST /organization/custom-fields`, `PUT /organization/custom-fields/:id` (name, options, order, `hidden`, `required`) and `PUT /organization/custom-fields/order`.
+* `GET /clients/custom-fields` stays for compatibility.
+
+**Validation.** `applyClientLayout(fields, body, { partial })` in `clientFieldService.js` runs on client create, client update and every CSV import row:
+
+* Values of switched-off fields are dropped, so they never overwrite kept data. On update, kept values of switched-off custom fields are carried over.
+* Required fields must be filled ("Service area is required"). On a partial update only the fields sent are checked.
+
+Then `validateCustomFields(definitions, values)` in `backend/services/customFieldService.js` checks custom values:
 
 | Type | Valid value |
 |---|---|
@@ -426,13 +471,13 @@ ALTER TABLE field_definitions ENABLE ROW LEVEL SECURITY;
 | dropdown | one of `options` |
 | text | string up to 1000 characters |
 
-Unknown keys are rejected. Use it in client create, client update and client CSV import.
+Unknown keys are rejected.
 
-**Forms.**
+**Screens.**
 
-* `ClientEntryForm`, `EditClientModal` and `ExistingClientForm` render an extra section, "Additional fields", generated from the active definitions in `display_order`.
-* Use the existing shadcn inputs: `Input`, `Select`, the date input already used in the forms, and `Checkbox`.
-* Fixed fields and their validation are untouched. Values save into `clients.custom_fields`.
+* `ClientFieldsForm` generates the client form from the layout: sections, names, order, required marks, the right input for each type (multi-select with an "Other" box, text with suggestions, dropdown, long text). `ClientEntryForm` and `EditClientModal` use it.
+* Tables (`MasterClientTable`, the CST portfolio), the client details dialog, inbox and strategy cards, the assigned list, the monthly review and the follow up form take their client columns, names and options from the layout.
+* Organization Settings > **Client Fields** replaces the Custom Fields tab.
 
 ### 6.2 Pipeline stages
 
@@ -506,7 +551,7 @@ Restructure the existing `OrganizationSettings.tsx` into four tabs, exactly as i
 | Tab | Contents |
 |---|---|
 | **Portals and Labels** | Existing organization details form (name, industry, size) at the top, then the existing `PortalsEditor` and `LabelsEditor` |
-| **Custom Fields** | New editor (Section 6.1): table of fields with name, type and options; "Add field" dialog; edit; drag or arrow reorder |
+| **Client Fields** | Editor of the whole client layout (Section 6.1): every field by section with name, type, kind (core, standard, custom), Required and Shown switches, arrow reorder, edit dialog, "Add field" dialog and the read-only system fields |
 | **Pipeline Stages** | New editor (Section 6.2): ordered list with rename and reorder; "Add stage" input |
 | **Permissions** | Existing `PermissionsEditor`, laid out as in Section 9.8 |
 
@@ -675,7 +720,7 @@ The report: "let a sales manager import clients from a CSV file using the same v
   * Imported clients get the same initial status as clients created by a sales manager (`new`).
 * **UI:** a new "Import CSV" button in the Sales Manager Client Entry module (`ClientEntryForm`).
   * Reuse the CSV parsing and the result table from `EmployeesStep`.
-  * Offer a "Download template" link with headers for the fixed client fields plus the organization's custom fields.
+  * Offer a "Download template" link with one column per switched-on client field: the key for standard fields, the name for custom fields. Columns may also use the field's name.
 
 ---
 
@@ -973,6 +1018,7 @@ The report's assistant panel mockup shows "Summary saved to client notes (auto t
 
 * [ ] It has four tabs exactly as in Figure 4.6.
 * [ ] Custom fields of all five types appear in the client forms and persist in `custom_fields`.
+* [ ] The Client Fields tab lists every client field; renaming, requiring, switching off and reordering a field changes the client form, tables, details and CSV template of that organization only.
 * [ ] Stages can be added, renamed and reordered.
 * [ ] The Permissions tab shows the five field groups and the action list with the mockup labels. Switching a field group off hides it in every screen for that portal and tier.
 

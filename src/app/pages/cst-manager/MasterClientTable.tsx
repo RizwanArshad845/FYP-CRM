@@ -6,9 +6,11 @@ import { Badge } from '../../components/ui/badge';
 import { Search, List } from 'lucide-react';
 import { useClients } from '../../context/ClientContext';
 import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
+import { ClientFieldCell, tableFields } from '../../components/shared/ClientFieldCell';
 
 export function MasterClientTable() {
-  const { clients } = useClients();
+  const { clients, clientFields } = useClients();
+  const columns = tableFields(clientFields);
   const [search, setSearch] = useState('');
   const [view, setView] = useState<ClientView>('table');
 
@@ -54,13 +56,8 @@ export function MasterClientTable() {
           <Table className="w-full text-[11px] text-left border-collapse">
             <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
               <TableRow className="border-b border-border">
-                {[
-                  'Status', 'Cin', 'Company Name', 'Customer Name', 'Service AREA', 
-                  'Contact No.1', 'Contact No.2', 'Email', 
-                  'Assigned To', 'Stage', 'Last contact', 'Date', '$', 'Gateway', 
-                  'SERVICES'
-                ].map(h => (
-                  <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
+                {['Status', ...columns.map((f) => f.label), 'Assigned To', 'Stage', 'Last contact', 'Date'].map((h, i) => (
+                  <TableHead key={i} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
                     {h}
                   </TableHead>
                 ))}
@@ -77,25 +74,16 @@ export function MasterClientTable() {
                         {c.status === 'flagged' && c.flag_type ? `${c.status}: ${c.flag_type.replace('-', ' ')}` : c.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-medium text-primary ">{c.cin || '—'}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_1}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.email}</TableCell>
+                  {columns.map((f) => <ClientFieldCell key={f.key} field={f} client={c} className="px-4 py-3 border-r border-border" />)}
                   <TableCell className="px-4 py-3 border-r border-border font-semibold text-primary ">{c.assigned_name || 'Unassigned'}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border">{c.stage_name || '—'}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{c.last_contact ? new Date(c.last_contact).toLocaleDateString() : '—'}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-bold text-success ">${c.payment_amount}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
                 </TableRow>
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={15} className="text-center py-24 text-muted-foreground bg-muted/20">
+                  <TableCell colSpan={columns.length + 5} className="text-center py-24 text-muted-foreground bg-muted/20">
                     <div className="flex flex-col items-center gap-2">
                         <Search className="h-8 w-8 opacity-20" />
                         <p className="text-sm font-medium">No assigned clients found matching your search.</p>

@@ -2,7 +2,7 @@ import express from 'express';
 import {
     getClients, createClient, updateClient, toggleClientStatus,
     getDeactivationRequests, assignClient, unassignClient, discardClient,
-    getClientCustomFields, getClientPipelineStages, moveClientStage, stageMoveSchema,
+    getClientCustomFields, getClientFieldList, getClientPipelineStages, moveClientStage, stageMoveSchema,
     importClients, clientSchema, clientImportSchema,
 } from '../controllers/clientController.js';
 import { allow } from '../policy/index.js';
@@ -11,6 +11,7 @@ import { validate } from '../middleware/validate.js';
 const router = express.Router();
 
 router.get('/', getClients);
+router.get('/fields', getClientFieldList);
 router.get('/custom-fields', getClientCustomFields);
 router.get('/pipeline-stages', getClientPipelineStages);
 router.post('/', allow('client.create'), validate(clientSchema), createClient);

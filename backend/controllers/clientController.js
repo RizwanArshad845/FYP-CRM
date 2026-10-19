@@ -3,6 +3,7 @@ import pool, { withTransaction } from '../config/db.js';
 import { clientImportSchema, clientSchema } from '../validation/clientSchema.js';
 import { applyFieldVisibility, can } from '../policy/index.js';
 import { getFieldDefinitions, validateCustomFields } from '../services/customFieldService.js';
+import { applyClientLayout, customDefinitions, getClientFields } from '../services/clientFieldService.js';
 import { getPipelineStages } from './organizationController.js';
 import {
     assertClientAccess, assertUsersInTenant, getClientInTenant, isManager, memberClientColumn,
@@ -57,10 +58,12 @@ const insertClient = async (db, tenantId, c, status, custom) => (await db.query(
     ]
 )).rows[0];
 
-// Create a new client (Sales Manager entry form or CST Manager existing-client form)
+// Create a new client (Sales Manager client entry form). The organization's client
+// layout decides which fields are kept and which are required.
 export const createClient = async (req, res) => {
-    const c = { ...req.body };
     const tenantId = req.user.tenantId;
+    const fields = await getClientFields(tenantId);
+    const c = applyClientLayout(fields, req.body);
 
     // Member-tier sales staff can only create clients for themselves.
     if (!isManager(req.user) && memberClientColumn(req.user) === 'sales_agent_id') {
@@ -69,10 +72,8 @@ export const createClient = async (req, res) => {
     }
     await assertUsersInTenant(tenantId, [c.sales_agent_id, c.cst_agent_id]);
 
-    const custom = validateCustomFields(await getFieldDefinitions(tenantId), c.customFields);
-    const initialStatus = ['cst', 'cst_manager'].includes(req.user.role) ? 'existing' : 'new';
-
-    const row = await insertClient(pool, tenantId, c, initialStatus, custom);
+    const custom = validateCustomFields(customDefinitions(fields), c.customFields);
+    const row = await insertClient(pool, tenantId, c, 'new', custom);
     res.status(201).json({ success: true, data: await applyFieldVisibility(req.user, 'client', row) });
 };
 
@@ -83,7 +84,8 @@ export const createClient = async (req, res) => {
  */
 export const importClients = async (req, res) => {
     const tenantId = req.user.tenantId;
-    const definitions = await getFieldDefinitions(tenantId);
+    const fields = await getClientFields(tenantId);
+    const definitions = customDefinitions(fields);
     const rowErrors = [];
     const valid = [];
 
@@ -98,8 +100,8 @@ export const importClients = async (req, res) => {
             });
             continue;
         }
-        const c = { ...parsed.data, sales_agent_id: parsed.data.sales_agent_id ?? req.user.id };
         try {
+            const c = applyClientLayout(fields, { ...parsed.data, sales_agent_id: parsed.data.sales_agent_id ?? req.user.id });
             const custom = validateCustomFields(definitions, c.customFields);
             await assertUsersInTenant(tenantId, [c.sales_agent_id, c.cst_agent_id]);
             valid.push({ c, custom });
@@ -142,17 +144,29 @@ export const unassignClient = async (req, res) => {
     res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
-// General update to a client
+// General update to a client. Only the fields sent change; switched-off fields are never touched.
 export const updateClient = async (req, res) => {
+    const fields = await getClientFields(req.user.tenantId);
+    const body = applyClientLayout(fields, req.body, { partial: true });
     const {
         companyName, customerName, email, email_2, paymentAmount,
         productSold, serviceArea, contactNo1, contactNo2,
         clientConcerns, tipsForTech, notes, digitalPresence, clientServices,
         cin, paymentGateway,
-    } = req.body;
+    } = body;
     // Custom fields are replaced as a whole when sent, and left alone otherwise.
-    const custom = req.body.customFields === undefined ? null
-        : validateCustomFields(await getFieldDefinitions(req.user.tenantId), req.body.customFields);
+    // Values of switched-off custom fields are carried over so they are not lost.
+    let custom = null;
+    if (body.customFields !== undefined) {
+        custom = validateCustomFields(customDefinitions(fields), body.customFields);
+        const hiddenNames = fields.filter((f) => f.kind === 'custom' && f.hidden).map((f) => f.name);
+        if (hiddenNames.length) {
+            const client = await getClientInTenant(req.user.tenantId, req.params.id);
+            for (const name of hiddenNames) {
+                if (client.custom_fields?.[name] != null) custom[name] = client.custom_fields[name];
+            }
+        }
+    }
 
     const result = await pool.query(
         `UPDATE clients SET
@@ -251,6 +265,11 @@ export const getDeactivationRequests = async (req, res) => {
 // Definitions and stages for client forms and the board: readable by anyone in the tenant.
 export const getClientCustomFields = async (req, res) => {
     res.json({ success: true, data: await getFieldDefinitions(req.user.tenantId) });
+};
+
+// The organization's whole client layout (standard and custom fields) for forms and tables.
+export const getClientFieldList = async (req, res) => {
+    res.json({ success: true, data: await getClientFields(req.user.tenantId) });
 };
 
 export const getClientPipelineStages = async (req, res) => {

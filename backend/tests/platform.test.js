@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
-import { as, http, setupOrg, signupOrg, unique } from './helpers.js';
+import { as, clientBody, http, setupOrg, signupOrg, unique } from './helpers.js';
 
 // Platform administrator module (plan 4.5): view only, no access to tenant records.
 const PASSWORD = 'PlatformPass123!';
@@ -21,7 +21,7 @@ beforeAll(async () => {
 
     org = await setupOrg();
     orgId = (await as(org.admin).get('/api/auth/me')).body.data.organization.id;
-    await as(org.sales_manager.token).post('/api/clients', { companyName: 'Secret Client Co', customerName: 'Hidden Person', email: 'hidden@client.co' });
+    await as(org.sales_manager.token).post('/api/clients', clientBody('Secret Client Co', { customerName: 'Hidden Person', email: 'hidden@client.co' }));
     fresh = await signupOrg(unique('Still Onboarding '));
 });
 

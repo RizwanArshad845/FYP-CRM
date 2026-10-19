@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import pool from '../config/db.js';
-import { as, addActiveEmployees, setupOrg, signupOrg } from './helpers.js';
+import { as, addActiveEmployees, clientBody, setupOrg, signupOrg } from './helpers.js';
 
 const newClient = async (org, companyName, extra = {}) =>
-    (await as(org.sales_manager.token).post('/api/clients', { companyName, customerName: `${companyName} Owner`, ...extra })).body.data;
+    (await as(org.sales_manager.token).post('/api/clients', clientBody(companyName, { customerName: `${companyName} Owner`, ...extra }))).body.data;
 
 // UC3 (plan 7.1)
 describe('follow up auto fill, duplicate check and numbering', () => {
@@ -217,12 +217,12 @@ describe('client CSV import', () => {
     it('saves valid rows as new clients and lists invalid rows with reasons', async () => {
         const res = await as(org.sales_manager.token).post('/api/clients/import', {
             clients: [
-                { companyName: 'Csv One', customerName: 'Ann', email: 'ann@csv.one', paymentAmount: '1200', customFields: { Plan: 'Pro' } },
-                { companyName: '', customerName: 'No Company' },
-                { companyName: 'Bad Email', email: 'not-an-email' },
-                { companyName: 'Bad Plan', customFields: { Plan: 'Gold' } },
-                { companyName: 'Negative', paymentAmount: -5 },
-                { companyName: 'Csv Two' },
+                clientBody('Csv One', { customerName: 'Ann', email: 'ann@csv.one', paymentAmount: '1200', customFields: { Plan: 'Pro' } }),
+                clientBody('', { customerName: 'No Company' }),
+                clientBody('Bad Email', { email: 'not-an-email' }),
+                clientBody('Bad Plan', { customFields: { Plan: 'Gold' } }),
+                clientBody('Negative', { paymentAmount: -5 }),
+                clientBody('Csv Two'),
             ],
         });
         expect(res.status).toBe(201);
@@ -234,16 +234,16 @@ describe('client CSV import', () => {
 
     it('applies the same validation to the client form endpoint', async () => {
         expect((await as(org.sales_manager.token).post('/api/clients', { companyName: '' })).status).toBe(400);
-        expect((await as(org.sales_manager.token).post('/api/clients', { companyName: 'Ok', email: 'nope' })).status).toBe(400);
+        expect((await as(org.sales_manager.token).post('/api/clients', clientBody('Ok', { email: 'nope' }))).status).toBe(400);
     });
 
     it('refuses agents of another organization, Members and an empty file', async () => {
         const other = await setupOrg();
         const res = await as(org.sales_manager.token).post('/api/clients/import', {
-            clients: [{ companyName: 'Foreign Agent', cst_agent_id: other.cst.id }, { companyName: 'Fine Co' }],
+            clients: [clientBody('Foreign Agent', { cst_agent_id: other.cst.id }), clientBody('Fine Co')],
         });
         expect(res.body.data.rowErrors).toEqual([{ row: 1, error: expect.stringMatching(/organization/) }]);
-        expect((await as(org.sales.token).post('/api/clients/import', { clients: [{ companyName: 'X' }] })).status).toBe(403);
+        expect((await as(org.sales.token).post('/api/clients/import', { clients: [clientBody('X')] })).status).toBe(403);
         expect((await as(org.sales_manager.token).post('/api/clients/import', { clients: [] })).status).toBe(400);
     });
 });
