@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
 import type { PermissionChange, PortalConfig, PortalPermissions, Tier } from '../../types/crm';
 import { PORTAL_THEMES } from '../../styles/portal-themes';
 import { usePortals } from '../../hooks/usePortals';
-import { Checkbox } from '../../components/ui/checkbox';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
 import { Switch } from '../../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -15,61 +12,98 @@ import { cn } from '../../components/ui/utils';
 
 export const TIERS: Tier[] = ['Member', 'Manager', 'Admin'];
 
-// Used by both the onboarding wizard and Organization Settings.
+// Portal card text of Figure 4.2; the landing page reuses it.
+export const PORTAL_CARDS: Record<string, { name: string; description: string }> = {
+  admin: { name: 'Admin', description: 'Employees, tasks, reviews and settings' },
+  sales: { name: 'Sales', description: 'Clients, follow ups and calls' },
+  sales_manager: { name: 'Sales Manager', description: 'Targets, recordings and imports' },
+  cst: { name: 'Customer Success', description: 'Notes, flags, concerns and requests' },
+  cst_manager: { name: 'Customer Success Manager', description: 'Assignment, approvals and strategies' },
+  finance: { name: 'Finance', description: 'Payroll, salary slips and expenses' },
+};
 
-export function PortalsEditor({ portals, onSave, saving, submitLabel, secondaryAction }: {
+// Used by both the onboarding wizard and Organization Settings. With `tierLabels`
+// (wizard Portals step) it also asks for one Member / Manager / Admin label for every portal.
+export function PortalsEditor({ portals, onSave, saving, submitLabel, secondaryAction, tierLabels = false }: {
   portals: PortalConfig[];
-  onSave: (changes: { key: string; enabled: boolean }[]) => void;
+  onSave: (changes: { key: string; enabled: boolean }[], tierLabels?: Record<Tier, string>) => void;
   saving: boolean;
   submitLabel: string;
   secondaryAction?: React.ReactNode;
+  tierLabels?: boolean;
 }) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
+  const [labels, setLabels] = useState<Record<Tier, string>>({ Member: 'Member', Manager: 'Manager', Admin: 'Admin' });
   useEffect(() => {
     setEnabled(Object.fromEntries(portals.map((p) => [p.key, p.enabled])));
+    const sample = portals.find((p) => p.enabled && p.key !== 'admin')?.tierLabels ?? {};
+    const admin = portals.find((p) => p.key === 'admin')?.tierLabels ?? {};
+    setLabels({ Member: sample.Member || 'Member', Manager: sample.Manager || 'Manager', Admin: admin.Admin || 'Admin' });
   }, [portals]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <div className="mb-[18px] grid grid-cols-1 gap-3 md:grid-cols-3">
         {portals.map((p) => {
           const locked = p.key === 'admin';
-          const on = enabled[p.key] ?? p.enabled;
+          const on = locked || (enabled[p.key] ?? p.enabled);
+          const card = PORTAL_CARDS[p.key] ?? { name: p.defaultLabel, description: p.description };
           return (
-            <label
+            <button
               key={p.key}
-              htmlFor={`portal-${p.key}`}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              aria-disabled={locked}
+              onClick={() => !locked && setEnabled((s) => ({ ...s, [p.key]: !on }))}
               className={cn(
-                'flex gap-3 rounded-xl border bg-card p-4 transition-colors border-l-4',
-                PORTAL_THEMES[p.key]?.borderAccent,
-                on ? 'shadow-sm' : 'opacity-60',
-                locked ? 'cursor-default' : 'cursor-pointer hover:bg-accent/40',
+                'flex items-start gap-[11px] rounded-[9px] border px-[14px] py-[13px] text-left',
+                on ? 'border-primary bg-primary-soft' : 'border-[#dfe4ee] bg-card',
+                locked ? 'cursor-default' : 'cursor-pointer',
               )}
             >
-              <Checkbox
-                id={`portal-${p.key}`}
-                checked={on}
-                disabled={locked}
-                onCheckedChange={(v) => setEnabled((s) => ({ ...s, [p.key]: Boolean(v) }))}
-                className="mt-0.5"
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{p.defaultLabel}</span>
-                  <Badge variant="secondary" className="text-[10px]">default: {p.defaultTier}</Badge>
-                  {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Always enabled" />}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
-              </div>
-            </label>
+              <span className={cn(
+                'mt-px flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[4px] border-2 text-[12px] font-bold text-white',
+                on ? 'border-primary bg-primary' : 'border-[#b9c2d3]',
+              )}>{on ? '✓' : ''}</span>
+              <span>
+                <b className="mb-[3px] block text-[14px]">
+                  {card.name}
+                  {locked && <span className="ml-1 text-[11px] font-normal text-info">always on</span>}
+                </b>
+                <small className="text-[12px] text-muted-foreground">{card.description}</small>
+              </span>
+            </button>
           );
         })}
       </div>
+
+      {tierLabels && (
+        <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+          {(['Member', 'Manager', 'Admin'] as Tier[]).map((t) => (
+            <div key={t}>
+              <label htmlFor={`tier-label-${t}`} className="mb-[5px] block text-[12px] font-normal text-muted-foreground">{t} tier label</label>
+              <Input
+                id={`tier-label-${t}`}
+                maxLength={100}
+                value={labels[t]}
+                placeholder={t}
+                onChange={(e) => setLabels((l) => ({ ...l, [t]: e.target.value }))}
+                className="h-auto px-3 py-[9px] text-[13.5px]"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>{secondaryAction}</div>
         <Button
           disabled={saving}
-          onClick={() => onSave(portals.map((p) => ({ key: p.key, enabled: p.key === 'admin' ? true : (enabled[p.key] ?? p.enabled) })))}
+          onClick={() => onSave(
+            portals.map((p) => ({ key: p.key, enabled: p.key === 'admin' ? true : (enabled[p.key] ?? p.enabled) })),
+            tierLabels ? labels : undefined,
+          )}
         >
           {saving ? 'Saving…' : submitLabel}
         </Button>

@@ -92,6 +92,23 @@ export const setPortalLabels = async (db, tenantId, portals) => {
     }
 };
 
+// The same tier labels on every enabled portal (the Admin portal only has the Admin tier).
+// A label equal to the tier's own name, or blank, means "keep the default".
+export const setTierLabels = async (db, tenantId, tierLabels) => {
+    const clean = Object.fromEntries(
+        Object.entries(tierLabels)
+            .filter(([tier, label]) => TIERS.includes(tier) && typeof label === 'string' && label.trim() && label.trim() !== tier)
+            .map(([tier, label]) => [tier, label.trim()])
+    );
+    const adminOnly = clean.Admin ? { Admin: clean.Admin } : {};
+    await db.query(`
+        UPDATE organization_portals op
+        SET tier_labels = CASE WHEN pt.key = 'admin' THEN $2::jsonb ELSE $3::jsonb END, updated_at = CURRENT_TIMESTAMP
+        FROM portal_types pt
+        WHERE op.portal_type_id = pt.id AND op.tenant_id = $1 AND op.enabled
+    `, [tenantId, JSON.stringify(adminOnly), JSON.stringify(clean)]);
+};
+
 // --- Permission dials ---------------------------------------------------------
 // Per (portal, tier) restrictions on top of the fixed policy catalog. Only
 // non-admin portals and Manager/Member tiers are configurable.

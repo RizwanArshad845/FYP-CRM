@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import pool, { withTransaction } from '../config/db.js';
 import { applyFieldVisibility } from '../policy/index.js';
 import {
-    BCRYPT_ROUNDS, createUserRecord, portalKeyForRoleId, syncPortalAccess,
+    BCRYPT_ROUNDS, createUserRecord, importEmployees, portalKeyForRoleId, syncPortalAccess,
 } from '../services/userService.js';
 
 
@@ -223,4 +223,13 @@ export const getRoles = async (req, res) => {
 export const getDepartments = async (req, res) => {
     const result = await pool.query('SELECT * FROM departments WHERE tenant_id = $1 ORDER BY name ASC', [req.user.tenantId]);
     res.json({ success: true, data: result.rows });
+};
+
+// Add employees by form rows or CSV after onboarding; same rules as the wizard step.
+export const importUsers = async (req, res) => {
+    const { created, rowErrors } = await importEmployees(req.user.tenantId, req.body.employees);
+    if (!created.length) {
+        return res.status(400).json({ success: false, error: 'No valid rows; nothing was created', rowErrors });
+    }
+    res.status(201).json({ success: true, data: { created, rowErrors } });
 };

@@ -45,7 +45,7 @@ describe('login', () => {
     it('wrong password gets 401 with a generic message', async () => {
         const res = await http().post('/api/auth/login').send({ email: 'nobody@example.com', password: 'whatever1' });
         expect(res.status).toBe(401);
-        expect(res.body.error).toBe('Invalid email or password');
+        expect(res.body.error).toBe('Incorrect email or password.');
     });
 
     it('the token carries user, organization, portal and tier', async () => {
@@ -65,7 +65,7 @@ describe('login', () => {
         const otherSlug = (await as(other.admin).get('/api/auth/me')).body.data.organization.slug;
         const wrong = await http().post('/api/auth/login').send({ email: org.sales.email, password: EMPLOYEE_PASSWORD, organization: otherSlug });
         expect(wrong.status).toBe(401);
-        expect(wrong.body.error).toBe('Invalid email or password');
+        expect(wrong.body.error).toBe('Incorrect email or password.');
         expect(wrong.body).not.toHaveProperty('token');
     });
 
@@ -75,6 +75,14 @@ describe('login', () => {
         expect(res.status).toBe(200);
         expect(res.body.data).toEqual({ name: me.name, slug: me.slug });
         expect((await http().get('/api/auth/organization/no-such-org-x')).status).toBe(404);
+    });
+
+    it('an inactive account is refused and gets no token', async () => {
+        const off = await setupOrg();
+        await as(off.admin).patch(`/api/users/${off.sales.id}/status`, { status: 'inactive' });
+        const res = await http().post('/api/auth/login').send({ email: off.sales.email, password: EMPLOYEE_PASSWORD });
+        expect(res.status).toBe(403);
+        expect(res.body).not.toHaveProperty('token');
     });
 
     it('missing fields get 400', async () => {

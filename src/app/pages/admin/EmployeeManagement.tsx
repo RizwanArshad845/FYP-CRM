@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Search, UserPlus, Mail, Shield, Banknote, Clock, Pencil, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Mail, Shield, Banknote, Clock, Pencil, Trash2, Upload } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,12 +28,14 @@ import { Label } from '../../components/ui/label';
 import { useEmployees } from '../../context/EmployeeContext';
 import { usePortals } from '../../hooks/usePortals';
 import { TierSelect } from '../../components/shared/TierSelect';
+import { EmployeesStep } from '../onboarding/EmployeesStep';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { AlertCircle, ShieldAlert } from 'lucide-react';
 
 export function EmployeeManagement() {
-  const { employees, isLoading, addEmployee, updateEmployee, deleteEmployee, roles, departments } = useEmployees();
+  const { employees, isLoading, addEmployee, updateEmployee, deleteEmployee, roles, departments, refresh } = useEmployees();
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -45,7 +47,7 @@ export function EmployeeManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
   // One-time display of a server-generated temporary password
   const [issuedPassword, setIssuedPassword] = useState<{ email: string; password: string } | null>(null);
-  const { labelFor, tierLabel } = usePortals();
+  const { labelFor, tierLabel, portals } = usePortals();
   const roleKey = (roleId: string) => roles.find(r => r.id.toString() === roleId)?.name;
 
   const handleAddEmployee = async (e: React.FormEvent) => {
@@ -174,6 +176,29 @@ export function EmployeeManagement() {
               <CardTitle>Employee Directory</CardTitle>
               <CardDescription>Manage your team, roles, and access controls</CardDescription>
             </div>
+            <div className="flex gap-2">
+            {/* Same CSV component as the onboarding Employees step (plan 5.4) */}
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />Import CSV
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Import employees</DialogTitle>
+                  <DialogDescription>Valid rows are saved; rows with problems are skipped and listed.</DialogDescription>
+                </DialogHeader>
+                {isImportOpen && (
+                  <EmployeesStep
+                    portals={portals}
+                    departments={departments}
+                    endpoint="/users/import"
+                    onCreated={() => { setIsImportOpen(false); refresh(); }}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -284,6 +309,7 @@ export function EmployeeManagement() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
             <Dialog open={!!issuedPassword} onOpenChange={(open) => { if (!open) setIssuedPassword(null); }}>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>

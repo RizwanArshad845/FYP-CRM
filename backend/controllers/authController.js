@@ -60,7 +60,7 @@ export const login = async (req, res) => {
     // that belongs to a different organization than the login URL's.
     const valid = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
     if (!user || !valid || (organization && organization !== user.slug)) {
-        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+        return res.status(401).json({ success: false, error: 'Incorrect email or password.' });
     }
     if (user.status !== 'active') {
         return res.status(403).json({ success: false, error: 'Account is deactivated. Please contact your administrator.' });

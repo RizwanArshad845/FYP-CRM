@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { ArrowRight } from 'lucide-react';
 import { useAuth, nextRouteFor } from '../../context/AuthContext';
-import { apiFetch } from '../../utils/api';
+import { apiFetch, ApiError } from '../../utils/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Card, CardContent } from '../../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { SetupShell } from './SetupShell';
+import { SetupShell, SetupStepper } from './SetupShell';
 
 const SIZES = ['1-10', '11-50', '51-200', '201-1000', '1000+'];
 
@@ -22,6 +20,7 @@ export function Signup() {
     firstName: '', lastName: '', email: '', password: '', confirm: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     if (!isLoading && user) navigate(nextRouteFor(user));
@@ -36,6 +35,7 @@ export function Signup() {
     if (form.password !== form.confirm) return toast.error('Passwords do not match');
 
     setSubmitting(true);
+    setEmailError('');
     try {
       const res = await apiFetch('/onboarding/organization', {
         method: 'POST',
@@ -52,7 +52,9 @@ export function Signup() {
       toast.success(`${res.user.organization.name} is ready. Let's set it up.`);
       navigate(nextRouteFor(signedIn));
     } catch (error: any) {
-      toast.error(error.message || 'Could not create the organization');
+      // "An account with this email already exists." belongs next to the email field (UC2 4A)
+      if (error instanceof ApiError && error.status === 409) setEmailError(error.message);
+      else toast.error(error.message || 'Could not create the organization');
     } finally {
       setSubmitting(false);
     }
@@ -60,14 +62,14 @@ export function Signup() {
 
   return (
     <SetupShell
-      title="Create your organization"
+      headerRight={`Organization setup${form.orgName.trim() ? `: ${form.orgName.trim()}` : ''}`}
+      stepper={<SetupStepper current={0} />}
+      title="Register your organization"
       subtitle="You'll be the administrator. Next you'll pick portals, name your teams and invite employees."
     >
-      <Card>
-        <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <fieldset className="space-y-4">
-              <legend className="text-sm font-semibold text-gray-900 dark:text-foreground">Organization</legend>
+              <legend className="text-sm font-semibold text-foreground">Organization</legend>
               <div className="space-y-2">
                 <Label htmlFor="orgName">Organization name</Label>
                 <Input id="orgName" required minLength={2} value={form.orgName} onChange={set('orgName')} placeholder="Acme Corp" />
@@ -90,7 +92,7 @@ export function Signup() {
             </fieldset>
 
             <fieldset className="space-y-4">
-              <legend className="text-sm font-semibold text-gray-900 dark:text-foreground">Your admin account</legend>
+              <legend className="text-sm font-semibold text-foreground">Your admin account</legend>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First name</Label>
@@ -103,7 +105,8 @@ export function Signup() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Work email</Label>
-                <Input id="email" type="email" required value={form.email} onChange={set('email')} autoComplete="email" />
+                <Input id="email" type="email" required value={form.email} onChange={(e) => { setEmailError(''); set('email')(e); }} autoComplete="email" aria-invalid={!!emailError} />
+                {emailError && <p className="text-[13px] text-danger">{emailError}</p>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -118,16 +121,15 @@ export function Signup() {
               <p className="text-xs text-muted-foreground">At least 8 characters.</p>
             </fieldset>
 
-            <Button type="submit" className="w-full h-11 gap-2" disabled={submitting}>
-              {submitting ? 'Creating…' : 'Create organization'}
-              {!submitting && <ArrowRight className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-text-secondary">
+                Already have an account? <Link to="/login" className="font-bold text-primary hover:underline">Log in</Link>
+              </span>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Creating…' : 'Save and continue'}
+              </Button>
+            </div>
           </form>
-        </CardContent>
-      </Card>
-      <p className="mt-6 text-center text-sm text-gray-600 dark:text-muted-foreground">
-        Already have an account? <Link to="/login" className="font-medium text-blue-600 hover:underline">Sign in</Link>
-      </p>
     </SetupShell>
   );
 }
