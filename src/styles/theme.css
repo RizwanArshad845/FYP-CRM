@@ -258,4 +258,20 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Navy and brand blue washes behind the setup screens (register, wizard, password change) */
+  .bg-brand-wash {
+    background:
+      radial-gradient(900px 520px at 0% 0%, rgba(59, 111, 224, 0.24), transparent 65%),
+      radial-gradient(800px 560px at 100% 30%, rgba(91, 141, 239, 0.24), transparent 65%),
+      radial-gradient(700px 420px at 40% 105%, rgba(47, 65, 112, 0.12), transparent 70%),
+      linear-gradient(180deg, #edf1fa 0%, #e8edf8 60%, #f3f5fb 100%);
+  }
+
+  .dark .bg-brand-wash {
+    background:
+      radial-gradient(900px 520px at 0% 0%, rgba(59, 111, 224, 0.18), transparent 65%),
+      radial-gradient(800px 560px at 100% 30%, rgba(91, 141, 239, 0.10), transparent 65%),
+      var(--background);
+  }
 }

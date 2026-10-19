@@ -271,21 +271,28 @@ export function AdminDashboard() {
 
           {activeModule === 'overview' && (
             <div className="animate-fade-in space-y-6">
-              {/* Stat Cards */}
+              <WelcomeHero
+                title="Organization overview"
+                description="Revenue, clients, people and the events coming up across your organization."
+                metrics={[
+                  { label: 'Employees', value: COMPANY_METRICS.totalEmployees ?? 0 },
+                  { label: 'Open concerns', value: pendingConcernsCount, alert: pendingConcernsCount > 0 },
+                ]}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <StatCard
-                  icon={<TrendingUp className="h-5 w-5 text-primary" />}
-                  title="Monthly Revenue"
+                  icon={<TrendingUp />}
+                  tone="primary"
+                  title="Monthly revenue"
                   value={`$${(COMPANY_METRICS.totalRevenue ?? 0).toLocaleString()}`}
                   subtitle={`${revenuePct}% of $${(COMPANY_METRICS.revenueTarget ?? 0).toLocaleString()} target`}
-                  accentColor={theme.accent}
                 />
                 <StatCard
-                  icon={<Users className="h-5 w-5 text-primary" />}
-                  title="Active Clients"
+                  icon={<Users />}
+                  tone="indigo"
+                  title="Active clients"
                   value={COMPANY_METRICS.activeClients}
                   subtitle={`${COMPANY_METRICS.clientRetention}% retention rate`}
-                  accentColor={theme.accent}
                 />
               </div>
 

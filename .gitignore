@@ -56,3 +56,6 @@ Thumbs.db
 
 # Personal notes, never committed
 myfolder/
+
+# Downloaded design skills (not part of the app)
+.claude/skills/

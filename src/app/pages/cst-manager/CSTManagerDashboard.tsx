@@ -116,26 +116,16 @@ export function CSTManagerDashboard() {
             <DashboardHeader title="CST Manager Portal" theme={theme} />
             <main className="px-6 py-5">
                 {/* Welcome Hero */}
-                {/* <WelcomeHero theme={theme}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <h2 className="text-lg font-semibold mb-1 text-foreground">Client Operations</h2>
-                            <p className="text-sm text-muted-foreground">Manage inbox, assignments, and strategies</p>
-                        </div>
-                        <div className="flex items-center gap-6">
-                            {pendingCount > 0 && (
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-danger ">{pendingCount}</p>
-                                    <p className="text-xs text-muted-foreground">Pending Inbox</p>
-                                </div>
-                            )}
-                            <div className="text-center">
-                                <p className="text-2xl font-bold text-foreground">{inboxClients.length}</p>
-                                <p className="text-xs text-muted-foreground">Total Clients</p>
-                            </div>
-                        </div>
-                    </div>
-                </WelcomeHero> */}
+                {activeModule === 'client-ops' && (
+                    <WelcomeHero
+                        title="Client operations"
+                        description="Assign new clients, plan strategies and keep the inbox clear."
+                        metrics={[
+                            { label: 'Pending inbox', value: pendingCount, alert: pendingCount > 0 },
+                            { label: 'Total clients', value: inboxClients.length },
+                        ]}
+                    />
+                )}
 
                 <div className="w-full">
                     {/* Main Content Area (Horizontal Tabs based on selected module) */}

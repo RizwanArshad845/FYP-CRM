@@ -20,6 +20,8 @@ import { ImportantRecordings } from '../sales/ImportantRecordings';
 import { ClientEntryForm } from './ClientEntryForm';
 import { useAgentTargets } from '../../context/AgentTargetContext';
 import { useEmployees } from '../../context/EmployeeContext';
+import { useManagerTasks } from '../../context/ManagerTaskContext';
+import { useConcerns } from '../../context/ConcernContext';
 import { useOrgPath } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import { getPortalTheme } from '../../styles/portal-themes';
@@ -146,9 +148,17 @@ export function SalesManagerDashboard() {
     const activeModule = searchParams.get('module') || 'overview';
     const activeTab = searchParams.get('tab');
 
-    const INITIAL_AGENTS = employees.filter(e => String(e.role || '').toLowerCase().includes('sales')).map(e => ({ ...e, overallScore: (e as any).overallScore || 85 }));
-    const totalAgents = INITIAL_AGENTS.length;
-    const avgScore = totalAgents > 0 ? Math.round(INITIAL_AGENTS.reduce((s, a) => s + (a.overallScore || 0), 0) / totalAgents) : 0;
+    const { targets } = useAgentTargets();
+    const { tasks } = useManagerTasks();
+    const { externalConcerns, internalConcerns } = useConcerns();
+
+    // Real figures for the overview: team size, sales target attainment, open work
+    const totalAgents = employees.filter(e => String(e.role || '').toLowerCase() === 'sales').length;
+    const salesTargets = targets.filter(t => t.type === 'sales');
+    const targetSum = salesTargets.reduce((sum, t) => sum + (t.target || 0), 0);
+    const attainment = targetSum > 0 ? Math.round((salesTargets.reduce((sum, t) => sum + (t.achieved || 0), 0) / targetSum) * 100) : 0;
+    const openTasks = tasks.filter(t => !['completed', 'approved'].includes(String(t.status))).length;
+    const openConcerns = [...externalConcerns, ...internalConcerns].filter(c => ['pending', 'open'].includes(String(c.status).toLowerCase())).length;
 
     return (
         <div className="min-h-screen bg-background">
@@ -157,62 +167,22 @@ export function SalesManagerDashboard() {
                 <div className="w-full">
                     {activeModule === 'overview' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                            <WelcomeHero theme={theme}>
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div>
-                                        <h2 className="text-lg font-semibold mb-1 text-foreground">Team Management</h2>
-                                        <p className="text-sm text-muted-foreground">Monitor targets, performance, and follow-ups</p>
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <div className="text-center">
-                                            <p className="text-2xl font-bold text-foreground">{totalAgents}</p>
-                                            <p className="text-xs text-muted-foreground">Agents</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="text-2xl font-bold text-primary ">{avgScore}%</p>
-                                            <p className="text-xs text-muted-foreground">Avg Score</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </WelcomeHero>
+                            <WelcomeHero
+                                title="Team management"
+                                description="Monitor targets, performance and follow-ups across your sales team."
+                                metrics={[
+                                    { label: 'Agents', value: totalAgents },
+                                    { label: 'Target achieved', value: `${attainment}%` },
+                                ]}
+                            />
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=team&tab=performance'))}>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                                            Team Performance
-                                            <Users className="h-4 w-4 text-primary" />
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{avgScore}%</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Average agent score</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=mytasks'))}>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                                            Manager Tasks
-                                            <ClipboardCheck className="h-4 w-4 text-warning" />
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">Review Desk</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Manage pending actions</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=concerns'))}>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                                            Team Concerns
-                                            <AlertCircle className="h-4 w-4 text-danger" />
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">Open Tickets</div>
-                                        <p className="text-xs text-muted-foreground mt-1">Resolution required</p>
-                                    </CardContent>
-                                </Card>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <StatCard tone="primary" icon={<Users />} title="Team performance" value={`${attainment}%`}
+                                    subtitle="Of this team's sales targets" onClick={() => navigate(to('/dashboard?module=team&tab=performance'))} />
+                                <StatCard tone="warning" icon={<ClipboardCheck />} title="Manager tasks" value={openTasks}
+                                    subtitle={openTasks === 1 ? 'Task waiting for you' : 'Tasks waiting for you'} onClick={() => navigate(to('/dashboard?module=mytasks'))} />
+                                <StatCard tone="danger" icon={<AlertCircle />} title="Team concerns" value={openConcerns}
+                                    subtitle="Open and awaiting resolution" onClick={() => navigate(to('/dashboard?module=concerns'))} />
                             </div>
                         </div>
                     )}

@@ -435,30 +435,20 @@ export function FinanceDashboard() {
       <DashboardHeader title="Finance Team Portal" theme={theme} />
       <main className="px-6 py-5 space-y-6">
         {/* Welcome Hero */}
-        <WelcomeHero theme={theme}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold mb-1 text-foreground">Financial Overview</h2>
-              <p className="text-sm text-muted-foreground">Manage payroll, expenses, and financial metrics</p>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary ">{active.length}</p>
-                <p className="text-xs text-muted-foreground">Active Employees</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">$ {(totalRevenue / 1000).toFixed(1)}k</p>
-                <p className="text-xs text-muted-foreground">Revenue</p>
-              </div>
-            </div>
-          </div>
-        </WelcomeHero>
+        <WelcomeHero
+          title="Financial overview"
+          description="Manage payroll, salary slips, expenses and the month's figures."
+          metrics={[
+            { label: 'Active employees', value: active.length },
+            { label: 'Revenue', value: `$${(totalRevenue / 1000).toFixed(1)}k` },
+          ]}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={<DollarSign className="h-5 w-5 text-primary" />} title="Total Salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} accentColor={theme.accent} />
-          <StatCard icon={<TrendingDown className="h-5 w-5 text-warning" />} title="Advance Payments" value={PKR(totalAdvances)} subtitle="Paid in advance" valueClassName="text-warning" accentColor={theme.accent} />
-        <StatCard icon={<TrendingUp className="h-5 w-5 text-success" />} title="Total Incoming" value={`$ ${totalRevenue.toLocaleString()}`} subtitle="Revenue this month" valueClassName="text-success" accentColor={theme.accent} />
-        <StatCard icon={<Calculator className="h-5 w-5 text-primary" />} title="Monthly Expenses" value={PKR(totalSalaries + totalExpenses)} subtitle="Total outgoing" valueClassName="text-primary" accentColor={theme.accent} />
+          <StatCard tone="primary" icon={<DollarSign />} title="Total salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} />
+          <StatCard tone="warning" icon={<TrendingDown />} title="Advance payments" value={PKR(totalAdvances)} subtitle="Paid in advance" />
+        <StatCard tone="success" icon={<TrendingUp />} title="Total incoming" value={`$ ${totalRevenue.toLocaleString()}`} subtitle="Revenue this month" />
+        <StatCard tone="indigo" icon={<Calculator />} title="Monthly expenses" value={PKR(totalSalaries + totalExpenses)} subtitle="Total outgoing" />
         </div>
 
         {/* Auto Salary Calculator — standalone tool, maps to processPayroll formula */}

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { WelcomeHero } from '../../components/shared/WelcomeHero';
+import { StatCard } from '../../components/shared/StatCard';
 import { cls } from '../../styles/classes';
 import { getPortalTheme } from '../../styles/portal-themes';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
@@ -840,50 +841,32 @@ export function CSTDashboard() {
         <div className="w-full">
           {activeModule === 'overview' && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-              {/* <WelcomeHero theme={theme}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold mb-1 text-foreground">Client Success Hub</h2>
-                    <p className="text-sm text-muted-foreground">Manage clients, onboarding, and daily operations</p>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-foreground">{onboardingClients.length}</p>
-                      <p className="text-xs text-muted-foreground">Onboarding</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-danger ">{flaggedClients.length}</p>
-                      <p className="text-xs text-muted-foreground">Flagged</p>
-                    </div>
-                  </div>
-                </div>
-              </WelcomeHero> */}
+              <WelcomeHero
+                title="Client success hub"
+                description="Onboard new clients, resolve flagged issues and keep every account healthy."
+                metrics={[
+                  { label: 'Onboarding', value: onboardingClients.length },
+                  { label: 'Flagged', value: flaggedClients.length, alert: flaggedClients.length > 0 },
+                ]}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=clients&tab=onboarding'))}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                      Pending Onboarding
-                      <UserPlus className="h-4 w-4 text-primary" />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{onboardingClients.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Clients awaiting setup</p>
-                  </CardContent>
-                </Card>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(to('/dashboard?module=clients&tab=flagged'))}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                      Flagged Issues
-                      <Flag className="h-4 w-4 text-danger" />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-danger">{flaggedClients.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Clients requiring attention</p>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StatCard
+                  icon={<UserPlus />}
+                  tone="primary"
+                  title="Pending onboarding"
+                  value={onboardingClients.length}
+                  subtitle="Clients awaiting setup"
+                  onClick={() => navigate(to('/dashboard?module=clients&tab=onboarding'))}
+                />
+                <StatCard
+                  icon={<Flag />}
+                  tone="danger"
+                  title="Flagged issues"
+                  value={flaggedClients.length}
+                  subtitle="Clients requiring attention"
+                  onClick={() => navigate(to('/dashboard?module=clients&tab=flagged'))}
+                />
               </div>
 
               <Card>

@@ -16,14 +16,14 @@ export function SetupShell({ title, subtitle, children, headerRight, stepper, wi
   wide?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-brand-wash flex flex-col">
       <header className="flex h-[58px] shrink-0 items-center justify-between bg-navy px-7 text-white">
         <BrandMark onDark logoClassName="h-7 w-7" textClassName="text-[20px]" />
         {headerRight && <span className="text-[13px] text-sidebar-foreground">{headerRight}</span>}
       </header>
       <main className="px-4 pb-10">
         <div className={cn(
-          'mx-auto mt-[22px] w-full rounded-[10px] border border-border bg-card px-[30px] py-6',
+          'mx-auto mt-[22px] w-full rounded-[12px] border border-[#dbe3f1] bg-card px-5 py-6 shadow-[0_12px_32px_-16px_rgba(30,42,68,0.25)] sm:px-[30px] dark:border-border',
           wide ? 'max-w-[900px]' : 'max-w-[520px]',
         )}>
           {stepper}
@@ -70,7 +70,7 @@ export function SetupStepper({ current, canOpen, onOpen }: {
               )}>
                 {done ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
               </i>
-              {label}
+              <span className={isCurrent ? '' : 'hidden sm:inline'}>{label}</span>
             </button>
           </li>
         );

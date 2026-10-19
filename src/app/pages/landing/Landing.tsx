@@ -13,6 +13,22 @@ import { PORTAL_CARDS } from '../onboarding/PortalEditors';
 
 const FONT = { fontFamily: '"Hanken Grotesk", Arial, sans-serif' };
 
+// The app's own colours as gradients: soft washes of brand blue and navy over a
+// light base, so the page has colour while the text stays dark and readable.
+const HERO_BG = {
+  background: [
+    'radial-gradient(900px 520px at 8% -10%, rgba(59,111,224,0.32), transparent 65%)',
+    'radial-gradient(760px 520px at 100% 15%, rgba(91,141,239,0.28), transparent 65%)',
+    'radial-gradient(700px 420px at 55% 110%, rgba(47,65,112,0.12), transparent 70%)',
+    'linear-gradient(180deg, #edf1fa 0%, #e8edf8 60%, #f3f5fb 100%)',
+  ].join(', '),
+};
+const TINT_BG = { background: 'linear-gradient(135deg, #edf1fb 0%, #e7ecf7 55%, #f1f4fb 100%)' };
+const CTA_BG = { background: 'linear-gradient(110deg, #1e2a44 0%, #2f4170 45%, #3b6fe0 100%)' };
+// Feature panels take turns in blue, navy and periwinkle
+const PANEL_BG = ['bg-[#eaf0ff]', 'bg-[#e8ebf3]', 'bg-[#edf0fb]'];
+const TILE = ['bg-[#e3ebff] text-[#2f5fd0]', 'bg-[#e3e7f1] text-[#1e2a44]', 'bg-[#e6ebfb] text-[#3d5bb0]'];
+
 const PORTALS = [
   { key: 'admin', icon: UserCog },
   { key: 'sales', icon: TrendingUp },
@@ -179,7 +195,7 @@ export function Landing() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-white text-[#1f2937]" style={FONT}>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-[#e3e7ef] bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-[#dfe6f3]/80 bg-white/75 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
           <Link to="/" className="flex items-center gap-2.5" aria-label={`${BRAND_NAME} home`}>
             <BrandLogo className="h-8 w-8" />
@@ -198,10 +214,10 @@ export function Landing() {
       </header>
 
       {/* Hero: the product, shown */}
-      <section className="relative overflow-hidden bg-[#f3f5f9]">
+      <section className="relative -mt-16 overflow-hidden pt-16" style={HERO_BG}>
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:py-24">
           <div>
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[13px] font-medium text-[#2d55b8] ring-1 ring-[#dfe4ee]">
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[13px] font-medium text-[#2d55b8] ring-1 ring-[#d3ddf2]">
               <BrandLogo className="h-4 w-4" /> {BRAND_TAGLINE}
             </p>
             <h1 className="text-[38px] font-extrabold leading-[1.08] tracking-[-0.02em] text-[#1e2a44] sm:text-[46px]">
@@ -216,7 +232,7 @@ export function Landing() {
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-[#5b6475]">
               {['Six ready-made portals', 'Your own sign-in address', 'Import employees and clients by CSV'].map((t) => (
-                <li key={t} className="flex items-center gap-2"><Check className="h-4 w-4 text-[#1d7a3e]" strokeWidth={3} />{t}</li>
+                <li key={t} className="flex items-center gap-2"><Check className="h-4 w-4 text-[#3b6fe0]" strokeWidth={3} />{t}</li>
               ))}
             </ul>
           </div>
@@ -233,7 +249,7 @@ export function Landing() {
           {FEATURES.map((f, i) => (
             <div key={f.title} className="grid items-center gap-10 md:grid-cols-2">
               <div className={i % 2 ? 'md:order-2' : ''}>
-                <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#f2f6ff] text-[#3b6fe0]"><f.icon className="h-5 w-5" /></span>
+                <span className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${TILE[i % 3]}`}><f.icon className="h-5 w-5" /></span>
                 <h3 className="text-[26px] font-bold text-[#1e2a44]">{f.title}</h3>
                 <p className="mt-3 text-[17px] leading-relaxed text-[#5b6475]">{f.text}</p>
                 <ul className="mt-5 space-y-2.5">
@@ -242,21 +258,21 @@ export function Landing() {
                   ))}
                 </ul>
               </div>
-              <div className={`rounded-[18px] bg-[#f3f5f9] p-6 sm:p-8 ${i % 2 ? 'md:order-1' : ''}`}>{f.vignette}</div>
+              <div className={`rounded-[18px] p-6 sm:p-8 ${PANEL_BG[i % 3]} ${i % 2 ? 'md:order-1' : ''}`}>{f.vignette}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* Portals */}
-      <section id="portals" className="scroll-mt-20 border-y border-[#e3e7ef] bg-[#f8f9fc]">
+      <section id="portals" className="scroll-mt-20" style={TINT_BG}>
         <div className="mx-auto max-w-6xl px-6 py-20">
           <h2 className="text-[32px] font-extrabold tracking-[-0.01em] text-[#1e2a44]">A portal for every team</h2>
           <p className="mt-3 max-w-2xl text-[17px] text-[#5b6475]">Each employee works in one portal with one access tier. Turn on the portals your organization needs.</p>
-          <div className="mt-10 grid gap-px overflow-hidden rounded-[14px] border border-[#e3e7ef] bg-[#e3e7ef] sm:grid-cols-2 lg:grid-cols-3">
-            {PORTALS.map(({ key, icon: Icon }) => (
-              <div key={key} className="flex gap-4 bg-white p-6">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#1e2a44] text-white"><Icon className="h-5 w-5" /></span>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {PORTALS.map(({ key, icon: Icon }, i) => (
+              <div key={key} className="flex gap-4 rounded-[14px] border border-[#dbe3f1] bg-white p-6 transition-colors duration-200 hover:border-[#9db6ee]">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${TILE[i % 3]}`}><Icon className="h-5 w-5" /></span>
                 <div>
                   <h3 className="text-[16px] font-bold text-[#1e2a44]">{PORTAL_CARDS[key].name}</h3>
                   <p className="mt-1 text-[14px] text-[#5b6475]">{PORTAL_CARDS[key].description}</p>
@@ -273,8 +289,8 @@ export function Landing() {
         <ol className="mt-10 grid gap-8 md:grid-cols-4">
           {STEPS.map((s, i) => (
             <li key={s.title} className="relative">
-              {i < STEPS.length - 1 && <span className="absolute left-10 right-0 top-[13px] hidden h-px bg-[#cfd6e3] md:block" aria-hidden />}
-              <span className="relative flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[#3b6fe0] text-[12px] font-bold text-white" style={{ fontFamily: 'Arial, sans-serif' }}>{i + 1}</span>
+              {i < STEPS.length - 1 && <span className="absolute left-10 right-0 top-[13px] hidden h-px bg-gradient-to-r from-[#9db6ee] to-[#b6bfd3] md:block" aria-hidden />}
+              <span className={`relative flex h-[26px] w-[26px] items-center justify-center rounded-full text-[12px] font-bold text-white ${i < STEPS.length - 1 ? 'bg-[#3b6fe0]' : 'bg-[#1e2a44]'}`} style={{ fontFamily: 'Arial, sans-serif' }}>{i + 1}</span>
               <h3 className="mt-4 text-[17px] font-bold text-[#1e2a44]">{s.title}</h3>
               <p className="mt-1.5 text-[14px] leading-relaxed text-[#5b6475]">{s.text}</p>
             </li>
@@ -284,22 +300,22 @@ export function Landing() {
 
       {/* Closing call to action */}
       <section className="px-6 pb-20">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[20px] bg-[#1e2a44] px-8 py-10 sm:flex-row sm:items-center sm:px-12">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[20px] px-8 py-10 sm:flex-row sm:items-center sm:px-12" style={CTA_BG}>
           <div>
             <h2 className="text-[28px] font-extrabold text-white">Bring your teams into one CRM</h2>
-            <p className="mt-2 text-[16px] text-[#cfd8ea]">Register your organization, choose your portals and invite your team.</p>
+            <p className="mt-2 text-[16px] text-white/85">Register your organization, choose your portals and invite your team.</p>
           </div>
-          <div className="flex shrink-0 gap-3">
-            <Button asChild className="h-12 px-6 text-[15px] font-semibold"><Link to="/signup">Register your organization</Link></Button>
-            <Button asChild variant="outline" className="h-12 border-white/40 bg-transparent px-6 text-[15px] font-semibold text-white hover:bg-white/10 hover:text-white"><Link to="/login">Log in</Link></Button>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <Button asChild className="h-12 bg-white px-6 text-[15px] font-semibold text-[#1e2a44] hover:bg-white/90"><Link to="/signup">Register your organization</Link></Button>
+            <Button asChild variant="outline" className="h-12 border-white/50 bg-transparent px-6 text-[15px] font-semibold text-white hover:bg-white/10 hover:text-white"><Link to="/login">Log in</Link></Button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#e3e7ef]">
+      <footer className="border-t border-[#dfe6f3] bg-[#f5f8fd]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-[14px] text-[#6b7383]">
-          <span className="flex items-center gap-2.5"><BrandLogo className="h-6 w-6" /><span>AICRE, Final Year Project, FAST NUCES Lahore</span></span>
+          <span className="flex items-center gap-2.5"><BrandLogo className="h-6 w-6" /><span>© {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.</span></span>
           <span className="flex gap-6">
             <Link to="/login" className="hover:text-[#1e2a44]">Log in</Link>
             <Link to="/signup" className="hover:text-[#1e2a44]">Register</Link>

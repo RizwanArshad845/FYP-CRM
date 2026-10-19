@@ -136,9 +136,9 @@ export function PlatformOverview() {
     <PlatformShell title="Overview">
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard icon={<Building2 className="h-5 w-5" />} title="Organizations" value={data?.total ?? '—'} subtitle="Registered on AICRE" />
-        <StatCard icon={<CheckCircle2 className="h-5 w-5" />} title="Onboarding complete" value={data?.completed ?? '—'} subtitle="Working in their portals" />
-        <StatCard icon={<Clock className="h-5 w-5" />} title="Still onboarding" value={data?.onboarding ?? '—'} subtitle="Setup not finished yet" />
+        <StatCard icon={<Building2 />} tone="primary" title="Organizations" value={data?.total ?? '—'} subtitle="Registered on AICRE" />
+        <StatCard icon={<CheckCircle2 />} tone="success" title="Onboarding complete" value={data?.completed ?? '—'} subtitle="Working in their portals" />
+        <StatCard icon={<Clock />} tone="warning" title="Still onboarding" value={data?.onboarding ?? '—'} subtitle="Setup not finished yet" />
       </div>
     </PlatformShell>
   );

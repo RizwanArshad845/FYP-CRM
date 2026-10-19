@@ -79,10 +79,10 @@ export function CSTMonthlyTargets() {
     <div className={cls.page}>
       {/* Stat Cards */}
       <div className={cls.gridResponsive2}>
-        <StatCard icon={<Target className="h-4 w-4 text-primary" />} title="Client Target" value={String(displayTargetClients)} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-success" />} title="Clients Achieved" value={String(displayAchievedClients)} subtitle={`${progressPctClients}% of target`} valueClassName="text-success" />
-        <StatCard icon={<Target className="h-4 w-4 text-primary" />} title="Revenue Target" value={`$${displayTargetAmount.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-success" />} title="Revenue Achieved" value={`$${displayAchievedAmount.toLocaleString()}`} subtitle={`${progressPctAmount}% of target`} valueClassName="text-success" />
+        <StatCard icon={<Target />} tone="primary" title="Client target" value={String(displayTargetClients)} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
+        <StatCard icon={<TrendingUp />} tone="success" title="Clients achieved" value={String(displayAchievedClients)} subtitle={`${progressPctClients}% of target`} />
+        <StatCard icon={<Target />} tone="indigo" title="Revenue target" value={`$${displayTargetAmount.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
+        <StatCard icon={<TrendingUp />} tone="success" title="Revenue achieved" value={`$${displayAchievedAmount.toLocaleString()}`} subtitle={`${progressPctAmount}% of target`} />
       </div>
 
       {/* Progress Bars */}

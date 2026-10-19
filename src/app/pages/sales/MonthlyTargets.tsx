@@ -55,10 +55,10 @@ export function MonthlyTargets() {
     <div className={cls.page}>
       {/* Stat Cards */}
       <div className={cls.gridResponsive2}>
-        <StatCard icon={<Target className="h-4 w-4 text-primary" />} title="My Target" value={`$ ${displayTarget.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-success" />} title="Achieved" value={`$ ${displayAchieved.toLocaleString()}`} subtitle={`${progressPct}% of target`} valueClassName="text-success" />
-        <StatCard icon={<TrendingDown className="h-4 w-4 text-warning" />} title="Remaining" value={`$ ${displayLeft.toLocaleString()}`} subtitle={`${100 - progressPct}% left`} valueClassName="text-warning" />
-        <StatCard icon={<ShoppingCart className="h-4 w-4 text-primary" />} title="Total Targets" value={String(myTargets.length)} subtitle="Assigned periods" />
+        <StatCard icon={<Target />} tone="primary" title="My target" value={`$ ${displayTarget.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
+        <StatCard icon={<TrendingUp />} tone="success" title="Achieved" value={`$ ${displayAchieved.toLocaleString()}`} subtitle={`${progressPct}% of target`} />
+        <StatCard icon={<TrendingDown />} tone="warning" title="Remaining" value={`$ ${displayLeft.toLocaleString()}`} subtitle={`${100 - progressPct}% left`} />
+        <StatCard icon={<ShoppingCart />} tone="navy" title="Total targets" value={String(myTargets.length)} subtitle="Assigned periods" />
       </div>
 
       {/* Progress Bar */}
