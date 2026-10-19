@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { StatCard } from '../../components/shared/StatCard';
 import { NAV_ITEM_CLASS } from '../../components/shared/AppSidebar';
-import { BRAND_NAME } from '../../components/shared/BrandMark';
+import { BrandLogo, BRAND_NAME } from '../../components/shared/BrandMark';
 import { PORTAL_CARDS } from '../onboarding/PortalEditors';
 import { clearPlatformSession, getPlatformAdmin, getPlatformToken, platformFetch } from '../../utils/platformApi';
 
@@ -63,9 +63,12 @@ function PlatformShell({ title, children }: { title: string; children: ReactNode
       <div className="min-h-screen flex w-full bg-background">
         <Sidebar collapsible="icon" className="border-r-0">
           <SidebarHeader className="p-0 pt-[18px] pb-[18px]">
-            <div className="px-[22px] text-[20px] font-bold leading-tight tracking-[0.5px] text-white group-data-[collapsible=icon]:hidden">
-              {BRAND_NAME}
-              <small className="mt-[2px] block text-[11px] font-normal tracking-normal text-sidebar-caption">Platform Admin</small>
+            <div className="flex items-center gap-[10px] px-[22px] text-[20px] font-bold leading-tight tracking-[0.5px] text-white group-data-[collapsible=icon]:px-2">
+              <BrandLogo onDark className="h-8 w-8" />
+              <div className="group-data-[collapsible=icon]:hidden">
+                {BRAND_NAME}
+                <small className="mt-[2px] block text-[11px] font-normal tracking-normal text-sidebar-caption">Platform Admin</small>
+              </div>
             </div>
           </SidebarHeader>
           <SidebarContent>

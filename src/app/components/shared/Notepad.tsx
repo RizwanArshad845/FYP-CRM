@@ -60,21 +60,21 @@ export function Notepad() {
     if (isInitialLoad) return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading your scratchpad...</div>;
 
     return (
-        <Card className="h-full min-h-[500px] flex flex-col shadow-lg border-2 border-amber-100 dark:border-amber-900/20">
-            <CardHeader className="bg-amber-50/50 dark:bg-amber-900/10 border-b">
+        <Card className="h-full min-h-[500px] flex flex-col shadow-lg border-2 border-warning/30 ">
+            <CardHeader className="bg-warning-bg/50 border-b">
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="flex items-center gap-2">
-                            <StickyNote className="h-5 w-5 text-amber-500" />
+                            <StickyNote className="h-5 w-5 text-warning" />
                             Personal Notepad
                         </CardTitle>
                         <CardDescription>Your private scratchpad. Saves only for you.</CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                        <Button variant="outline" size="sm" onClick={handleDelete} className="text-danger hover:text-danger hover:bg-danger-bg">
                             <Trash2 className="h-4 w-4 mr-2" /> Clear All
                         </Button>
-                        <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-amber-600 hover:bg-amber-700 text-white">
+                        <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-warning hover:bg-warning text-white">
                             <Save className="h-4 w-4 mr-2" /> {isSaving ? 'Saving...' : 'Save Notes'}
                         </Button>
                     </div>
@@ -88,7 +88,7 @@ export function Notepad() {
                     onChange={(e) => setContent(e.target.value)}
                 />
             </CardContent>
-            <div className="px-6 py-2 bg-amber-50/30 dark:bg-amber-900/5 text-[10px] text-muted-foreground border-t italic">
+            <div className="px-6 py-2 bg-warning-bg/30 text-[10px] text-muted-foreground border-t italic">
                 Last auto-sync: {new Date().toLocaleTimeString()} • Only you can see these notes.
             </div>
         </Card>

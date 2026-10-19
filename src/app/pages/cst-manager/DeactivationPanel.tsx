@@ -48,7 +48,7 @@ export function DeactivationPanel() {
     return (
       <Card>
         <CardContent className="py-16 text-center">
-          <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-emerald-400 opacity-60" />
+          <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-success opacity-60" />
           <h3 className="text-lg font-semibold text-foreground mb-1">All Clear!</h3>
           <p className="text-sm text-muted-foreground">No pending deactivation requests from CST agents.</p>
         </CardContent>

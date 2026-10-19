@@ -106,7 +106,7 @@ export function StrategiesPanel() {
                                                 </div>
                                             )}
                                             {client.tips_for_tech && (
-                                                <div className={`${cls.muted} bg-blue-50 text-sm`}>
+                                                <div className={`${cls.muted} bg-primary-soft text-sm`}>
                                                     <p className={`${cls.hintXs} mb-1`}>Tips for Tech (from Sales)</p>
                                                     <p>{client.tips_for_tech}</p>
                                                 </div>

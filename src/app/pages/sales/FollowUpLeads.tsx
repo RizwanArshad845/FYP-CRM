@@ -37,9 +37,9 @@ interface FollowUpLead {
 }
 
 const STATUS_COLORS: Record<FollowUpStatus, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-    contacted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-    closed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    pending: 'bg-warning-bg text-warning ',
+    contacted: 'bg-primary-soft text-primary ',
+    closed: 'bg-success-bg text-success ',
 };
 
 // Client details used to fill a new follow up (UC3)
@@ -226,7 +226,7 @@ export function FollowUpLeads() {
                                         <TableCell className={cls.tableCell}>
                                             <div className={cls.iconRow}>
                                                 <Button variant="outline" size="sm" onClick={() => openEdit(l)}><Edit className="h-4 w-4" /></Button>
-                                                <Button variant="outline" size="sm" onClick={() => handleDelete(l.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                                                <Button variant="outline" size="sm" onClick={() => handleDelete(l.id)}><Trash2 className="h-4 w-4 text-danger" /></Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>

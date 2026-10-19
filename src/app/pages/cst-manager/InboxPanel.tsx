@@ -19,10 +19,10 @@ import { apiFetch } from '../../utils/api';
 type Suggestion = { id: number; name: string; active_count: number };
 
 function statusBadge(status: InboxClient['status']) {
-    if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    if (status === 'active') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    if (status === 'flagged') return 'bg-red-100 text-red-700 border-red-200';
-    return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (status === 'onboarding') return 'bg-warning-bg text-warning border-warning/30';
+    if (status === 'active') return 'bg-success-bg text-success border-success/30';
+    if (status === 'flagged') return 'bg-danger-bg text-danger border-danger-border';
+    return 'bg-primary-soft text-primary border-primary/30';
 }
 
 export function InboxPanel() {
@@ -124,7 +124,7 @@ export function InboxPanel() {
         <div className={cls.page}>
             <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <h2 className="text-lg font-semibold">Pending Client Submissions</h2>
-                <Badge className="bg-yellow-100 text-yellow-700 border border-yellow-200">
+                <Badge className="bg-warning-bg text-warning border border-warning/30">
                     {pending.length} pending
                 </Badge>
                 <div className="relative ml-auto">
@@ -136,7 +136,7 @@ export function InboxPanel() {
             {pending.length === 0 ? (
                 <Card>
                     <CardContent className="flex flex-col items-center py-12 gap-3 text-muted-foreground">
-                        <CheckCircle2 className="h-10 w-10 text-emerald-400" />
+                        <CheckCircle2 className="h-10 w-10 text-success" />
                         <p className="font-medium">All clients have been reviewed!</p>
                     </CardContent>
                 </Card>
@@ -171,7 +171,7 @@ export function InboxPanel() {
                                     </div>
                                 )}
                                 {client.tips_for_tech && (
-                                    <div className={`${cls.muted} bg-blue-50`}>
+                                    <div className={`${cls.muted} bg-primary-soft`}>
                                         <p className={cls.hintXs}>Tips for Tech</p>
                                         <p className="text-sm mt-1">{client.tips_for_tech}</p>
                                     </div>
@@ -189,7 +189,7 @@ export function InboxPanel() {
                                         </Button>
                                     )}
                                     {can('client.discard') && (
-                                        <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => openDiscard(client)}>
+                                        <Button variant="outline" className="flex-1 text-danger border-danger-border hover:bg-danger-bg" onClick={() => openDiscard(client)}>
                                             <XCircle className="h-4 w-4 mr-2" />Discard
                                         </Button>
                                     )}
@@ -244,7 +244,7 @@ export function InboxPanel() {
             <Dialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-red-600 flex items-center gap-2"><XCircle className="h-5 w-5" />Discard Client Submission</DialogTitle>
+                        <DialogTitle className="text-danger flex items-center gap-2"><XCircle className="h-5 w-5" />Discard Client Submission</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to reject and discard {selected?.company_name}? This will remove them from the inbox permanently.
                         </DialogDescription>

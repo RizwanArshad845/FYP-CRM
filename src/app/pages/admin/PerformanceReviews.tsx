@@ -18,25 +18,25 @@ import { toast } from 'sonner';
 
 
 const TASK_STATUS_STYLE: Record<string, string> = {
-  completed: 'bg-green-100 text-green-800',
-  'in-progress': 'bg-blue-100 text-blue-800',
-  missed: 'bg-red-100 text-red-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-emerald-100 text-emerald-800',
-  rejected: 'bg-rose-100 text-rose-800',
-  submitted: 'bg-indigo-100 text-indigo-800'
+  completed: 'bg-success-bg text-success',
+  'in-progress': 'bg-primary-soft text-primary',
+  missed: 'bg-danger-bg text-danger',
+  pending: 'bg-warning-bg text-warning',
+  approved: 'bg-success-bg text-success',
+  rejected: 'bg-danger-bg text-danger',
+  submitted: 'bg-primary-soft text-primary'
 };
 
 const PRIORITY_STYLE: Record<string, string> = {
-  high: 'bg-red-50 text-red-700 border-red-200',
-  medium: 'bg-orange-50 text-orange-700 border-orange-200',
-  low: 'bg-gray-50 text-gray-600 border-gray-200',
+  high: 'bg-danger-bg text-danger border-danger-border',
+  medium: 'bg-warning-bg text-warning border-warning/30',
+  low: 'bg-muted text-muted-foreground border-border',
 };
 
 function statusBadge(status: 'on-time' | 'tardy' | 'absent') {
-  if (status === 'on-time') return <Badge className="bg-green-100 text-green-800 border-0">On Time</Badge>;
-  if (status === 'tardy') return <Badge className="bg-yellow-100 text-yellow-800 border-0">Tardy</Badge>;
-  return <Badge className="bg-red-100 text-red-800 border-0">Absent</Badge>;
+  if (status === 'on-time') return <Badge className="bg-success-bg text-success border-0">On Time</Badge>;
+  if (status === 'tardy') return <Badge className="bg-warning-bg text-warning border-0">Tardy</Badge>;
+  return <Badge className="bg-danger-bg text-danger border-0">Absent</Badge>;
 }
 
 function exportCSV(name: string, records: any[]) {
@@ -138,10 +138,10 @@ function AttendanceTable({ userId, employeeName }: { userId: number; employeeNam
       {/* Summary tiles — always visible */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'On Time', value: onTime, bg: 'bg-green-50 border-green-200', text: 'text-green-700' },
-          { label: 'Tardy', value: tardy, bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700' },
-          { label: 'Absent', value: absent, bg: 'bg-red-50 border-red-200', text: 'text-red-700' },
-          { label: 'Avg Hrs', value: `${avgHrs}h`, bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
+          { label: 'On Time', value: onTime, bg: 'bg-success-bg border-success/30', text: 'text-success' },
+          { label: 'Tardy', value: tardy, bg: 'bg-warning-bg border-warning/30', text: 'text-warning' },
+          { label: 'Absent', value: absent, bg: 'bg-danger-bg border-danger-border', text: 'text-danger' },
+          { label: 'Avg Hrs', value: `${avgHrs}h`, bg: 'bg-primary-soft border-primary/30', text: 'text-primary' },
         ].map(({ label, value, bg, text }) => (
           <div key={label} className={`rounded-lg border ${bg} px-3 py-2 text-center`}>
             <p className={`text-xs font-medium ${text}`}>{label}</p>
@@ -314,10 +314,10 @@ function AttendanceGridView({ gridData, agentSearch }: { gridData: any[]; agentS
                             <TableCell className="px-3 py-2 text-muted-foreground border-r">{u.role.replace('_', ' ')}</TableCell>
                             {sortedDates.map(date => {
                                 const status = u.days[date];
-                                let color = 'bg-gray-100 text-gray-400';
-                                if (status === 'on-time') color = 'bg-green-100 text-green-700';
-                                else if (status === 'tardy') color = 'bg-yellow-100 text-yellow-700';
-                                else if (status === 'absent') color = 'bg-red-100 text-red-700';
+                                let color = 'bg-muted text-muted-foreground';
+                                if (status === 'on-time') color = 'bg-success-bg text-success';
+                                else if (status === 'tardy') color = 'bg-warning-bg text-warning';
+                                else if (status === 'absent') color = 'bg-danger-bg text-danger';
                                 
                                 return (
                                     <TableCell key={date} className="px-1 py-1 text-center border-r">
@@ -326,7 +326,7 @@ function AttendanceGridView({ gridData, agentSearch }: { gridData: any[]; agentS
                                                 {status === 'on-time' ? 'ON' : (status === 'tardy' ? 'TA' : 'AB')}
                                             </div>
                                         ) : (
-                                            <span className="text-gray-200">—</span>
+                                            <span className="text-muted-foreground">—</span>
                                         )}
                                     </TableCell>
                                 );
@@ -499,7 +499,7 @@ export function PerformanceReviews() {
           {/* Sales Manager */}
           <TabsContent value="sales_manager" className={cls.section}>
             {filterTeam(salesManagers).map(m => (
-              <Card key={m.id} className="border-2 border-blue-200">
+              <Card key={m.id} className="border-2 border-primary/30">
                 <CardHeader><MemberHeader name={m.name} role={m.role} /></CardHeader>
                 <CardContent className={cls.section}>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">

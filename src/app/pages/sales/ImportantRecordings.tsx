@@ -16,9 +16,9 @@ import { useClients } from '../../context/ClientContext';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 
 const OUTCOME_COLORS: Record<string, string> = {
-  converted: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  lost: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  converted: 'bg-success-bg text-success ',
+  pending: 'bg-warning-bg text-warning ',
+  lost: 'bg-danger-bg text-danger ',
 };
 
 export function ImportantRecordings() {
@@ -185,7 +185,7 @@ export function ImportantRecordings() {
                         <p className="font-bold truncate">{r.company_name}</p>
                         <p className="text-xs text-muted-foreground">{r.agent_name}</p>
                       </div>
-                      <Badge className={OUTCOME_COLORS[r.outcome] || 'bg-blue-100'}>
+                      <Badge className={OUTCOME_COLORS[r.outcome] || 'bg-primary-soft'}>
                         {r.outcome.toUpperCase()}
                       </Badge>
                     </div>
@@ -206,7 +206,7 @@ export function ImportantRecordings() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1 text-blue-600 border-blue-200"
+                        className="flex-1 text-primary border-primary/30"
                         onClick={() => window.open(r.recording_url, '_blank')}
                       >
                         <ExternalLink className="h-3.5 w-3.5 mr-2" />Open
@@ -216,7 +216,7 @@ export function ImportantRecordings() {
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleOpenEdit(r)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => handleDelete(r.id)}>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-danger" onClick={() => handleDelete(r.id)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </>
@@ -273,7 +273,7 @@ export function ImportantRecordings() {
                     {[1, 2, 3, 4, 5].map(s => (
                         <Star 
                             key={s} 
-                            className={`h-5 w-5 cursor-pointer ${s <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                            className={`h-5 w-5 cursor-pointer ${s <= rating ? 'fill-warning text-warning' : 'text-muted-foreground'}`}
                             onClick={() => setRating(s)}
                         />
                     ))}

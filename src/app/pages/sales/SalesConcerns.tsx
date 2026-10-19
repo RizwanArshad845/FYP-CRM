@@ -154,9 +154,9 @@ export function SalesConcerns() {
                     <TableCell className="max-w-[300px] truncate" title={c.description}>{c.description}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        c.status === 'open' ? 'bg-amber-100 text-amber-800' :
-                        c.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
+                        c.status === 'open' ? 'bg-warning-bg text-warning' :
+                        c.status === 'in-progress' ? 'bg-primary-soft text-primary' :
+                        'bg-success-bg text-success'
                       }`}>
                         {c.status.toUpperCase()}
                       </span>
@@ -176,7 +176,7 @@ export function SalesConcerns() {
                           variant="ghost" 
                           size="sm" 
                           onClick={() => handleDelete(c.id)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          className="text-danger hover:text-danger hover:bg-danger-bg"
                           title="Delete Concern"
                         >
                           <Trash2 className="h-4 w-4" />

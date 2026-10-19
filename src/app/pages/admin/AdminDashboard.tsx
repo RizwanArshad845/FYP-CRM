@@ -36,29 +36,29 @@ const ONBOARDING_CLIENTS: any[] = [];
 const theme = getPortalTheme('admin');
 
 const STRATEGY_ITEMS = [
-  { color: 'bg-green-500', text: 'Increase customer retention by 15%' },
-  { color: 'bg-blue-500', text: 'Improve CST response time' },
-  { color: 'bg-purple-500', text: 'Launch new training program' },
+  { color: 'bg-success', text: 'Increase customer retention by 15%' },
+  { color: 'bg-primary', text: 'Improve CST response time' },
+  { color: 'bg-primary', text: 'Launch new training program' },
 ];
 
 function perfColor(pct: number) {
-  if (pct >= 90) return 'text-green-600';
-  if (pct >= 70) return 'text-yellow-600';
-  return 'text-red-600';
+  if (pct >= 90) return 'text-success';
+  if (pct >= 70) return 'text-warning';
+  return 'text-danger';
 }
 
 const EVENT_COLORS: Record<string, string> = {
-  meeting: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  training: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-  deadline: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  other: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300',
-  celebration: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  meeting: 'bg-primary-soft text-primary ',
+  training: 'bg-primary-soft text-primary ',
+  deadline: 'bg-danger-bg text-danger ',
+  other: 'bg-muted text-foreground ',
+  celebration: 'bg-success-bg text-success ',
 };
 
 function healthColor(score: number) {
-  if (score >= 85) return 'text-green-600';
-  if (score >= 70) return 'text-yellow-600';
-  return 'text-red-600';
+  if (score >= 85) return 'text-success';
+  if (score >= 70) return 'text-warning';
+  return 'text-danger';
 }
 
 // Active Clients tab — admin view-only
@@ -118,7 +118,7 @@ function ActiveClientsPanel() {
                   <p className={cls.hint}>Agent: {c.assigned_name || 'Unassigned'} · Stage: {c.stage || 'Initial'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-blue-600">{c.onboarding_progress ?? 0}%</p>
+                  <p className="font-bold text-primary">{c.onboarding_progress ?? 0}%</p>
                 </div>
               </div>
               <Progress value={c.onboarding_progress ?? 0} className="h-2 mt-2" />
@@ -274,20 +274,18 @@ export function AdminDashboard() {
               {/* Stat Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <StatCard
-                  icon={<TrendingUp className="h-5 w-5 text-indigo-500" />}
+                  icon={<TrendingUp className="h-5 w-5 text-primary" />}
                   title="Monthly Revenue"
                   value={`$${(COMPANY_METRICS.totalRevenue ?? 0).toLocaleString()}`}
                   subtitle={`${revenuePct}% of $${(COMPANY_METRICS.revenueTarget ?? 0).toLocaleString()} target`}
                   accentColor={theme.accent}
-                  trend={{ value: 12 }}
                 />
                 <StatCard
-                  icon={<Users className="h-5 w-5 text-blue-500" />}
+                  icon={<Users className="h-5 w-5 text-primary" />}
                   title="Active Clients"
                   value={COMPANY_METRICS.activeClients}
                   subtitle={`${COMPANY_METRICS.clientRetention}% retention rate`}
                   accentColor={theme.accent}
-                  trend={{ value: 5 }}
                 />
               </div>
 
@@ -340,7 +338,7 @@ export function AdminDashboard() {
                 </CardHeader>
                 <CardContent className={cls.section}>
                   {events.map(ev => (
-                    <div key={ev.id} className={`${cls.item} border-l-4 ${ev.id === editingEventId ? 'border-blue-500' : 'border-slate-200'}`}>
+                    <div key={ev.id} className={`${cls.item} border-l-4 ${ev.id === editingEventId ? 'border-primary' : 'border-border'}`}>
                       {editingEventId === ev.id ? (
                         <div className="space-y-3 p-2">
                           <div className={cls.grid2}>
@@ -385,7 +383,7 @@ export function AdminDashboard() {
                             <Button variant="outline" size="sm" onClick={() => handleStartEdit(ev)}>
                               <Edit className="h-3.5 w-3.5 mr-1" />Edit
                             </Button>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50 border-red-200" onClick={() => handleDeleteEvent(ev.id)}>
+                            <Button variant="outline" size="sm" className="text-danger hover:bg-danger-bg border-danger-border" onClick={() => handleDeleteEvent(ev.id)}>
                               <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
                             </Button>
                           </div>

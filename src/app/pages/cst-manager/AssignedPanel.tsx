@@ -12,10 +12,10 @@ import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
 
 function statusBadge(status: InboxClient['status']) {
-    if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    if (status === 'active') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    if (status === 'flagged') return 'bg-red-100 text-red-700 border-red-200';
-    return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (status === 'onboarding') return 'bg-warning-bg text-warning border-warning/30';
+    if (status === 'active') return 'bg-success-bg text-success border-success/30';
+    if (status === 'flagged') return 'bg-danger-bg text-danger border-danger-border';
+    return 'bg-primary-soft text-primary border-primary/30';
 }
 
 export function AssignedPanel() {
@@ -67,7 +67,7 @@ export function AssignedPanel() {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs"
+                                                className="text-danger border-danger-border hover:bg-danger-bg hover:text-danger text-xs"
                                                 onClick={() => {
                                                     unassignClient(c.id);
                                                     toast.success(`${c.company_name} moved back to inbox`);

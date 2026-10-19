@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { BRAND_NAME } from '../../components/shared/BrandMark';
+import { BrandLogo, BRAND_NAME } from '../../components/shared/BrandMark';
 import { getPlatformToken, platformFetch, setPlatformSession } from '../../utils/platformApi';
 
 // Platform admin login (plan 4.4): the login card of Figure 4.1 without register or remember me.
@@ -35,6 +35,7 @@ export function PlatformLogin() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg,#1e2a44 0%,#2f4170 55%,#3b6fe0 100%)' }}>
       <div className="w-full max-w-[420px] rounded-[14px] bg-white px-10 py-[38px] text-[#1f2937] shadow-[0_20px_50px_rgba(0,0,0,.25)]">
+        <BrandLogo className="mx-auto mb-3 h-11 w-11" />
         <div className="text-center text-[28px] font-bold leading-tight text-[#1e2a44]">{BRAND_NAME}</div>
         <div className="mt-[6px] mb-[26px] text-center text-[13px] text-[#6b7383]">Platform Administration</div>
         <form onSubmit={submit}>

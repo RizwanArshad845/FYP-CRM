@@ -169,7 +169,7 @@ export function SalesManagerDashboard() {
                                             <p className="text-xs text-muted-foreground">Agents</p>
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{avgScore}%</p>
+                                            <p className="text-2xl font-bold text-primary ">{avgScore}%</p>
                                             <p className="text-xs text-muted-foreground">Avg Score</p>
                                         </div>
                                     </div>
@@ -181,7 +181,7 @@ export function SalesManagerDashboard() {
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                                             Team Performance
-                                            <Users className="h-4 w-4 text-blue-500" />
+                                            <Users className="h-4 w-4 text-primary" />
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -193,7 +193,7 @@ export function SalesManagerDashboard() {
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                                             Manager Tasks
-                                            <ClipboardCheck className="h-4 w-4 text-orange-500" />
+                                            <ClipboardCheck className="h-4 w-4 text-warning" />
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -205,7 +205,7 @@ export function SalesManagerDashboard() {
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                                             Team Concerns
-                                            <AlertCircle className="h-4 w-4 text-red-500" />
+                                            <AlertCircle className="h-4 w-4 text-danger" />
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>

@@ -11,9 +11,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useAgentTargets } from '../../context/AgentTargetContext';
 import { toast } from 'sonner';
 function pctColor(pct: number) {
-  if (pct >= 90) return 'text-green-600';
-  if (pct >= 70) return 'text-yellow-600';
-  return 'text-red-600';
+  if (pct >= 90) return 'text-success';
+  if (pct >= 70) return 'text-warning';
+  return 'text-danger';
 }
 
 export function CSTMonthlyTargets() {
@@ -79,10 +79,10 @@ export function CSTMonthlyTargets() {
     <div className={cls.page}>
       {/* Stat Cards */}
       <div className={cls.gridResponsive2}>
-        <StatCard icon={<Target className="h-4 w-4 text-blue-500" />} title="Client Target" value={String(displayTargetClients)} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-green-500" />} title="Clients Achieved" value={String(displayAchievedClients)} subtitle={`${progressPctClients}% of target`} valueClassName="text-green-600" />
-        <StatCard icon={<Target className="h-4 w-4 text-purple-500" />} title="Revenue Target" value={`$${displayTargetAmount.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-emerald-500" />} title="Revenue Achieved" value={`$${displayAchievedAmount.toLocaleString()}`} subtitle={`${progressPctAmount}% of target`} valueClassName="text-emerald-600" />
+        <StatCard icon={<Target className="h-4 w-4 text-primary" />} title="Client Target" value={String(displayTargetClients)} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
+        <StatCard icon={<TrendingUp className="h-4 w-4 text-success" />} title="Clients Achieved" value={String(displayAchievedClients)} subtitle={`${progressPctClients}% of target`} valueClassName="text-success" />
+        <StatCard icon={<Target className="h-4 w-4 text-primary" />} title="Revenue Target" value={`$${displayTargetAmount.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
+        <StatCard icon={<TrendingUp className="h-4 w-4 text-success" />} title="Revenue Achieved" value={`$${displayAchievedAmount.toLocaleString()}`} subtitle={`${progressPctAmount}% of target`} valueClassName="text-success" />
       </div>
 
       {/* Progress Bars */}
@@ -98,7 +98,7 @@ export function CSTMonthlyTargets() {
                 <span className={cls.label}>Progress ({displayAchievedClients}/{displayTargetClients})</span>
                 <span className={`${cls.metric} ${pctColor(progressPctClients)}`}>{progressPctClients}%</span>
               </div>
-              <Progress value={progressPctClients} className="h-4 bg-blue-100" />
+              <Progress value={progressPctClients} className="h-4 bg-primary-soft" />
             </div>
           </CardContent>
         </Card>
@@ -113,7 +113,7 @@ export function CSTMonthlyTargets() {
                 <span className={cls.label}>Progress (${displayAchievedAmount}/${displayTargetAmount})</span>
                 <span className={`${cls.metric} ${pctColor(progressPctAmount)}`}>{progressPctAmount}%</span>
               </div>
-              <Progress value={progressPctAmount} className="h-4 bg-purple-100" />
+              <Progress value={progressPctAmount} className="h-4 bg-primary-soft" />
             </div>
           </CardContent>
         </Card>
@@ -191,7 +191,7 @@ export function CSTMonthlyTargets() {
                         </TableCell>
 
                         {/* Remaining — auto calculated */}
-                        <TableCell className={`${cls.tableCell} font-mono text-orange-600`}>
+                        <TableCell className={`${cls.tableCell} font-mono text-warning`}>
                           {(t.achievedAmount || 0) > 0
                             ? '$' + remainingRev.toLocaleString()
                             : <span className={cls.hint}>—</span>}

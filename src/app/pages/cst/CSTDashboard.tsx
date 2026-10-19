@@ -40,15 +40,15 @@ import { Textarea } from '../../components/ui/textarea';
 const theme = getPortalTheme('cst');
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-  low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  high: 'bg-danger-bg text-danger ',
+  medium: 'bg-warning-bg text-warning ',
+  low: 'bg-primary-soft text-primary ',
 };
 
 const TASK_STATUS_COLORS: Record<string, string> = {
   todo: 'bg-muted text-muted-foreground',
-  'in-progress': 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-  done: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  'in-progress': 'bg-primary-soft text-primary ',
+  done: 'bg-success-bg text-success ',
 };
 
 // ── Schedule type matching DB: schedules(id, user_id, title, description, start_time, end_time)
@@ -63,9 +63,9 @@ const FLAG_BORDER_COLORS: Record<string, string> = {
 };
 
 const FLAG_OPTIONS: { value: string; label: string }[] = [
-  { value: 'red-flag', label: '🔴 Red Flag — Urgent issue' },
-  { value: 'yellow-flag', label: '🟡 Yellow Flag — Watch closely' },
-  { value: 'black-flag', label: '⚫ Black Flag — Churn / Cancel' },
+  { value: 'red-flag', label: 'Red Flag — Urgent issue' },
+  { value: 'yellow-flag', label: 'Yellow Flag — Watch closely' },
+  { value: 'black-flag', label: 'Black Flag — Churn / Cancel' },
 ];
 
 // ── Flag dialog (CST Agent only) ──────────────────────────────────────────────
@@ -98,7 +98,7 @@ function FlagDialog({ clientName, clientId, open, onClose }: FlagDialogProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flag Client</DialogTitle>
+          <DialogTitle className={cls.inline}><Flag className="h-5 w-5 text-danger" />Flag Client</DialogTitle>
           <DialogDescription>Flagging <strong>{clientName}</strong> — this will notify the CST Manager.</DialogDescription>
         </DialogHeader>
         <div className={cls.section}>
@@ -171,7 +171,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
         </button>
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-500" />
+            <Users className="h-5 w-5 text-primary" />
             {client.company_name}
           </DialogTitle>
           <DialogDescription>
@@ -205,7 +205,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Payment & Services</h3>
               <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Amount:</span> <span className="font-bold text-emerald-600 dark:text-emerald-400">${client.payment_amount}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Amount:</span> <span className="font-bold text-success ">${client.payment_amount}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Gateway:</span> <span>{client.payment_gateway || 'N/A'}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Services:</span> <span className="text-right break-words">{client.client_services || 'N/A'}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Product Sold:</span> <span className="text-right break-words">{client.product_sold || 'N/A'}</span></div>
@@ -240,11 +240,11 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
 
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2 uppercase tracking-wider border-b pb-2">
-            <StickyNote className="h-4 w-4 text-amber-500" /> Added Notes & History
+            <StickyNote className="h-4 w-4 text-warning" /> Added Notes & History
           </h3>
           {isLoadingNotes ? (
             <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               Loading notes...
             </div>
           ) : notes.length === 0 ? (
@@ -257,7 +257,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
                 <div key={note.id} className="bg-muted/30 p-3 rounded-lg border border-l-4 border-l-blue-500">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[10px] text-blue-700">
+                      <div className="w-5 h-5 rounded-full bg-primary-soft flex items-center justify-center text-[10px] text-primary">
                         {note.creator_name?.charAt(0) || 'U'}
                       </div>
                       {note.creator_name}
@@ -309,7 +309,7 @@ function ActiveClientsPanel() {
           <div className={cls.row}>
             <div>
               <CardTitle className={cls.inline}>
-                <div className="h-3 w-3 rounded-full bg-green-500" />
+                <div className="h-3 w-3 rounded-full bg-success" />
                 Active Clients
               </CardTitle>
               <CardDescription>
@@ -344,7 +344,7 @@ function ActiveClientsPanel() {
               </TableHeader>
               <TableBody className="divide-y">
                 {shownClients.map(c => (
-                  <TableRow key={c.id} className={`${!c.is_active ? 'opacity-60' : ''} hover:bg-muted/30 transition-colors cursor-pointer ${detailsTargetId === c.id ? 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/20' : ''}`} onClick={() => setDetailsTargetId(c.id)}>
+                  <TableRow key={c.id} className={`${!c.is_active ? 'opacity-60' : ''} hover:bg-muted/30 transition-colors cursor-pointer ${detailsTargetId === c.id ? 'ring-2 ring-primary/30 bg-primary-soft/50 ' : ''}`} onClick={() => setDetailsTargetId(c.id)}>
                     <TableCell>
                       <p className="font-bold">{c.company_name}</p>
                       <p className="text-xs text-muted-foreground">Person: {c.customer_name}</p>
@@ -370,7 +370,7 @@ function ActiveClientsPanel() {
                           {c.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                         {deactivationRequests.some(r => r.client_id === c.id) && (
-                          <Badge variant="outline" className="text-xs text-orange-700 border-orange-400 bg-orange-50">
+                          <Badge variant="outline" className="text-xs text-warning border-warning/30 bg-warning-bg">
                             Requested
                           </Badge>
                         )}
@@ -384,11 +384,11 @@ function ActiveClientsPanel() {
                       )}
                       {isCSTAgent && (
                         <div className="flex justify-end gap-1 flex-wrap">
-                          <Button size="sm" variant="outline" className="h-7 text-xs border-orange-400 text-orange-700 hover:bg-orange-50" onClick={(e) => { e.stopPropagation(); setFlagTarget({ id: c.id, name: c.company_name }); }}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs border-warning/30 text-warning hover:bg-warning-bg" onClick={(e) => { e.stopPropagation(); setFlagTarget({ id: c.id, name: c.company_name }); }}>
                             <Flag className="h-3 w-3 mr-1" />Flag
                           </Button>
                           {c.is_active && !deactivationRequests.some(r => r.client_id === c.id) && (
-                            <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleRequestDeactivation(c.id, c.company_name); }}>
+                            <Button size="sm" variant="outline" className="h-7 text-xs border-danger-border text-danger hover:bg-danger-bg" onClick={(e) => { e.stopPropagation(); handleRequestDeactivation(c.id, c.company_name); }}>
                               <AlertTriangle className="h-3 w-3 mr-1" />Deactivate
                             </Button>
                           )}
@@ -411,9 +411,9 @@ function ActiveClientsPanel() {
 
       {/* Pending Deactivation Requests — CST Manager only */}
       {isCSTManager && deactivationRequests.length > 0 && (
-        <Card className="border-2 border-orange-300 dark:border-orange-700">
+        <Card className="border-2 border-warning/30 ">
           <CardHeader>
-            <CardTitle className={`${cls.inline} text-orange-700 dark:text-orange-400`}>
+            <CardTitle className={`${cls.inline} text-warning `}>
               <AlertTriangle className="h-5 w-5" />
               Pending Deactivation Requests
             </CardTitle>
@@ -421,7 +421,7 @@ function ActiveClientsPanel() {
           </CardHeader>
           <CardContent className={cls.list}>
             {deactivationRequests.map(req => (
-              <div key={req.client_id} className={`${cls.item} border-orange-200 dark:border-orange-800`}>
+              <div key={req.client_id} className={`${cls.item} border-warning/30 `}>
                 <div className={`${cls.row} mb-3 flex-wrap gap-2`}>
                   <div>
                     <p className={cls.heading}>{req.client_name}</p>
@@ -561,7 +561,7 @@ function NotesPanel() {
       {/* Client Selector */}
       <Card className="lg:col-span-1">
         <CardHeader>
-          <CardTitle className={cls.inline}><Users className="h-5 w-5 text-blue-500" />Manage Client Notes</CardTitle>
+          <CardTitle className={cls.inline}><Users className="h-5 w-5 text-primary" />Manage Client Notes</CardTitle>
           <CardDescription>Search and select a client to manage their history</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -594,19 +594,19 @@ function NotesPanel() {
           </Select>
 
           {selectedClient && (
-            <div className={`${cls.muted} p-4 rounded-lg border border-blue-100 dark:border-blue-900/30`}>
+            <div className={`${cls.muted} p-4 rounded-lg border border-primary/30 `}>
               <h4 className="font-semibold mb-2 text-sm">Add New Note</h4>
               <Textarea
                 placeholder="Enter notes here... (Use new lines for points)"
                 value={newNote}
                 onChange={e => setNewNote(e.target.value)}
                 rows={5}
-                className="mb-3 text-sm focus-visible:ring-blue-500"
+                className="mb-3 text-sm focus-visible:ring-primary"
               />
               <Button
                 onClick={handleAddNote}
                 disabled={isAdding || !newNote.trim()}
-                className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
+                className="w-full h-9 bg-primary hover:bg-primary text-white min-w-[120px]"
               >
                 {isAdding ? (
                   <>Adding Record...</>
@@ -624,7 +624,7 @@ function NotesPanel() {
         <CardHeader className="border-b pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle className={cls.inline}><StickyNote className="h-5 w-5 text-amber-500" />Client History &amp; Records</CardTitle>
+              <CardTitle className={cls.inline}><StickyNote className="h-5 w-5 text-warning" />Client History &amp; Records</CardTitle>
               <CardDescription>
                 {selectedClient
                   ? `Timeline for ${clients.find(c => c.id === selectedClient)?.company_name}`
@@ -660,10 +660,10 @@ function NotesPanel() {
           ) : (
             <div className="space-y-4">
               {filteredNotes.map(note => (
-                <div key={note.id} className={`${cls.item} relative group border-l-4 border-l-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors`}>
+                <div key={note.id} className={`${cls.item} relative group border-l-4 border-l-blue-500 hover:bg-primary-soft/50 transition-colors`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[10px] font-bold text-blue-700">
+                      <div className="h-6 w-6 rounded-full bg-primary-soft flex items-center justify-center text-[10px] font-bold text-primary">
                         {note.creator_name?.charAt(0) || 'U'}
                       </div>
                       <div>
@@ -675,7 +675,7 @@ function NotesPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-blue-600 hover:bg-blue-100"
+                        className="h-7 w-7 text-primary hover:bg-primary-soft"
                         onClick={() => {
                           setEditingNoteId(note.id);
                           setEditNoteText(note.note_text);
@@ -686,7 +686,7 @@ function NotesPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-red-600 hover:bg-red-100"
+                        className="h-7 w-7 text-danger hover:bg-danger-bg"
                         onClick={() => handleDeleteNote(note.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -704,7 +704,7 @@ function NotesPanel() {
                       />
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingNoteId(null)} disabled={isUpdatingNote}>Cancel</Button>
-                        <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]" onClick={handleUpdateNote} disabled={isUpdatingNote}>
+                        <Button size="sm" className="h-7 text-xs bg-primary hover:bg-primary text-white min-w-[100px]" onClick={handleUpdateNote} disabled={isUpdatingNote}>
                           {isUpdatingNote ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </div>
@@ -852,7 +852,7 @@ export function CSTDashboard() {
                       <p className="text-xs text-muted-foreground">Onboarding</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-red-500 dark:text-red-400">{flaggedClients.length}</p>
+                      <p className="text-2xl font-bold text-danger ">{flaggedClients.length}</p>
                       <p className="text-xs text-muted-foreground">Flagged</p>
                     </div>
                   </div>
@@ -864,7 +864,7 @@ export function CSTDashboard() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                       Pending Onboarding
-                      <UserPlus className="h-4 w-4 text-blue-500" />
+                      <UserPlus className="h-4 w-4 text-primary" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -876,11 +876,11 @@ export function CSTDashboard() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                       Flagged Issues
-                      <Flag className="h-4 w-4 text-red-500" />
+                      <Flag className="h-4 w-4 text-danger" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{flaggedClients.length}</div>
+                    <div className="text-2xl font-bold text-danger">{flaggedClients.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">Clients requiring attention</p>
                   </CardContent>
                 </Card>
@@ -933,7 +933,7 @@ export function CSTDashboard() {
                           .map((c, idx) => {
                             const isHighlighted = searchParams.get('client') === String(c.id);
                             return (
-                              <TableRow key={c.id} className={`hover:bg-muted/50 transition-colors ${isHighlighted ? 'ring-2 ring-yellow-400 bg-yellow-100/70 dark:bg-yellow-950/30' : 'bg-background'}`} id={isHighlighted ? 'highlighted-client' : undefined}>
+                              <TableRow key={c.id} className={`hover:bg-muted/50 transition-colors ${isHighlighted ? 'ring-2 ring-warning/30 bg-warning-bg/70 ' : 'bg-background'}`} id={isHighlighted ? 'highlighted-client' : undefined}>
                                 <TableCell className="px-4 py-3 border-r border-border">
                                   <Badge
                                     variant={c.status === 'active' ? 'default' : c.status === 'flagged' ? 'destructive' : 'secondary'}
@@ -945,16 +945,16 @@ export function CSTDashboard() {
                                 <TableCell className="px-4 py-3 border-r border-border">
                                   {c.flag_type ? (
                                     <Badge
-                                      className={`text-[10px] uppercase font-bold px-1.5 h-5 ${c.flag_type === 'red-flag' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
-                                          c.flag_type === 'yellow-flag' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300' :
-                                            c.flag_type === 'black-flag' ? 'bg-gray-900 text-white dark:bg-gray-700' : 'bg-muted text-muted-foreground'
+                                      className={`text-[10px] uppercase font-bold px-1.5 h-5 ${c.flag_type === 'red-flag' ? 'bg-danger-bg text-danger ' :
+                                          c.flag_type === 'yellow-flag' ? 'bg-warning-bg text-warning ' :
+                                            c.flag_type === 'black-flag' ? 'bg-navy text-white ' : 'bg-muted text-muted-foreground'
                                         }`}
                                     >
-                                      {c.flag_type === 'red-flag' ? '🔴 Red' : c.flag_type === 'yellow-flag' ? '🟡 Yellow' : c.flag_type === 'black-flag' ? '⚫ Black' : c.flag_type}
+                                      {c.flag_type === 'red-flag' ? 'Red' : c.flag_type === 'yellow-flag' ? 'Yellow' : c.flag_type === 'black-flag' ? 'Black' : c.flag_type}
                                     </Badge>
                                   ) : '—'}
                                 </TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border font-medium text-primary ">{c.cin || '—'}</TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
@@ -968,7 +968,7 @@ export function CSTDashboard() {
                                 <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.tips_for_tech}>{c.tips_for_tech || '—'}</TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</TableCell>
+                                <TableCell className="px-4 py-3 border-r border-border font-bold text-success ">${c.payment_amount}</TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
                                 <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
                               </TableRow>
@@ -1003,7 +1003,7 @@ export function CSTDashboard() {
                     <CardHeader>
                       <div className={cls.row}>
                         <div>
-                          <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-blue-500" />Clients to be Onboarded</CardTitle>
+                          <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-primary" />Clients to be Onboarded</CardTitle>
                           <CardDescription>{onboardingClients.length} clients in onboarding</CardDescription>
                         </div>
                         <div className="relative">
@@ -1041,7 +1041,7 @@ export function CSTDashboard() {
                     <CardHeader>
                       <div className={cls.row}>
                         <div>
-                          <CardTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flagged Clients</CardTitle>
+                          <CardTitle className={cls.inline}><Flag className="h-5 w-5 text-danger" />Flagged Clients</CardTitle>
                           <CardDescription>Clients requiring immediate attention</CardDescription>
                         </div>
                         <div className="relative">
@@ -1070,7 +1070,7 @@ export function CSTDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                                className="border-success text-success hover:bg-success-bg"
                                 onClick={() => unflagClient(c.id)}
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
@@ -1112,10 +1112,10 @@ export function CSTDashboard() {
                 <CardHeader>
                   <div className={cls.row}>
                     <div>
-                      <CardTitle className={cls.inline}><Calendar className="h-5 w-5 text-blue-500" />Personal Calendar</CardTitle>
+                      <CardTitle className={cls.inline}><Calendar className="h-5 w-5 text-primary" />Personal Calendar</CardTitle>
                       <CardDescription>{schedules.length} scheduled items · {formatDate(new Date().toISOString())}</CardDescription>
                     </div>
-                    <Button onClick={() => openScheduleModal()} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                    <Button onClick={() => openScheduleModal()} className="bg-primary hover:bg-primary text-white shadow-lg">
                       <Plus className="h-4 w-4 mr-2" />Add Entry
                     </Button>
                   </div>
@@ -1152,10 +1152,10 @@ export function CSTDashboard() {
                               <span className={`${cls.hintXs}`}>{formatDate(sch.start_time)}</span>
                             </div>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm" className="border-blue-500 text-blue-700 hover:bg-blue-50" onClick={() => openScheduleModal(sch)}>
+                              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary-soft" onClick={() => openScheduleModal(sch)}>
                                 <Edit className="h-3.5 w-3.5 mr-1" />Edit
                               </Button>
-                              <Button variant="outline" size="sm" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => handleDeleteScheduleRow(sch.id)}>
+                              <Button variant="outline" size="sm" className="border-danger text-danger hover:bg-danger-bg" onClick={() => handleDeleteScheduleRow(sch.id)}>
                                 <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
                               </Button>
                             </div>
@@ -1189,7 +1189,7 @@ export function CSTDashboard() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className={cls.inline}>
-              {editingScheduleId ? <Edit className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-blue-500" />}
+              {editingScheduleId ? <Edit className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
               {editingScheduleId ? 'Edit Schedule Entry' : 'Add New Schedule Entry'}
             </DialogTitle>
             <DialogDescription>Plan your daily tasks and interactions.</DialogDescription>
@@ -1226,7 +1226,7 @@ export function CSTDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsScheduleOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleScheduleSubmit} disabled={isSubmitting}>
+            <Button className="bg-primary hover:bg-primary text-white" onClick={handleScheduleSubmit} disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : (editingScheduleId ? 'Update Entry' : 'Save Entry')}
             </Button>
           </DialogFooter>

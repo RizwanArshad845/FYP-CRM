@@ -176,9 +176,9 @@ export function InternalConcerns() {
                       <TableCell>{c.raised_by_name}</TableCell>
                       <TableCell>
                         <Badge className={
-                          c.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                          c.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
+                          c.status === 'resolved' ? 'bg-success-bg text-success' :
+                          c.status === 'in-progress' ? 'bg-primary-soft text-primary' :
+                          'bg-warning-bg text-warning'
                         }>
                           {c.status.toUpperCase()}
                         </Badge>
@@ -188,7 +188,7 @@ export function InternalConcerns() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={`h-8 w-8 ${c.status.toLowerCase() === 'open' ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-gray-400 cursor-not-allowed'}`}
+                            className={`h-8 w-8 ${c.status.toLowerCase() === 'open' ? 'text-primary hover:text-primary hover:bg-primary-soft' : 'text-muted-foreground cursor-not-allowed'}`}
                             onClick={() => c.status.toLowerCase() === 'open' && handleOpenEdit(c)}
                             title={c.status.toLowerCase() === 'open' ? 'Edit' : 'Cannot edit (Admin viewed or processing)'}
                             disabled={c.status.toLowerCase() !== 'open'}
@@ -198,7 +198,7 @@ export function InternalConcerns() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={`h-8 w-8 ${c.status.toLowerCase() === 'open' ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-gray-400 cursor-not-allowed'}`}
+                            className={`h-8 w-8 ${c.status.toLowerCase() === 'open' ? 'text-danger hover:text-danger hover:bg-danger-bg' : 'text-muted-foreground cursor-not-allowed'}`}
                             onClick={() => c.status.toLowerCase() === 'open' && handleDelete(c.id)}
                             title={c.status.toLowerCase() === 'open' ? 'Delete' : 'Cannot delete (Admin viewed or processing)'}
                             disabled={c.status.toLowerCase() !== 'open'}

@@ -67,9 +67,9 @@ type SalarySlip = {
 };
 
 const PAYMENT_COLORS: Record<PaymentStatus, string> = {
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  paid: 'bg-success-bg text-success ',
+  pending: 'bg-warning-bg text-warning ',
+  partial: 'bg-warning-bg text-warning ',
 };
 
 const CALC_FIELDS: { k: string; label: string; placeholder: string }[] = [
@@ -443,7 +443,7 @@ export function FinanceDashboard() {
             </div>
             <div className="flex items-center gap-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{active.length}</p>
+                <p className="text-2xl font-bold text-primary ">{active.length}</p>
                 <p className="text-xs text-muted-foreground">Active Employees</p>
               </div>
               <div className="text-center">
@@ -455,10 +455,10 @@ export function FinanceDashboard() {
         </WelcomeHero>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={<DollarSign className="h-5 w-5 text-violet-500" />} title="Total Salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} accentColor={theme.accent} />
-          <StatCard icon={<TrendingDown className="h-5 w-5 text-orange-500" />} title="Advance Payments" value={PKR(totalAdvances)} subtitle="Paid in advance" valueClassName="text-orange-600" accentColor={theme.accent} />
-        <StatCard icon={<TrendingUp className="h-5 w-5 text-green-500" />} title="Total Incoming" value={`$ ${totalRevenue.toLocaleString()}`} subtitle="Revenue this month" valueClassName="text-green-600" accentColor={theme.accent} trend={{ value: 8 }} />
-        <StatCard icon={<Calculator className="h-5 w-5 text-blue-500" />} title="Monthly Expenses" value={PKR(totalSalaries + totalExpenses)} subtitle="Total outgoing" valueClassName="text-blue-600" accentColor={theme.accent} trend={{ value: -3 }} />
+          <StatCard icon={<DollarSign className="h-5 w-5 text-primary" />} title="Total Salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} accentColor={theme.accent} />
+          <StatCard icon={<TrendingDown className="h-5 w-5 text-warning" />} title="Advance Payments" value={PKR(totalAdvances)} subtitle="Paid in advance" valueClassName="text-warning" accentColor={theme.accent} />
+        <StatCard icon={<TrendingUp className="h-5 w-5 text-success" />} title="Total Incoming" value={`$ ${totalRevenue.toLocaleString()}`} subtitle="Revenue this month" valueClassName="text-success" accentColor={theme.accent} />
+        <StatCard icon={<Calculator className="h-5 w-5 text-primary" />} title="Monthly Expenses" value={PKR(totalSalaries + totalExpenses)} subtitle="Total outgoing" valueClassName="text-primary" accentColor={theme.accent} />
         </div>
 
         {/* Auto Salary Calculator — standalone tool, maps to processPayroll formula */}
@@ -602,8 +602,8 @@ export function FinanceDashboard() {
                         <Badge variant={emp.is_active ? 'default' : 'secondary'}>{emp.is_active ? 'Active' : 'Inactive'}</Badge>
                       </TableCell>
                       <TableCell className={cls.tableCell}>{PKR(emp.base_salary)}</TableCell>
-                      <TableCell className={`${cls.tableCell} text-orange-600`}>{PKR(emp.advance_payments)}</TableCell>
-                      <TableCell className={`${cls.tableCell} text-green-600`}>{PKR(emp.accrued_payments || 0)}</TableCell>
+                      <TableCell className={`${cls.tableCell} text-warning`}>{PKR(emp.advance_payments)}</TableCell>
+                      <TableCell className={`${cls.tableCell} text-success`}>{PKR(emp.accrued_payments || 0)}</TableCell>
                       <TableCell className={`${cls.tableCell} ${cls.heading}`}>{PKR(emp.total_salary)}</TableCell>
                       <TableCell className={cls.tableCell}>
                         <Badge className={PAYMENT_COLORS[emp.payment_status as PaymentStatus] || PAYMENT_COLORS.pending}>{emp.payment_status}</Badge>
@@ -639,7 +639,7 @@ export function FinanceDashboard() {
                 <CardTitle>Monthly Expenses</CardTitle>
                 <CardDescription>Operational expenses for the current month</CardDescription>
               </div>
-              <Button onClick={() => openExpenseModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg">
+              <Button onClick={() => openExpenseModal()} className="bg-success hover:bg-success text-white shadow-lg">
                 <Plus className="h-5 w-5 mr-2" /> ADD NEW EXPENSE
               </Button>
             </div>
@@ -664,16 +664,16 @@ export function FinanceDashboard() {
                         <TableCell className={`${cls.tableCell} font-mono`}>{PKR(Number(exp.amount))}</TableCell>
                         <TableCell className={`${cls.tableCell} ${cls.mono} text-xs`}>{exp.expense_date?.split('T')[0]}</TableCell>
                         <TableCell className={cls.tableCell}>
-                          <Badge className={exp.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                          <Badge className={exp.status === 'paid' ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning'}>
                             {exp.status}
                           </Badge>
                         </TableCell>
                         <TableCell className={cls.tableCell}>
                           <div className="flex gap-2 items-center">
-                            <Button variant="outline" size="sm" className="border-blue-500 text-blue-700 hover:bg-blue-50" onClick={() => openExpenseModal(exp as any)}>
+                            <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary-soft" onClick={() => openExpenseModal(exp as any)}>
                               <Edit className="h-4 w-4 mr-1" /> Edit
                             </Button>
-                            <Button variant="outline" size="sm" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => handleDeleteExpenseRow(exp.id)}>
+                            <Button variant="outline" size="sm" className="border-danger text-danger hover:bg-danger-bg" onClick={() => handleDeleteExpenseRow(exp.id)}>
                               <Trash2 className="h-4 w-4 mr-1" /> Delete
                             </Button>
                           </div>
@@ -752,7 +752,7 @@ export function FinanceDashboard() {
               </DialogDescription>
             </DialogHeader>
             {currentSlip && (
-              <div id="salary-slip-content" className="space-y-4 p-6 bg-white rounded-xl text-gray-900 border border-gray-200 shadow-xl">
+              <div id="salary-slip-content" className="space-y-4 p-6 bg-white rounded-xl text-foreground border border-border shadow-xl">
                 <div className="flex justify-between items-start border-b pb-4">
                     <div className="space-y-1">
                         <h2 className="text-2xl font-bold text-[#2C3E50]">Official Salary Slip</h2>
@@ -767,19 +767,19 @@ export function FinanceDashboard() {
                 <div className="grid grid-cols-2 gap-3 p-4 rounded-lg bg-muted/50 border">
                   <div>
                     <p className="text-xs text-muted-foreground">Employee Name</p>
-                    <p className="font-bold text-gray-900">{currentSlip.employeeName}</p>
+                    <p className="font-bold text-foreground">{currentSlip.employeeName}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Employee ID</p>
-                    <p className="font-mono text-sm font-bold text-gray-900">{currentSlip.employeeId}</p>
+                    <p className="font-mono text-sm font-bold text-foreground">{currentSlip.employeeId}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Department</p>
-                    <p className="text-sm font-semibold text-gray-800">{currentSlip.department}</p>
+                    <p className="text-sm font-semibold text-foreground">{currentSlip.department}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="text-sm font-semibold text-gray-800">{currentSlip.role}</p>
+                    <p className="text-sm font-semibold text-foreground">{currentSlip.role}</p>
                   </div>
                 </div>
 
@@ -787,19 +787,19 @@ export function FinanceDashboard() {
                 <div className="space-y-2 p-4 rounded-lg border">
                   <div className="flex justify-between items-center py-1.5 border-b">
                     <span className="text-sm text-muted-foreground">Base Salary</span>
-                    <span className="font-mono font-bold text-gray-900">{PKR(currentSlip.baseSalary)}</span>
+                    <span className="font-mono font-bold text-foreground">{PKR(currentSlip.baseSalary)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                    <span className="text-sm text-green-600 font-medium">+ Bonus</span>
-                    <span className="font-mono font-bold text-green-600">{PKR(currentSlip.accruedPayments || 0)}</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border">
+                    <span className="text-sm text-success font-medium">+ Bonus</span>
+                    <span className="font-mono font-bold text-success">{PKR(currentSlip.accruedPayments || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                    <span className="text-sm text-orange-600 font-medium">− Advance Payments</span>
-                    <span className="font-mono font-bold text-orange-600">{PKR(currentSlip.advancePayments || 0)}</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border">
+                    <span className="text-sm text-warning font-medium">− Advance Payments</span>
+                    <span className="font-mono font-bold text-warning">{PKR(currentSlip.advancePayments || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-t-2 border-gray-200 mt-2">
-                    <span className="font-bold text-gray-900">Net Pay</span>
-                    <span className="font-mono font-bold text-xl text-gray-900">{PKR(currentSlip.totalSalary)}</span>
+                  <div className="flex justify-between items-center py-2 border-t-2 border-border mt-2">
+                    <span className="font-bold text-foreground">Net Pay</span>
+                    <span className="font-mono font-bold text-xl text-foreground">{PKR(currentSlip.totalSalary)}</span>
                   </div>
                 </div>
 

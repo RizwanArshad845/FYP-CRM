@@ -125,7 +125,7 @@ export function CSTManagerDashboard() {
                         <div className="flex items-center gap-6">
                             {pendingCount > 0 && (
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{pendingCount}</p>
+                                    <p className="text-2xl font-bold text-danger ">{pendingCount}</p>
                                     <p className="text-xs text-muted-foreground">Pending Inbox</p>
                                 </div>
                             )}
@@ -145,7 +145,7 @@ export function CSTManagerDashboard() {
                                 <TabsList className="mb-6 flex-wrap w-full justify-start h-auto gap-1 bg-muted/50 p-1.5 rounded-xl border border-border/50">
                                     <TabsTrigger value="inbox" className="relative rounded-lg data-[state=active]:shadow-sm">
                                         <Inbox className="h-4 w-4 mr-2" /> Inbox
-                                        {pendingCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold">{pendingCount}</span>}
+                                        {pendingCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-danger text-white text-[10px] font-bold">{pendingCount}</span>}
                                     </TabsTrigger>
                                     <TabsTrigger value="assigned" className="rounded-lg data-[state=active]:shadow-sm"><Users className="h-4 w-4 mr-2" />Assigned</TabsTrigger>
                                     <TabsTrigger value="active" className="rounded-lg data-[state=active]:shadow-sm"><Globe className="h-4 w-4 mr-2" />Active</TabsTrigger>
@@ -167,7 +167,7 @@ export function CSTManagerDashboard() {
                                     <TabsTrigger value="targets" className="rounded-lg data-[state=active]:shadow-sm"><Target className="h-4 w-4 mr-2" />Targets</TabsTrigger>
                                     <TabsTrigger value="tasks" className="relative rounded-lg data-[state=active]:shadow-sm">
                                         <ClipboardCheck className="h-4 w-4 mr-2" /> Tasks
-                                        {adminTaskCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-500 text-white text-[10px] font-bold">{adminTaskCount}</span>}
+                                        {adminTaskCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-warning text-white text-[10px] font-bold">{adminTaskCount}</span>}
                                     </TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="performance"><CSTAgentPerformance/></TabsContent>
@@ -194,7 +194,7 @@ export function CSTManagerDashboard() {
                                 <TabsList className="mb-6 flex-wrap w-full justify-start h-auto gap-1 bg-muted/50 p-1.5 rounded-xl border border-border/50">
                                     <TabsTrigger value="deactivation" className="relative rounded-lg data-[state=active]:shadow-sm">
                                         <AlertTriangle className="h-4 w-4 mr-2" /> Deactivations
-                                        {deactivationCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-500 text-white text-[10px] font-bold">{deactivationCount}</span>}
+                                        {deactivationCount > 0 && <span className="ml-2 inline-flex items-center justify-center h-4 w-4 rounded-full bg-warning text-white text-[10px] font-bold">{deactivationCount}</span>}
                                     </TabsTrigger>
                                     <TabsTrigger value="existing-entry" className="rounded-lg data-[state=active]:shadow-sm"><UserPlus className="h-4 w-4 mr-2" />Add Existing</TabsTrigger>
                                 </TabsList>
@@ -209,10 +209,10 @@ export function CSTManagerDashboard() {
                                     <CardHeader>
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <CardTitle className="flex items-center gap-2"><CalendarIcon className="h-5 w-5 text-blue-500" />Team Calender</CardTitle>
+                                                <CardTitle className="flex items-center gap-2"><CalendarIcon className="h-5 w-5 text-primary" />Team Calender</CardTitle>
                                                 <CardDescription>View and manage scheduled check-ins and meetings</CardDescription>
                                             </div>
-                                            <Button onClick={() => openScheduleModal()} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                                            <Button onClick={() => openScheduleModal()} className="bg-primary hover:bg-primary text-white shadow-lg">
                                                 <Plus className="h-4 w-4 mr-2" />Add Entry
                                             </Button>
                                         </div>
@@ -220,7 +220,7 @@ export function CSTManagerDashboard() {
                                     <CardContent>
                                         <div className="space-y-3">
                                             {schedules.map(sch => (
-                                                <div key={sch.id} className={`p-4 rounded-xl border flex items-center justify-between gap-4 hover:shadow-md transition-all ${!isUpcoming(sch.start_time) ? 'bg-muted/30 opacity-60' : 'bg-card border-blue-100 dark:border-blue-900/20'}`}>
+                                                <div key={sch.id} className={`p-4 rounded-xl border flex items-center justify-between gap-4 hover:shadow-md transition-all ${!isUpcoming(sch.start_time) ? 'bg-muted/30 opacity-60' : 'bg-card border-primary/30 '}`}>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <h4 className="font-bold truncate">{sch.title}</h4>
@@ -236,8 +236,8 @@ export function CSTManagerDashboard() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2 shrink-0">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => openScheduleModal(sch)}><Edit className="h-4 w-4" /></Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => deleteSchedule(sch.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => openScheduleModal(sch)}><Edit className="h-4 w-4" /></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-danger" onClick={() => deleteSchedule(sch.id)}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -257,7 +257,7 @@ export function CSTManagerDashboard() {
                     <DialogContent className="max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                                <CalendarIcon className="h-5 w-5 text-blue-500" />
+                                <CalendarIcon className="h-5 w-5 text-primary" />
                                 {editingScheduleId ? 'Edit Calender Entry' : 'Add Calender Entry'}
                             </DialogTitle>
                             <DialogDescription>Schedule a new activity for the team.</DialogDescription>
@@ -294,7 +294,7 @@ export function CSTManagerDashboard() {
                         </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsScheduleOpen(false)}>Cancel</Button>
-                            <Button onClick={handleScheduleSubmit} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+                            <Button onClick={handleScheduleSubmit} disabled={isSubmitting} className="bg-primary hover:bg-primary text-white">
                                 {isSubmitting ? 'Saving...' : 'Save Entry'}
                             </Button>
                         </DialogFooter>

@@ -23,9 +23,9 @@ export function ActiveClientsPanel() {
         <div className={cls.page}>
             {/* Pending Deactivation Requests from CST Agents */}
             {deactivationRequests.length > 0 && (
-                <Card className="border-2 border-yellow-300 dark:border-yellow-700">
+                <Card className="border-2 border-warning/30 ">
                     <CardHeader>
-                        <CardTitle className={`${cls.inline} text-yellow-700 dark:text-yellow-400`}>
+                        <CardTitle className={`${cls.inline} text-warning `}>
                             <AlertTriangle className="h-5 w-5" />
                             Pending Deactivation Requests
                         </CardTitle>
@@ -33,7 +33,7 @@ export function ActiveClientsPanel() {
                     </CardHeader>
                     <CardContent className={cls.list}>
                         {deactivationRequests.map(req => (
-                                <div key={req.client_id} className={`${cls.item} border-yellow-200`}>
+                                <div key={req.client_id} className={`${cls.item} border-warning/30`}>
                                     <div className={`${cls.row} mb-3 flex-wrap gap-2`}>
                                         <div>
                                             <p className={cls.heading}>{req.client_name}</p>

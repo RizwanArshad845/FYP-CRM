@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { BRAND_NAME, BRAND_TAGLINE } from '../components/shared/BrandMark';
+import { BrandLogo, BRAND_NAME, BRAND_TAGLINE } from '../components/shared/BrandMark';
 import { useAuth, nextRouteFor } from '../context/AuthContext';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -63,6 +63,7 @@ export function Login() {
       style={{ background: 'linear-gradient(135deg,#1e2a44 0%,#2f4170 55%,#3b6fe0 100%)' }}
     >
       <div className="w-full max-w-[420px] rounded-[14px] bg-white px-10 py-[38px] text-[#1f2937] shadow-[0_20px_50px_rgba(0,0,0,.25)]">
+        {(!slug || orgMissing) && <BrandLogo className="mx-auto mb-3 h-11 w-11" />}
         <div className="text-center text-[28px] font-bold leading-tight text-[#1e2a44]">{slug && !orgMissing ? orgName ?? ' ' : BRAND_NAME}</div>
         <div className="mt-[6px] mb-[26px] text-center text-[13px] text-[#6b7383]">{BRAND_TAGLINE}</div>
 

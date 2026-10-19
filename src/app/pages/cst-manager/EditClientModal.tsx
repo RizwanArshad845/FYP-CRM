@@ -68,7 +68,7 @@ export function EditClientModal({ client, open, onOpenChange, onSuccess }: EditC
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className={cls.inline}><Edit className="h-5 w-5 text-blue-500" />Edit Client Information</DialogTitle>
+                    <DialogTitle className={cls.inline}><Edit className="h-5 w-5 text-primary" />Edit Client Information</DialogTitle>
                     <DialogDescription>Correct any errors in the client information.</DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
@@ -140,7 +140,7 @@ export function EditClientModal({ client, open, onOpenChange, onSuccess }: EditC
                 />
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
-                    <Button onClick={handleUpdate} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
+                    <Button onClick={handleUpdate} disabled={isSaving} className="bg-primary hover:bg-primary text-white min-w-[120px]">
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </DialogFooter>

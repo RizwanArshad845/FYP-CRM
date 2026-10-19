@@ -135,11 +135,11 @@ export function ExistingClientForm() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-5xl mx-auto py-4">
-      <Card className="shadow-lg border-blue-100 dark:border-blue-900/20">
-        <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b">
+      <Card className="shadow-lg border-primary/30 ">
+        <CardHeader className="bg-primary-soft/50 border-b">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                <UserPlus className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-primary-soft rounded-lg">
+                <UserPlus className="h-6 w-6 text-primary" />
             </div>
             <div>
                 <CardTitle>Add Existing Client</CardTitle>
@@ -150,8 +150,8 @@ export function ExistingClientForm() {
         <CardContent className="p-6 space-y-8">
           {/* Client Information */}
           <section className="space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-blue-600 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-blue-600" />
+            <h3 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+              <div className="h-4 w-1 rounded-full bg-primary" />
               Client Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -175,13 +175,13 @@ export function ExistingClientForm() {
                   onBlur={() => setTimeout(() => setShowStates(false), 200)}
                 />
                 {showStates && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-xl dark:bg-gray-800 dark:border-gray-700">
+                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-xl ">
                     {states
                       .filter(s => s.toLowerCase().includes(formData.serviceArea.toLowerCase()))
                       .map(s => (
                         <div
                           key={s}
-                          className="px-4 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 text-sm"
+                          className="px-4 py-2 cursor-pointer hover:bg-primary-soft text-sm"
                           onMouseDown={() => {
                             set('serviceArea', s);
                             setShowStates(false);
@@ -247,8 +247,8 @@ export function ExistingClientForm() {
           {/* Contact & Links */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t">
             <section className="space-y-4">
-                <h3 className="font-bold text-sm uppercase tracking-wider text-blue-600 flex items-center gap-2">
-                    <div className="h-4 w-1 rounded-full bg-blue-600" />
+                <h3 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+                    <div className="h-4 w-1 rounded-full bg-primary" />
                     Contact Details
                 </h3>
                 <div className="space-y-4">
@@ -258,8 +258,8 @@ export function ExistingClientForm() {
             </section>
 
             <section className="space-y-4">
-                <h3 className="font-bold text-sm uppercase tracking-wider text-blue-600 flex items-center gap-2">
-                    <div className="h-4 w-1 rounded-full bg-blue-600" />
+                <h3 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+                    <div className="h-4 w-1 rounded-full bg-primary" />
                     Digital Presence
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -276,8 +276,8 @@ export function ExistingClientForm() {
 
           {/* Additional Info */}
           <section className="space-y-4 pt-4 border-t">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-blue-600 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-blue-600" />
+            <h3 className="font-bold text-sm uppercase tracking-wider text-primary flex items-center gap-2">
+              <div className="h-4 w-1 rounded-full bg-primary" />
               Additional Information
             </h3>
             <div className="grid grid-cols-1 gap-4">
@@ -297,7 +297,7 @@ export function ExistingClientForm() {
             <Button type="button" variant="outline" onClick={handleClear} className="flex-1" disabled={isSubmitting}>
               <X className="h-4 w-4 mr-2" />Clear Form
             </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+            <Button type="submit" className="flex-1 bg-primary hover:bg-primary text-white" disabled={isSubmitting}>
               <Send className="h-4 w-4 mr-2" />{isSubmitting ? 'Adding Client...' : 'Add Existing Client'}
             </Button>
           </div>

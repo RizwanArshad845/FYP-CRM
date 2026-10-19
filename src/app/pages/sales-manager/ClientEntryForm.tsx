@@ -179,7 +179,7 @@ export function ClientEntryForm() {
           {/* Client Information */}
           <section className={cls.section}>
             <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-emerald-500" />
+              <div className="h-4 w-1 rounded-full bg-success" />
               Client Information
             </h3>
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-4`}>
@@ -202,13 +202,13 @@ export function ClientEntryForm() {
                   onBlur={() => setTimeout(() => setShowStates(false), 200)}
                 />
                 {showStates && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700">
+                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-lg ">
                     {states
                       .filter(s => s.toLowerCase().includes(formData.serviceArea.toLowerCase()))
                       .map(s => (
                         <div
                           key={s}
-                          className="px-4 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 text-sm"
+                          className="px-4 py-2 cursor-pointer hover:bg-primary-soft text-sm"
                           onMouseDown={() => {
                             set('serviceArea', s);
                             setShowStates(false);
@@ -285,7 +285,7 @@ export function ClientEntryForm() {
           {/* Contact Details */}
           <section className={cls.section}>
             <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-blue-500" />
+              <div className="h-4 w-1 rounded-full bg-primary" />
               Contact Details
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -297,7 +297,7 @@ export function ClientEntryForm() {
           {/* Digital Presence */}
           <section className={cls.section}>
             <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-purple-500" />
+              <div className="h-4 w-1 rounded-full bg-primary" />
               Digital Presence
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -314,7 +314,7 @@ export function ClientEntryForm() {
           {/* Additional Information */}
           <section className={cls.section}>
             <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-amber-500" />
+              <div className="h-4 w-1 rounded-full bg-warning" />
               Additional Information
             </h3>
             {TEXT_AREAS.map(({ id, label, placeholder }) => (
@@ -357,7 +357,7 @@ export function ClientEntryForm() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {pendingClients.map((client) => (
-                <Card key={client.id} className="shadow-sm border-l-4 border-yellow-500">
+                <Card key={client.id} className="shadow-sm border-l-4 border-warning">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">{client.company_name}</CardTitle>
                     <CardDescription className="text-xs">{client.customer_name}</CardDescription>
@@ -372,7 +372,7 @@ export function ClientEntryForm() {
                       <span className="font-medium">${client.payment_amount}</span>
                     </div>
                     <div className="flex justify-end">
-                      <span className="text-xs font-semibold px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                      <span className="text-xs font-semibold px-2 py-1 bg-warning-bg text-warning rounded-full">
                         ONBOARDING PENDING
                       </span>
                     </div>

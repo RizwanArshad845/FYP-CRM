@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
-import { BRAND_NAME } from '../../components/shared/BrandMark';
+import { BrandMark } from '../../components/shared/BrandMark';
 import { cn } from '../../components/ui/utils';
 
 // Shared frame for the pre-dashboard setup screens (signup, wizard, password change),
@@ -18,7 +18,7 @@ export function SetupShell({ title, subtitle, children, headerRight, stepper, wi
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="flex h-[58px] shrink-0 items-center justify-between bg-navy px-7 text-white">
-        <b className="text-[20px] tracking-[0.5px]">{BRAND_NAME}</b>
+        <BrandMark onDark logoClassName="h-7 w-7" textClassName="text-[20px]" />
         {headerRight && <span className="text-[13px] text-sidebar-foreground">{headerRight}</span>}
       </header>
       <main className="px-4 pb-10">

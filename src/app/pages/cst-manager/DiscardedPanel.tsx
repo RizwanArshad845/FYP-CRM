@@ -43,7 +43,7 @@ export function DiscardedPanel() {
                 <CardHeader>
                     <div className={cls.row}>
                         <div>
-                            <CardTitle className="text-red-600 flex items-center gap-2">
+                            <CardTitle className="text-danger flex items-center gap-2">
                                 <ShieldAlert className="h-5 w-5" />
                                 Discarded & Black-Flagged Clients
                             </CardTitle>
@@ -82,7 +82,7 @@ export function DiscardedPanel() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-3">
                                     <div className="md:col-span-2">
                                         <p className={cls.hintXs}>Reason</p>
-                                        <p className="font-medium text-red-700 bg-red-50 p-2 rounded mt-1 border border-red-100">
+                                        <p className="font-medium text-danger bg-danger-bg p-2 rounded mt-1 border border-danger-border">
                                             {c.discard_reason || 'No reason provided.'}
                                         </p>
                                     </div>
