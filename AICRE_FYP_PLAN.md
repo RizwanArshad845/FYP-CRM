@@ -15,7 +15,7 @@ AICRE, the AI Integrated Client Relations Engine, is a multi tenant, web based C
 
 ### 0.2 What is obsolete
 
-* **`future_plan.md` is obsolete.** Do not follow it. In particular, its rule "every write action requires confirmation, no exceptions" is replaced by the auto tier and confirm tier design in Section 10.
+* **`future_plan.md` is obsolete.** Do not follow it. In particular, its rule "every write action requires confirmation, no exceptions" is replaced by the auto tier and confirm tier design in Section 11.
 * **The old version of this file is replaced completely.** The old `AICRE_FYP_PLAN.md` described an ML side car, a next best action model, synthetic training data and an `ml_predictions` table. None of that is in the report. Section 2.3 lists everything removed.
 
 ### 0.3 The two phases
@@ -23,7 +23,8 @@ AICRE, the AI Integrated Client Relations Engine, is a multi tenant, web based C
 | Phase | Content | Status |
 |---|---|---|
 | **Phase 1 (build now)** | Everything in the report except the AI assistant. It covers: finishing multi tenancy, a public landing page, the platform administrator module, custom fields, pipeline stages and the Kanban board, table driven navigation, client and employee CSV import, the rule based automations, and the full UI restyle to the report's mockups. | In progress. Multi tenancy, onboarding and the permission dials already exist. |
-| **Phase 2 (next)** | The AI assistant: retrieval over the organization's own records, six fixed tools with auto and confirm tiers, the action log, conversation history and the adversarial test suite for the assistant. | Not started. Specified in Section 10 so the design stays consistent, but **do not build any of it in Phase 1.** |
+| **Phase 1 optional** | Additions and fixes found by comparing AICRE with other CRMs (leads pipeline, activity timeline, change history, notifications, export and reports, and more). Not required by the report. | Proposed only. Section 10. **Build an item only when the user picks it.** |
+| **Phase 2 (next)** | The AI assistant: retrieval over the organization's own records, six fixed tools with auto and confirm tiers, the action log, conversation history and the adversarial test suite for the assistant. | Not started. Specified in Section 11 so the design stays consistent, but **do not build any of it in Phase 1.** |
 
 ### 0.4 Rules that apply to every change
 
@@ -874,7 +875,7 @@ As described in Section 7.3.
 
 ### 9.7 Assistant panel (Figure 4.3)
 
-Phase 2 only; see Section 10.
+Phase 2 only; see Section 11.
 
 ### 9.8 Permissions (Figure 4.6)
 
@@ -892,11 +893,94 @@ The landing page, the platform admin module and every other existing module scre
 
 ---
 
-## 10. Phase 2: AI assistant (specified now, built later)
+## 10. Optional additions and fixes (Phase 1, optional, not required by the report)
+
+Ideas from comparing AICRE with HubSpot, Salesforce, Zoho CRM, Pipedrive and Freshsales. **None of this is required by the report.** Build an item only when the user picks it; each one is a plan deviation, recorded like the client field layout (Section 6.1). Items O5 (reports) may overlap with the Phase 2 assistant; check before building.
+
+### 10.1 The six portals
+
+The six portals fit AICRE's target, small and medium sales and customer success companies. Big CRMs organize by function rather than by role:
+
+| AICRE | Closest equivalent elsewhere | Verdict |
+|---|---|---|
+| Sales, Sales Manager | HubSpot Sales Hub, Salesforce Sales Cloud | Keep |
+| CST, CST Manager | HubSpot Service Hub, Salesforce Service Cloud | Keep |
+| Admin | The settings and admin area in every CRM | Keep |
+| Finance (payroll, salary slips, attendance) | Not in CRMs. That is HR or payroll software (Zoho People, BambooHR) | Unusual; see fix X3 |
+
+Portals other CRMs have that AICRE does not, and should not add:
+
+* **Marketing** (campaigns, email lists, landing pages): large and outside the report's scope.
+* **Customer self-service portal** (clients log in to see their tickets): too large for the FYP.
+
+### 10.2 Feasible additions
+
+At the time of writing AICRE has no in-app notifications, no client export and no change history.
+
+| # | Feature | Why it matters | Effort |
+|---|---|---|---|
+| O1 | **Deals before the sale** (leads with expected value, expected close date, won or lost reason) | Today a client enters AICRE only after it is sold; the pipeline before that is only follow-ups. Every sales CRM centres on deals, and forecasting comes from them. Reuses the pipeline stages and Kanban board (Section 10.3). | Medium to large |
+| O2 | **Activity timeline per client** | One history on the client: notes, follow-ups, calls, status changes, assignments. Salesforce and HubSpot are built around it. The data mostly exists; `last_contact` already combines three sources. | Small to medium |
+| O3 | **Change history (audit log)** | Who changed which field, when, from what to what. Standard in Salesforce. A strong point for a multi-tenant system. | Small to medium |
+| O4 | **In-app notifications** | "Client assigned to you", "task due tomorrow", "deactivation approved". Today users have to notice sidebar badges. | Medium |
+| O5 | **Export and simple reports** | CSV export of clients and follow-ups. Reports such as revenue by month or agent, clients by stage, conversion rate. AICRE has import but no export; every CRM has both. | Small (export), medium (reports) |
+| O6 | **Duplicate warning on client entry** | "A client with this email or company already exists." Follow-ups already have a duplicate check (Section 7.1). | Small |
+| O7 | **Web-to-lead form** | A public link or embeddable form per organization that creates a lead. Salesforce and HubSpot both have it, and it works well in a multi-tenant demo. | Small to medium |
+| O8 | **Email from the client record** | Send emails using the CST templates and log them on the timeline (O2). Skip open tracking. | Medium |
+| O9 | **Global search** | One search box across clients, follow-ups and employees. | Small |
+
+**Do not attempt:** Google or Outlook calendar sync, inbox sync, telephony and mobile apps. They need OAuth or outside providers: a lot of work for little gain in the FYP.
+
+### 10.3 O1 in detail: leads on the existing pipeline (HubSpot style)
+
+**Why the current stages are not a lead pipeline yet.** An admin can already name stages "New lead, Contacted, Proposal sent, Won" (the landing page shows that board), but:
+
+1. **Clients enter only after the sale.** The Sales Manager's form is "Sales information entry for CST team"; every new client goes straight into the CST Manager's inbox. A lead entered today would land there as if already sold.
+2. **The board is on the CST side only.** The Kanban is in the CST portfolio and the CST Manager's client screens; moving stages is allowed only for CST, CST Manager and Admin (`client.move_stage`). Sales and Sales Manager have neither the board nor the permission.
+3. **One pipeline covers the whole client lifecycle.** CST uses the stages for onboarding and account progress; sales stages in the same list would mix "Proposal sent" with "Onboarding call done".
+4. **No deal fields.** Payment amount is money already paid. Leads need an expected value, an expected close date and a won or lost reason.
+
+**How other CRMs do it.** HubSpot: one record with a lifecycle stage (Lead, Opportunity, Customer) plus a separate deals pipeline. Salesforce and Zoho: a separate Lead record converted into an Account and Opportunity once qualified. AICRE follows HubSpot, which reuses the most.
+
+| Change | Detail |
+|---|---|
+| **Lifecycle on the client record** | A lead status; leads stay out of the CST inbox. |
+| **A separate sales pipeline** | `pipeline_stages.object_type` already exists (always `client` today). A `lead` value gives sales its own stages without touching CST's. Organization Settings gets a second stage list. |
+| **Kanban for Sales and Sales Manager** | A "Leads" module with the same board component, and the move permission for those portals. |
+| **Quick lead entry** | A short form (company, contact, expected value, close date). The full client form is filled at the sale. |
+| **"Mark as won"** | The lead becomes a normal client and enters the CST inbox exactly as today. "Mark as lost" records a reason. |
+| **Easy wins afterwards** | Conversion rate, pipeline value by stage and a simple forecast for the Sales Manager. |
+
+**Effort:** medium, about the size of the client field layout. Reused: the board, the stage editor, permissions and the client layout. New: the lead status, the second pipeline, the "won" step and the sales screens.
+
+**Open point:** follow-ups ("Follow-up Leads") already track leads in a simpler way. Recommended: attach them to the lead as activities, as CRMs do, instead of keeping them separate.
+
+### 10.4 Proposed fixes and removals
+
+| # | Item | Why | Recommendation |
+|---|---|---|---|
+| X1 | **Hard-coded numbers** | The Sales home figures and the admin "strategy" list are fixed values in the code, and the admin revenue target defaults to $300,000. Examiners notice fake data. | **Fix first:** use real data or remove them |
+| X2 | **Personal Notepad** (Sales, Sales Manager) | Not a CRM feature. In CRMs, notes belong to a client record. | Remove, or turn into client notes |
+| X3 | **Payroll, salary slips, attendance** | HR software, not CRM. It makes AICRE look less focused. | Keep only if the report requires it (it does: UC6, Section 7.4). Otherwise move it out or describe it as an extra |
+| X4 | **"Report Bug"** in the sidebar | A developer tool, not a product feature | Remove or move to a help menu |
+| X5 | **Three separate calendars** (admin events, CST calendar, CST Manager team calendar) | Overlapping features | Consider merging into one calendar with team filters |
+| X6 | **Concerns in every portal** | Close to "tickets" in service CRMs, but split across portals | Keep; if extended, add priority and a due date |
+
+### 10.5 Recommended order
+
+If any of this is built, this order gives the most "real CRM" value for the effort:
+
+1. X1: fix the hard-coded numbers.
+2. O2 and O3: activity timeline and change history.
+3. O5: export and simple reports.
+4. O4: notifications.
+5. O1: deals before the sale. The biggest gap, and the biggest change.
+
+## 11. Phase 2: AI assistant (specified now, built later)
 
 **Do not build this in Phase 1.** It is here so that Phase 1 choices stay compatible, and so the same agent can continue later.
 
-### 10.1 Requirements from the report
+### 11.1 Requirements from the report
 
 * **Answers.**
   * Answer plain language questions from the organization's own records and cite the record identifiers.
@@ -934,7 +1018,7 @@ The landing page, the platform admin module and every other existing module scre
   * Apply a rate limit per user.
 * **Performance.** Answers begin within 8 seconds when up to 8 records are retrieved.
 
-### 10.2 Use case 7: Ask the AI Assistant
+### 11.2 Use case 7: Ask the AI Assistant
 
 **Special requirement:** only records and fields the user is allowed to see are used.
 
@@ -945,7 +1029,7 @@ The landing page, the platform admin module and every other existing module scre
 | Alternative 1. No record the user may see matches the question. | 2A. System replies that it found nothing the user can access. |
 | Alternative 1. The answer needs a field hidden from the user. | 2B. System leaves the field out and says it is not available at this access level. |
 
-### 10.3 Expected building blocks
+### 11.3 Expected building blocks
 
 * **Backend:**
   * `backend/ai/` with the provider adapter, retrieval, `tools.js` (the single tool catalog) and the confirmation token store.
@@ -957,7 +1041,7 @@ The landing page, the platform admin module and every other existing module scre
 * **Admin portal:** an "Assistant log" view.
 * **Landing page:** the fourth feature card.
 
-### 10.4 Adversarial test suite
+### 11.4 Adversarial test suite
 
 The platform administrator runs this suite before every release, as `npm run test:security`. Its target is zero cross organization or hidden field leaks across all executed cases. It checks whether a user can:
 
@@ -968,13 +1052,13 @@ The platform administrator runs this suite before every release, as `npm run tes
 * skip the confirmation step for sensitive actions
 * reach a confirm tier tool through the auto tier path, and whether any auto tier tool writes anything except the action log
 
-### 10.5 Open point to settle before Phase 2
+### 11.5 Open point to settle before Phase 2
 
 The report's assistant panel mockup shows "Summary saved to client notes (auto tier, logged)". The functional requirement says auto tier tools "never change stored data". Follow the requirement: the summary is returned as a draft, and the user saves it into the notes with one click through the existing notes endpoint. Confirm this with the team before building.
 
 ---
 
-## 11. Phase 1 build order
+## 12. Phase 1 build order
 
 1. **Baseline.** Run `npm test` on `main` and record the results.
    * Copy `docs/design/gui/` into the repo.
@@ -988,13 +1072,13 @@ The report's assistant panel mockup shows "Summary saved to client notes (auto t
 8. **Automations,** each with its tests (7.1 to 7.5).
 9. **Migration `007_platform_admin.sql`, platform API and platform UI (Section 4).**
 10. **Landing page (Section 3).**
-11. **Full regression.** Run `npm test`, `npm run typecheck`, `npm run lint` and `npm run build`. Then a manual pass through every portal (Section 12).
+11. **Full regression.** Run `npm test`, `npm run typecheck`, `npm run lint` and `npm run build`. Then a manual pass through every portal (Section 13).
 
 ---
 
-## 12. Acceptance checklist (Phase 1)
+## 13. Acceptance checklist (Phase 1)
 
-### 12.1 Platform and identity
+### 13.1 Platform and identity
 
 * [ ] `/` shows the landing page when logged out. "Register your organization" opens `/signup` and "Log in" opens `/login`.
 * [ ] Login matches Figure 4.1:
@@ -1005,7 +1089,7 @@ The report's assistant panel mockup shows "Summary saved to client notes (auto t
 * [ ] The token carries user, organization, portal and tier, and `protect` still reloads the user.
 * [ ] The sidebar and dashboard come from `portalNav.ts` and the session; no `user.role` comparisons remain in `AppSidebar.tsx` or `Dashboard.tsx`.
 
-### 12.2 Registration and onboarding
+### 13.2 Registration and onboarding
 
 * [ ] Registering a new organization creates its first administrator. A duplicate email shows "An account with this email already exists.".
 * [ ] The wizard shows the five steps of Figure 4.2:
@@ -1014,7 +1098,7 @@ The report's assistant panel mockup shows "Summary saved to client notes (auto t
   * Closing and reopening resumes at the saved step.
 * [ ] The employee CSV (onboarding and Admin portal) saves the valid rows, lists the skipped rows with reasons and shows the temporary passwords.
 
-### 12.3 Organization Settings
+### 13.3 Organization Settings
 
 * [ ] It has four tabs exactly as in Figure 4.6.
 * [ ] Custom fields of all five types appear in the client forms and persist in `custom_fields`.
@@ -1022,7 +1106,7 @@ The report's assistant panel mockup shows "Summary saved to client notes (auto t
 * [ ] Stages can be added, renamed and reordered.
 * [ ] The Permissions tab shows the five field groups and the action list with the mockup labels. Switching a field group off hides it in every screen for that portal and tier.
 
-### 12.4 Daily work
+### 13.4 Daily work
 
 * [ ] The Kanban view works for CST agents (own clients) and CST managers (team).
   * Dragging changes `stage_id` and `stage_changed_at` only, never `status`.
@@ -1039,13 +1123,13 @@ The report's assistant panel mockup shows "Summary saved to client notes (auto t
   * "Download all slips" gives one slip per page.
 * [ ] Sales managers import clients from CSV, with form validation, custom field columns and a row error report.
 
-### 12.5 Platform administrator
+### 13.5 Platform administrator
 
 * [ ] Platform admin login works only for `platform_admins` accounts.
 * [ ] The organization list and detail show the fields of Section 4.3 and nothing from users or clients.
 * [ ] Tenant and platform tokens cannot cross.
 
-### 12.6 Look and regression
+### 13.6 Look and regression
 
 * [ ] Every portal uses the navy sidebar, white top bar, light background, cards, tables, buttons and tags of Section 9.
 * [ ] All existing prototype features still work in every portal, scoped to the organization, and the whole test suite passes.
