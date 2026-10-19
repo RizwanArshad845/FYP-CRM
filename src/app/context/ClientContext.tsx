@@ -33,6 +33,8 @@ export interface ManagedClient {
     custom_fields?: Record<string, string | number | boolean> | null;
     stage_id?: number | null;
     stage_changed_at?: string | null;
+    stage_name?: string | null;
+    last_contact?: string | null;
 
     // Virtual/UI fields
     assigned_name?: string;

@@ -10,11 +10,14 @@ import { toast } from 'sonner';
 import { useClients, ManagedClient } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
+import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
 
 export function ActiveClientsPanel() {
     const { clients, deactivationRequests, toggleActive, resolveDeactivationRequest } = useClients();
     const { can } = usePortals();
     const [search, setSearch] = useState('');
+    const [view, setView] = useState<ClientView>('table');
+    const shown = clients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase()));
 
     return (
         <div className={cls.page}>
@@ -85,6 +88,8 @@ export function ActiveClientsPanel() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    <ClientViewToggle view={view} onChange={setView} />
+                    {view === 'kanban' ? <PipelineKanbanBoard clients={shown} /> : (
                     <div className="overflow-x-auto">
                         <Table className="w-full text-sm">
                             <TableHeader className="bg-muted/50">
@@ -95,7 +100,7 @@ export function ActiveClientsPanel() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y">
-                                {clients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).map(c => (
+                                {shown.map(c => (
                                     <TableRow key={c.id} className={`${cls.tableRow} ${!c.isActive ? 'opacity-60' : ''}`}>
                                         <TableCell className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</TableCell>
                                         <TableCell className={cls.tableCell}>{c.assigned_name || 'Unassigned'}</TableCell>
@@ -127,6 +132,7 @@ export function ActiveClientsPanel() {
                             </TableBody>
                         </Table>
                     </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

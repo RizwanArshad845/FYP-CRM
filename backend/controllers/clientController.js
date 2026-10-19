@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import pool from '../config/db.js';
 import { applyFieldVisibility, can } from '../policy/index.js';
 import { getFieldDefinitions, validateCustomFields } from '../services/customFieldService.js';
@@ -12,10 +13,18 @@ export const getClients = async (req, res) => {
     let query = `
         SELECT c.*,
                s.first_name || ' ' || s.last_name AS submitted_by_name,
-               cst.first_name || ' ' || cst.last_name AS assigned_name
+               cst.first_name || ' ' || cst.last_name AS assigned_name,
+               ps.stage_name,
+               -- Latest contact: the newest follow up, note or call recording (plan 6.3)
+               (SELECT MAX(x.at) FROM (
+                    SELECT MAX(f.created_at) AS at FROM follow_ups f WHERE f.client_id = c.id AND f.tenant_id = c.tenant_id
+                    UNION ALL SELECT MAX(n.created_at) FROM client_notes n WHERE n.client_id = c.id AND n.tenant_id = c.tenant_id
+                    UNION ALL SELECT MAX(r.created_at) FROM call_recordings r WHERE r.client_id = c.id AND r.tenant_id = c.tenant_id
+               ) x) AS last_contact
         FROM clients c
         LEFT JOIN users s ON c.sales_agent_id = s.id
         LEFT JOIN users cst ON c.cst_agent_id = cst.id
+        LEFT JOIN pipeline_stages ps ON ps.id = c.stage_id AND ps.tenant_id = c.tenant_id
         WHERE c.tenant_id = $1
     `;
     // Member tier in a sales/CST portal sees only assigned clients
@@ -150,6 +159,23 @@ export const toggleClientStatus = async (req, res) => {
     const result = await pool.query(
         'UPDATE clients SET status = $1, flag_type = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4 RETURNING *',
         [status, flag_type || null, client.id, req.user.tenantId]
+    );
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
+};
+
+export const stageMoveSchema = z.object({ stage_id: z.number().int().positive() });
+
+// Kanban move (plan 6.3): sets the stage and when it changed; never touches status.
+export const moveClientStage = async (req, res) => {
+    const tenantId = req.user.tenantId;
+    const client = await getClientInTenant(tenantId, req.params.id);
+    assertClientAccess(req.user, client);
+    const stage = await pool.query('SELECT id FROM pipeline_stages WHERE id = $1 AND tenant_id = $2', [req.body.stage_id, tenantId]);
+    if (!stage.rows[0]) return res.status(400).json({ success: false, error: 'Stage does not exist in this organization' });
+
+    const result = await pool.query(
+        'UPDATE clients SET stage_id = $1, stage_changed_at = now(), updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3 RETURNING *',
+        [stage.rows[0].id, client.id, tenantId]
     );
     res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };

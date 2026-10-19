@@ -122,3 +122,51 @@ describe('pipeline stages', () => {
         expect((await as(org.cst_manager.token).post('/api/organization/pipeline-stages', { stage_name: 'Lost' })).status).toBe(403);
     });
 });
+
+describe('kanban stage moves', () => {
+    let org;
+    let stages;
+    let mine;
+    let theirs;
+    beforeAll(async () => {
+        org = await setupOrg();
+        for (const stage_name of ['New Lead', 'Contacted']) await as(org.admin).post('/api/organization/pipeline-stages', { stage_name });
+        stages = (await as(org.admin).get('/api/organization/pipeline-stages')).body.data;
+        const create = async (companyName) => (await as(org.sales_manager.token).post('/api/clients', { companyName, customerName: 'C' })).body.data;
+        mine = await create('Mine Co');
+        theirs = await create('Theirs Co');
+        await as(org.cst_manager.token).patch(`/api/clients/${mine.id}/assign`, { agentId: org.cst.id });
+    });
+
+    it('moves a client and leaves its status alone', async () => {
+        const before = (await as(org.cst.token).get('/api/clients')).body.data.find((c) => c.id === mine.id);
+        const res = await as(org.cst.token).patch(`/api/clients/${mine.id}/stage`, { stage_id: stages[1].id });
+        expect(res.status).toBe(200);
+        expect(res.body.data.stage_id).toBe(stages[1].id);
+        expect(res.body.data.stage_changed_at).toBeTruthy();
+        expect(res.body.data.status).toBe(before.status);
+
+        const listed = (await as(org.cst.token).get('/api/clients')).body.data.find((c) => c.id === mine.id);
+        expect(listed.stage_name).toBe('Contacted');
+        expect(listed.status).toBe(before.status);
+    });
+
+    it("a Member can't move a client that isn't theirs; a Manager can", async () => {
+        expect((await as(org.cst.token).patch(`/api/clients/${theirs.id}/stage`, { stage_id: stages[0].id })).status).toBe(403);
+        expect((await as(org.cst_manager.token).patch(`/api/clients/${theirs.id}/stage`, { stage_id: stages[0].id })).status).toBe(200);
+    });
+
+    it('refuses portals without the action and stages of another organization', async () => {
+        expect((await as(org.sales.token).patch(`/api/clients/${mine.id}/stage`, { stage_id: stages[0].id })).status).toBe(403);
+        const other = await setupOrg();
+        const foreign = (await as(other.admin).post('/api/organization/pipeline-stages', { stage_name: 'Foreign' })).body.data;
+        expect((await as(org.cst_manager.token).patch(`/api/clients/${mine.id}/stage`, { stage_id: foreign.id })).status).toBe(400);
+    });
+
+    it('lists the last contact date from notes, follow ups and calls', async () => {
+        await as(org.cst.token).post('/api/cst/notes', { client_id: mine.id, note_text: 'Called today' });
+        const listed = (await as(org.cst_manager.token).get('/api/clients')).body.data;
+        expect(listed.find((c) => c.id === mine.id).last_contact).toBeTruthy();
+        expect(listed.find((c) => c.id === theirs.id).last_contact).toBeNull();
+    });
+});

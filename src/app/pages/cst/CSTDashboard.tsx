@@ -34,6 +34,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
+import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
 import { Textarea } from '../../components/ui/textarea';
 
 const theme = getPortalTheme('cst');
@@ -298,6 +299,8 @@ function ActiveClientsPanel() {
   };
 
   const activeClients = clients.filter(c => c.is_active && c.status === 'active');
+  const [view, setView] = useState<ClientView>('table');
+  const shownClients = activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className={cls.section}>
@@ -324,6 +327,8 @@ function ActiveClientsPanel() {
           </div>
         </CardHeader>
         <CardContent>
+          <ClientViewToggle view={view} onChange={setView} />
+          {view === 'kanban' ? <PipelineKanbanBoard clients={shownClients} /> : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50 sticky top-0">
@@ -338,7 +343,7 @@ function ActiveClientsPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y">
-                {activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).map(c => (
+                {shownClients.map(c => (
                   <TableRow key={c.id} className={`${!c.is_active ? 'opacity-60' : ''} hover:bg-muted/30 transition-colors cursor-pointer ${detailsTargetId === c.id ? 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/20' : ''}`} onClick={() => setDetailsTargetId(c.id)}>
                     <TableCell>
                       <p className="font-bold">{c.company_name}</p>
@@ -392,7 +397,7 @@ function ActiveClientsPanel() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                {shownClients.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No active clients found.</TableCell>
                   </TableRow>
@@ -400,6 +405,7 @@ function ActiveClientsPanel() {
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
 

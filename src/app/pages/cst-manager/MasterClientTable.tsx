@@ -5,10 +5,12 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Search, List } from 'lucide-react';
 import { useClients } from '../../context/ClientContext';
+import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
 
 export function MasterClientTable() {
   const { clients } = useClients();
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<ClientView>('table');
 
   // Filter: Assigned clients (both new and existing)
   // According to user: "when the client is assigned to someone"
@@ -46,6 +48,8 @@ export function MasterClientTable() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        <div className="px-6 pt-4"><ClientViewToggle view={view} onChange={setView} /></div>
+        {view === 'kanban' ? <div className="px-6 pb-6"><PipelineKanbanBoard clients={filtered} /></div> : (
         <div className="overflow-x-auto max-h-[700px]">
           <Table className="w-full text-[11px] text-left border-collapse">
             <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
@@ -53,7 +57,7 @@ export function MasterClientTable() {
                 {[
                   'Status', 'Cin', 'Company Name', 'Customer Name', 'Service AREA', 
                   'Contact No.1', 'Contact No.2', 'Email', 
-                  'Assigned To', 'Date', '$', 'Gateway', 
+                  'Assigned To', 'Stage', 'Last contact', 'Date', '$', 'Gateway', 
                   'SERVICES'
                 ].map(h => (
                   <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
@@ -81,6 +85,8 @@ export function MasterClientTable() {
                   <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border">{c.email}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border font-semibold text-blue-700 dark:text-blue-400">{c.assigned_name || 'Unassigned'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.stage_name || '—'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{c.last_contact ? new Date(c.last_contact).toLocaleDateString() : '—'}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
@@ -89,7 +95,7 @@ export function MasterClientTable() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={13} className="text-center py-24 text-muted-foreground bg-muted/20">
+                  <TableCell colSpan={15} className="text-center py-24 text-muted-foreground bg-muted/20">
                     <div className="flex flex-col items-center gap-2">
                         <Search className="h-8 w-8 opacity-20" />
                         <p className="text-sm font-medium">No assigned clients found matching your search.</p>
@@ -100,6 +106,7 @@ export function MasterClientTable() {
             </TableBody>
           </Table>
         </div>
+        )}
       </CardContent>
     </Card>
   );
