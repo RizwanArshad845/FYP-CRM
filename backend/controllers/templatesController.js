@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import pool from '../config/db.js';
 import { ownerScope } from '../utils/tenant.js';
 
@@ -15,6 +16,13 @@ export const getTemplates = async (req, res) => {
     `, [req.user.tenantId]);
     res.json({ success: true, data: result.rows });
 };
+
+export const templateSchema = z.object({
+    title: z.string().trim().min(1, 'title is required').max(255),
+    content: z.string().max(20000).optional().nullable(),
+    type: z.string().trim().max(50).optional().nullable(),
+});
+export const templateUpdateSchema = templateSchema.partial();
 
 export const createTemplate = async (req, res) => {
     const { title, content, type } = req.body;

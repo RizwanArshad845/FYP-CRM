@@ -1,5 +1,6 @@
 import express from 'express';
-import { getTasks, createTask, updateTaskStatus, submitTask, deleteTask, updateTask } from '../controllers/taskController.js';
+import { validate } from '../middleware/validate.js';
+import { getTasks, createTask, updateTaskStatus, submitTask, deleteTask, updateTask, createTaskSchema, updateTaskSchema } from '../controllers/taskController.js';
 import { allow } from '../policy/index.js';
 
 const router = express.Router();
@@ -7,8 +8,8 @@ const router = express.Router();
 const delegators = allow('task.delegate');
 
 router.get('/', getTasks);
-router.post('/', delegators, createTask);
-router.put('/:id', delegators, updateTask);
+router.post('/', delegators, validate(createTaskSchema), createTask);
+router.put('/:id', delegators, validate(updateTaskSchema), updateTask);
 router.patch('/:id/status', updateTaskStatus);
 router.post('/:id/submit', submitTask);
 router.delete('/:id', delegators, deleteTask);
