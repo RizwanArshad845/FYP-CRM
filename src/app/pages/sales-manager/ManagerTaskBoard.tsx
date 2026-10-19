@@ -22,16 +22,16 @@ import { cls } from '../../styles/classes';
 import { useManagerTasks, type TaskPriority, type TaskStatus } from '../../context/ManagerTaskContext';
 
 const PRIORITY_BADGE: Record<TaskPriority, string> = {
-    high: 'bg-red-100 text-red-700 border-red-200',
-    medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    low: 'bg-green-100 text-green-700 border-green-200',
+    high: 'bg-danger-bg text-danger border-danger-border',
+    medium: 'bg-warning-bg text-warning border-warning/30',
+    low: 'bg-success-bg text-success border-success/30',
 };
 
 const STATUS_BADGE: Record<TaskStatus, string> = {
-    completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    'in-progress': 'bg-blue-100 text-blue-700 border-blue-200',
-    pending: 'bg-slate-100 text-slate-600 border-slate-200',
-    missed: 'bg-red-100 text-red-700 border-red-200',
+    completed: 'bg-success-bg text-success border-success/30',
+    'in-progress': 'bg-primary-soft text-primary border-primary/30',
+    pending: 'bg-muted text-muted-foreground border-border',
+    missed: 'bg-danger-bg text-danger border-danger-border',
 };
 
 const STATUS_ICON: Record<TaskStatus, React.ReactNode> = {
@@ -46,9 +46,9 @@ const CATEGORIES = ['Management', 'Sales', 'Report', 'HR', 'Admin', 'Coaching', 
 const EMPTY_FORM = { title: '', priority: 'medium' as TaskPriority, dueDate: '', category: 'Management', notes: '' };
 
 function completionColor(pct: number) {
-    if (pct >= 80) return { text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800', bar: 'bg-emerald-500', label: 'Excellent' };
-    if (pct >= 60) return { text: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800', bar: 'bg-yellow-500', label: 'On Track' };
-    return { text: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800', bar: 'bg-red-500', label: 'Needs Improvement' };
+    if (pct >= 80) return { text: 'text-success ', bg: 'bg-success-bg border-success/30 ', bar: 'bg-success', label: 'Excellent' };
+    if (pct >= 60) return { text: 'text-warning ', bg: 'bg-warning-bg border-warning/30 ', bar: 'bg-warning', label: 'On Track' };
+    return { text: 'text-danger ', bg: 'bg-danger-bg border-danger-border ', bar: 'bg-danger', label: 'Needs Improvement' };
 }
 
 export function ManagerTaskBoard() {
@@ -103,13 +103,13 @@ export function ManagerTaskBoard() {
     const now = new Date();
     const currentMonthLabel = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     const monthTasks = tasks.filter(t => t.month === currentMonthLabel);
-    const total      = monthTasks.length;
-    const completed  = monthTasks.filter(t => t.status === 'completed').length;
+    const total = monthTasks.length;
+    const completed = monthTasks.filter(t => t.status === 'completed').length;
     const inProgress = monthTasks.filter(t => t.status === 'in-progress').length;
-    const missed     = monthTasks.filter(t => t.status === 'missed').length;
-    const pending    = monthTasks.filter(t => t.status === 'pending').length;
-    const pct        = total > 0 ? Math.round((completed / total) * 100) : 0;
-    const theme      = completionColor(pct);
+    const missed = monthTasks.filter(t => t.status === 'missed').length;
+    const pending = monthTasks.filter(t => t.status === 'pending').length;
+    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const theme = completionColor(pct);
 
     // ── Filtered list ─────────────────────────────────────────────────────────
     const filtered = tasks.filter(t => {
@@ -147,21 +147,21 @@ export function ManagerTaskBoard() {
                                     <p className={cls.hintXs}>Total</p>
                                 </div>
                                 <div className="p-3 bg-card rounded-xl border shadow-sm border-border">
-                                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{completed}</p>
+                                    <p className="text-2xl font-bold text-success ">{completed}</p>
                                     <p className={cls.hintXs}>Completed</p>
                                 </div>
                                 <div className="p-3 bg-card rounded-xl border shadow-sm border-border">
-                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{inProgress}</p>
+                                    <p className="text-2xl font-bold text-primary ">{inProgress}</p>
                                     <p className={cls.hintXs}>In Progress</p>
                                 </div>
                                 <div className="p-3 bg-card rounded-xl border shadow-sm border-border">
-                                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{missed}</p>
+                                    <p className="text-2xl font-bold text-danger ">{missed}</p>
                                     <p className={cls.hintXs}>Missed</p>
                                 </div>
                             </div>
                             <p className={cls.hintXs}>
                                 {pending} task{pending !== 1 ? 's' : ''} still pending · 
-                                Target: 80% completion to reach <strong className="text-emerald-600">Excellent</strong> rating
+                                Target: 80% completion to reach <strong className="text-success">Excellent</strong> rating
                             </p>
                         </div>
                     </div>
@@ -297,7 +297,7 @@ export function ManagerTaskBoard() {
                                             <TableCell className={`${cls.tableCell} text-xs font-mono`}>{task.dueDate}</TableCell>
                                             <TableCell className={cls.tableCell}>
                                                 <Badge variant="outline" className="text-xs">
-                                                    {task.assignedBy === 'admin' ? '👤 Admin' : '🙋 Self'}
+                                                    {task.assignedBy === 'admin' ? 'From admin' : 'Self'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className={cls.tableCell}>
@@ -329,7 +329,7 @@ export function ManagerTaskBoard() {
                                                     <Button 
                                                         variant="ghost" 
                                                         size="icon" 
-                                                        className="h-7 w-7 text-blue-600 hover:text-blue-700"
+                                                        className="h-7 w-7 text-primary hover:text-primary"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleEditClick(task);
@@ -340,7 +340,7 @@ export function ManagerTaskBoard() {
                                                     <Button 
                                                         variant="ghost" 
                                                         size="icon" 
-                                                        className="h-7 w-7 text-red-600 hover:text-red-700"
+                                                        className="h-7 w-7 text-danger hover:text-danger"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleDeleteClick(task.id);

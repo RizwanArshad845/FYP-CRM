@@ -11,9 +11,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useAgentTargets } from '../../context/AgentTargetContext';
 import { toast } from 'sonner';
 function pctColor(pct: number) {
-  if (pct >= 90) return 'text-green-600';
-  if (pct >= 70) return 'text-yellow-600';
-  return 'text-red-600';
+  if (pct >= 90) return 'text-success';
+  if (pct >= 70) return 'text-warning';
+  return 'text-danger';
 }
 
 export function MonthlyTargets() {
@@ -55,10 +55,10 @@ export function MonthlyTargets() {
     <div className={cls.page}>
       {/* Stat Cards */}
       <div className={cls.gridResponsive2}>
-        <StatCard icon={<Target className="h-4 w-4 text-blue-500" />} title="My Target" value={`$ ${displayTarget.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-green-500" />} title="Achieved" value={`$ ${displayAchieved.toLocaleString()}`} subtitle={`${progressPct}% of target`} valueClassName="text-green-600" />
-        <StatCard icon={<TrendingDown className="h-4 w-4 text-orange-500" />} title="Remaining" value={`$ ${displayLeft.toLocaleString()}`} subtitle={`${100 - progressPct}% left`} valueClassName="text-orange-600" />
-        <StatCard icon={<ShoppingCart className="h-4 w-4 text-purple-500" />} title="Total Targets" value={String(myTargets.length)} subtitle="Assigned periods" />
+        <StatCard icon={<Target />} tone="primary" title="My target" value={`$ ${displayTarget.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'No target set'} />
+        <StatCard icon={<TrendingUp />} tone="success" title="Achieved" value={`$ ${displayAchieved.toLocaleString()}`} subtitle={`${progressPct}% of target`} />
+        <StatCard icon={<TrendingDown />} tone="warning" title="Remaining" value={`$ ${displayLeft.toLocaleString()}`} subtitle={`${100 - progressPct}% left`} />
+        <StatCard icon={<ShoppingCart />} tone="navy" title="Total targets" value={String(myTargets.length)} subtitle="Assigned periods" />
       </div>
 
       {/* Progress Bar */}
@@ -130,7 +130,7 @@ export function MonthlyTargets() {
                         </TableCell>
 
                         {/* Remaining — auto calculated */}
-                        <TableCell className={`${cls.tableCell} font-mono text-orange-600`}>
+                        <TableCell className={`${cls.tableCell} font-mono text-warning`}>
                           {t.achieved > 0
                             ? `$ ${remaining.toLocaleString()}`
                             : <span className={cls.hint}>—</span>}

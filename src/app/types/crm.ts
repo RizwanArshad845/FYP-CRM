@@ -57,10 +57,53 @@ export interface PortalConfig {
 }
 
 // Permission dials for one (portal, tier): fixed catalog entries with this org's values
+// Organization-defined client field (plan 6.1); field_name is also the key in custom_fields
+export interface FieldDefinition {
+  id: number;
+  field_name: string;
+  field_type: 'text' | 'number' | 'dropdown' | 'date' | 'checkbox';
+  options: string[] | null;
+  display_order: number;
+  hidden?: boolean;
+  required?: boolean;
+}
+
+// One field of the organization's client layout (plan 6.1). `key` never changes:
+// the column name for standard fields, `cf_<id>` for custom ones (value under `name`).
+export type ClientFieldKind = 'core' | 'standard' | 'custom';
+export type ClientFieldType =
+  | 'text' | 'email' | 'phone' | 'number' | 'textarea' | 'dropdown' | 'multiselect' | 'date' | 'checkbox';
+export type ClientSection = 'client' | 'contact' | 'online' | 'notes' | 'custom';
+
+export interface ClientField {
+  key: string;
+  /** Request key for standard fields (POST /clients) */
+  body?: string;
+  /** Custom fields: definition id and the key inside custom_fields */
+  id?: number;
+  name?: string;
+  kind: ClientFieldKind;
+  label: string;
+  default_label: string;
+  type: ClientFieldType;
+  section: ClientSection;
+  hidden: boolean;
+  required: boolean;
+  options: string[] | null;
+  display_order: number;
+}
+
+// Organization-defined pipeline stage (plan 6.2)
+export interface PipelineStage {
+  id: number;
+  stage_name: string;
+  stage_order: number;
+}
+
 export interface TierPermissions {
   tier: Tier;
-  actions: { key: string; label: string; allowed: boolean }[];
-  fields: { key: string; label: string; visible: boolean }[];
+  actions: { key: string; label: string; allowed: boolean; eligible: boolean }[];
+  fields: { key: string; label: string; visible: boolean; eligible: boolean }[];
 }
 
 export interface PortalPermissions {

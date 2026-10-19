@@ -1,0 +1,28 @@
+<html><head><link rel="stylesheet" href="base.css"><style>
+.split{display:flex;gap:18px;height:100%}.left{flex:1}.panel{width:380px;display:flex;flex-direction:column;padding:0}
+.ph{padding:14px 16px;border-bottom:1px solid #e3e7ef;font-weight:700;display:flex;justify-content:space-between}
+.pb{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:12px}
+.q{align-self:flex-end;background:#3b6fe0;color:#fff;border-radius:12px 12px 2px 12px;padding:9px 12px;max-width:260px;font-size:13.5px}
+.a{background:#f3f5f9;border-radius:12px 12px 12px 2px;padding:10px 12px;font-size:13.5px;line-height:1.45}
+.src{font-size:12px;color:#6b7383;margin-top:6px}.src span{color:#3b6fe0}
+.prop{border:1.5px dashed #3b6fe0;border-radius:10px;padding:11px 12px;font-size:13.5px;background:#f7f9ff}
+.prop b{display:block;margin-bottom:4px;color:#2d55b8}
+.acts{margin-top:9px;display:flex;gap:8px}
+.note{font-size:12.5px;color:#1d7a3e;background:#e6f6ec;border-radius:8px;padding:8px 10px}
+.ask{border-top:1px solid #e3e7ef;padding:12px 16px;display:flex;gap:8px}.ask div:first-child{flex:1;border:1px solid #cfd6e3;border-radius:8px;padding:9px 10px;color:#9aa3b2}
+</style></head><body><div class="app"><div class="side"><div class="brand">AICRE<small>CST Manager</small></div><div class="nav">
+<a>Dashboard</a><a class="on">Master Clients</a><a>Assignments</a><a>Deactivations</a><a>Strategies</a><a>Templates</a><a>Concerns</a></div></div>
+<div class="main"><div class="top"><h1>Master Clients</h1><div class="user"><span>Ayesha Khan</span><div class="av">AK</div></div></div>
+<div class="body"><div class="split"><div class="left card"><table><tr><th>Client</th><th>Agent</th><th>Stage</th><th>Flag</th><th>Last contact</th></tr>
+<tr><td>Acme Travel</td><td>Sara</td><td>Contacted</td><td><span class="tag red">Red</span></td><td>12 Sep</td></tr>
+<tr><td>Nova Foods</td><td>Ali</td><td>Proposal Sent</td><td><span class="tag gr">None</span></td><td>18 Sep</td></tr>
+<tr><td>Orbit Media</td><td>Sara</td><td>Won</td><td><span class="tag yel">Yellow</span></td><td>20 Sep</td></tr>
+<tr><td>Bolt Gyms</td><td>Omar</td><td>New Lead</td><td><span class="tag gr">None</span></td><td>22 Sep</td></tr>
+<tr><td>Zen Clinics</td><td>Ali</td><td>Won</td><td><span class="tag gr">None</span></td><td>23 Sep</td></tr>
+<tr><td>Peak Autos</td><td>Omar</td><td>Contacted</td><td><span class="tag gr">None</span></td><td>24 Sep</td></tr></table></div>
+<div class="panel card"><div class="ph"><span>AI Assistant</span><span style="color:#9aa3b2">&#10005;</span></div><div class="pb">
+<div class="q">What is going on with Acme Travel?</div>
+<div class="a">Two open concerns about late delivery since 12 Sep, and the last call was rated 2 of 5. A call back from the assigned agent is suggested.<div class="src">Sources: <span>client_notes #88</span>, <span>concerns #14</span></div></div>
+<div class="prop"><b>Proposed action (confirm tier)</b>Save onboarding strategy for Nova Foods: "Weekly check in for the first month."<div class="acts"><span class="btn">Edit</span><span class="btn p">Confirm</span><span class="btn">Cancel</span></div></div>
+<div class="note">Summary saved to client notes (auto tier, logged)</div>
+</div><div class="ask"><div>Ask about your clients...</div><span class="btn p">Send</span></div></div></div></div></div></div></body></html>

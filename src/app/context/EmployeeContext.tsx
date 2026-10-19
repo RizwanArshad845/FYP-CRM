@@ -12,6 +12,8 @@ interface EmployeeContextType {
     addEmployee: (emp: any) => Promise<{ tempPassword?: string } | null>;
     updateEmployee: (emp: any) => Promise<boolean>;
     deleteEmployee: (id: number) => Promise<boolean>;
+    /** Reloads employees, roles and departments (e.g. after a CSV import) */
+    refresh: () => Promise<void>;
     isLoading: boolean;
 }
 
@@ -148,6 +150,7 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
 
     return (
         <EmployeeContext.Provider value={{
+            refresh: fetchData,
             employees,
             roles,
             departments,

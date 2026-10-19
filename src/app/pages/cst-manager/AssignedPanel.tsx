@@ -10,18 +10,22 @@ import { useClientInbox, type InboxClient } from '../../context/ClientInboxConte
 import { useClients, ManagedClient } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
+import { fieldLookup, formatValue } from '../../utils/clientFields';
 
 function statusBadge(status: InboxClient['status']) {
-    if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    if (status === 'active') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    if (status === 'flagged') return 'bg-red-100 text-red-700 border-red-200';
-    return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (status === 'onboarding') return 'bg-warning-bg text-warning border-warning/30';
+    if (status === 'active') return 'bg-success-bg text-success border-success/30';
+    if (status === 'flagged') return 'bg-danger-bg text-danger border-danger-border';
+    return 'bg-primary-soft text-primary border-primary/30';
 }
 
 export function AssignedPanel() {
     const { inboxClients, unassignClient } = useClientInbox();
     const { can } = usePortals();
     const [search, setSearch] = useState('');
+    // Client columns from the organization's layout (labels; switched-off ones left out)
+    const field = fieldLookup(useClients().clientFields);
+    const columns = ['company_name', 'customer_name', 'product_sold', 'payment_amount'].map(field).filter((c) => c !== undefined);
 
     const assigned = inboxClients.filter(c => c.status === 'active' || c.status === 'flagged')
         .filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase()));
@@ -44,18 +48,19 @@ export function AssignedPanel() {
                     <Table className="w-full text-sm">
                         <TableHeader className="bg-muted/50">
                             <TableRow>
-                                {['Company', 'Contact', 'Product', 'Payment', 'Submitted By', 'Assigned To', 'Date', 'Status', 'Action'].map(h => (
-                                    <TableHead key={h} className={cls.tableHead}>{h}</TableHead>
+                                {[...columns.map((c) => c.label), 'Submitted By', 'Assigned To', 'Date', 'Status', 'Action'].map((h, i) => (
+                                    <TableHead key={i} className={cls.tableHead}>{h}</TableHead>
                                 ))}
                             </TableRow>
                         </TableHeader>
                         <TableBody className="divide-y">
                             {assigned.map(c => (
                                 <TableRow key={c.id} className={cls.tableRow}>
-                                    <TableCell className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</TableCell>
-                                    <TableCell className={cls.tableCell}>{c.customer_name}</TableCell>
-                                    <TableCell className={cls.tableCell}>{c.product_sold}</TableCell>
-                                    <TableCell className={`${cls.tableCell} font-mono`}>${Number(c.payment_amount || 0).toLocaleString()}</TableCell>
+                                    {columns.map((col) => (
+                                        <TableCell key={col.key} className={`${cls.tableCell} ${col.key === 'company_name' ? cls.heading : ''} ${col.key === 'payment_amount' ? 'font-mono' : ''}`}>
+                                            {formatValue(col, c)}
+                                        </TableCell>
+                                    ))}
                                     <TableCell className={cls.tableCell}>{c.submitted_by_name}</TableCell>
                                     <TableCell className={`${cls.tableCell} font-semibold text-primary`}>{c.assigned_name ?? '—'}</TableCell>
                                     <TableCell className={`${cls.tableCell} text-xs font-mono`}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</TableCell>
@@ -67,7 +72,7 @@ export function AssignedPanel() {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs"
+                                                className="text-danger border-danger-border hover:bg-danger-bg hover:text-danger text-xs"
                                                 onClick={() => {
                                                     unassignClient(c.id);
                                                     toast.success(`${c.company_name} moved back to inbox`);

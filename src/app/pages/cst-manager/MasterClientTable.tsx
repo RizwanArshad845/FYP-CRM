@@ -5,10 +5,14 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Search, List } from 'lucide-react';
 import { useClients } from '../../context/ClientContext';
+import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
+import { ClientFieldCell, tableFields } from '../../components/shared/ClientFieldCell';
 
 export function MasterClientTable() {
-  const { clients } = useClients();
+  const { clients, clientFields } = useClients();
+  const columns = tableFields(clientFields);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<ClientView>('table');
 
   // Filter: Assigned clients (both new and existing)
   // According to user: "when the client is assigned to someone"
@@ -22,12 +26,12 @@ export function MasterClientTable() {
   );
 
   return (
-    <Card className="shadow-lg border-blue-100 dark:border-blue-900/20">
-      <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b">
+    <Card className="shadow-lg border-primary/30 ">
+      <CardHeader className="bg-primary-soft/50 border-b">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-              <List className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-primary-soft rounded-lg">
+              <List className="h-6 w-6 text-primary" />
             </div>
             <div>
               <CardTitle>Client Table</CardTitle>
@@ -46,17 +50,14 @@ export function MasterClientTable() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        <div className="px-6 pt-4"><ClientViewToggle view={view} onChange={setView} /></div>
+        {view === 'kanban' ? <div className="px-6 pb-6"><PipelineKanbanBoard clients={filtered} /></div> : (
         <div className="overflow-x-auto max-h-[700px]">
           <Table className="w-full text-[11px] text-left border-collapse">
             <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
               <TableRow className="border-b border-border">
-                {[
-                  'Status', 'Cin', 'Company Name', 'Customer Name', 'Service AREA', 
-                  'Contact No.1', 'Contact No.2', 'Email', 
-                  'Assigned To', 'Date', '$', 'Gateway', 
-                  'SERVICES'
-                ].map(h => (
-                  <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
+                {['Status', ...columns.map((f) => f.label), 'Assigned To', 'Stage', 'Last contact', 'Date'].map((h, i) => (
+                  <TableHead key={i} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[130px] whitespace-nowrap bg-muted">
                     {h}
                   </TableHead>
                 ))}
@@ -73,23 +74,16 @@ export function MasterClientTable() {
                         {c.status === 'flagged' && c.flag_type ? `${c.status}: ${c.flag_type.replace('-', ' ')}` : c.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_1}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.email}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-semibold text-blue-700 dark:text-blue-400">{c.assigned_name || 'Unassigned'}</TableCell>
+                  {columns.map((f) => <ClientFieldCell key={f.key} field={f} client={c} className="px-4 py-3 border-r border-border" />)}
+                  <TableCell className="px-4 py-3 border-r border-border font-semibold text-primary ">{c.assigned_name || 'Unassigned'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border">{c.stage_name || '—'}</TableCell>
+                  <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{c.last_contact ? new Date(c.last_contact).toLocaleDateString() : '—'}</TableCell>
                   <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
-                  <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
                 </TableRow>
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={13} className="text-center py-24 text-muted-foreground bg-muted/20">
+                  <TableCell colSpan={columns.length + 5} className="text-center py-24 text-muted-foreground bg-muted/20">
                     <div className="flex flex-col items-center gap-2">
                         <Search className="h-8 w-8 opacity-20" />
                         <p className="text-sm font-medium">No assigned clients found matching your search.</p>
@@ -100,6 +94,7 @@ export function MasterClientTable() {
             </TableBody>
           </Table>
         </div>
+        )}
       </CardContent>
     </Card>
   );

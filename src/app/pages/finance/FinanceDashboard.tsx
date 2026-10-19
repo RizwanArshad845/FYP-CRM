@@ -7,6 +7,10 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { DollarSign, Download, Calculator, TrendingUp, TrendingDown, Edit, Search, Plus, Trash2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Employee } from '../../types/crm';
@@ -63,9 +67,9 @@ type SalarySlip = {
 };
 
 const PAYMENT_COLORS: Record<PaymentStatus, string> = {
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  paid: 'bg-success-bg text-success ',
+  pending: 'bg-warning-bg text-warning ',
+  partial: 'bg-warning-bg text-warning ',
 };
 
 const CALC_FIELDS: { k: string; label: string; placeholder: string }[] = [
@@ -76,6 +80,106 @@ const CALC_FIELDS: { k: string; label: string; placeholder: string }[] = [
 ];
 
 const PKR = (n: number) => `₨ ${n.toLocaleString()}`;
+
+// One salary slip on the current PDF page (A4, mm); shared by single and bulk downloads.
+const drawSlip = (pdf: jsPDF, slip: SalarySlip, orgName: string) => {
+  // 1. Header
+  pdf.setFontSize(22);
+  pdf.setTextColor(44, 62, 80); // #2C3E50
+  pdf.text('Official Salary Slip', 20, 25);
+  
+  pdf.setFontSize(10);
+  pdf.setTextColor(128, 128, 128);
+  pdf.text('PRIVATE & CONFIDENTIAL', 20, 32);
+  
+  pdf.setFontSize(10);
+  pdf.setTextColor(0, 0, 0);
+  // The slip is issued by the employer organization, not the platform
+  pdf.text(orgName, 140, 25);
+  pdf.text(`Date: ${new Date().toLocaleDateString()}`, 140, 30);
+
+  pdf.setDrawColor(200, 200, 200);
+  pdf.line(20, 40, 190, 40);
+
+  // 2. Employee Info Box
+  pdf.setFillColor(245, 247, 250);
+  pdf.rect(20, 45, 170, 40, 'F');
+  
+  pdf.setFontSize(9);
+  pdf.setTextColor(100, 100, 100);
+  pdf.text('Employee Name', 25, 53);
+  pdf.text('Employee ID', 110, 53);
+  pdf.text('Department', 25, 73);
+  pdf.text('Role', 110, 73);
+  
+  pdf.setFontSize(11);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(slip.employeeName, 25, 60);
+  pdf.text(slip.employeeId, 110, 60);
+  pdf.text(slip.department, 25, 80);
+  pdf.text(slip.role, 110, 80);
+
+  // 3. Pay Period
+  pdf.setFontSize(10);
+  pdf.text(`Pay Period: ${slip.payPeriodStart} to ${slip.payPeriodEnd}`, 20, 100);
+
+  // 4. Salary Breakdown Table
+  const startY = 110;
+  pdf.setDrawColor(220, 220, 220);
+  pdf.rect(20, startY, 170, 60);
+  
+  // Rows
+  const row = (label: string, value: string, y: number, isBold = false) => {
+      pdf.setFontSize(10);
+      if (isBold) pdf.setFont('helvetica', 'bold');
+      else pdf.setFont('helvetica', 'normal');
+      
+      pdf.text(label, 25, y);
+      // Replace the Unicode PKR symbol with safe 'Rs.' for the PDF
+      const safeValue = value.replace('₨', 'Rs.');
+      pdf.text(safeValue, 185, y, { align: 'right' });
+  };
+
+  row('Base Salary', PKR(slip.baseSalary), startY + 15);
+  row('Accrued Payments (Bonus)', PKR(slip.accruedPayments || 0), startY + 30);
+  row('Advance Payments (Deductions)', `- ${PKR(slip.advancePayments || 0)}`, startY + 45);
+  
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.5);
+  pdf.line(25, startY + 50, 185, startY + 50);
+  
+  row('Net Payable Amount', PKR(slip.totalSalary), startY + 56, true);
+
+  // 5. Footer
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(150, 150, 150);
+  pdf.text('This is a computer generated document and does not require a signature.', 105, 180, { align: 'center' });
+  pdf.text(`Generated with ${BRAND_NAME}`, 105, 185, { align: 'center' });
+};
+
+// Row of GET /finance/salary-slip(s) to the slip shape used by the dialog and PDF
+const toSlip = (s: any, id: number): SalarySlip => ({
+  id,
+  employeeName: s.employee_name,
+  employeeId: s.employee_id,
+  email: s.email,
+  department: s.department,
+  role: s.role,
+  payPeriodStart: String(s.pay_period_start).split('T')[0],
+  payPeriodEnd: String(s.pay_period_end).split('T')[0],
+  baseSalary: parseFloat(s.base_salary),
+  advancePayments: parseFloat(s.advance_payments),
+  accruedPayments: parseFloat(s.accrued_payments),
+  totalSalary: parseFloat(s.total_salary),
+  paymentStatus: s.payment_status,
+  processedAt: s.processed_at,
+});
+
+const currentMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
 
 const EDIT_FIELDS: { k: 'advancePayments' | 'accruedPayments'; label: string }[] = [
   { k: 'advancePayments', label: 'Advance Payments (PKR)' },
@@ -97,7 +201,7 @@ const getCurrentPayPeriod = () => {
 };
 
 export function FinanceDashboard() {
-  const { payrolls, expenses, isLoading, addExpense, updateExpense, deleteExpense, updatePayroll } = useFinance();
+  const { payrolls, expenses, isLoading, addExpense, updateExpense, deleteExpense, updatePayroll, fetchPayrolls: refreshFinance } = useFinance();
   const { user } = useAuth();
   const { clients } = useClients();
   const [filterDept, setFilterDept] = useState('all');
@@ -106,6 +210,13 @@ export function FinanceDashboard() {
   const [editingEmp, setEditingEmp] = useState<any | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(EMPTY_EDIT);
   const [calc, setCalc] = useState({ base: '', bonus: '', deductions: '', advances: '' });
+  const [calcEmployee, setCalcEmployee] = useState('');
+
+  // Payroll run state
+  const [runMonth, setRunMonth] = useState(currentMonth());
+  const [confirmRunOpen, setConfirmRunOpen] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runResult, setRunResult] = useState<{ month: string; processed: number; skipped: { user_id: number; name: string; reason: string }[] } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
 
@@ -183,79 +294,7 @@ export function FinanceDashboard() {
             format: 'a4'
         });
 
-        // 1. Header
-        pdf.setFontSize(22);
-        pdf.setTextColor(44, 62, 80); // #2C3E50
-        pdf.text('Official Salary Slip', 20, 25);
-        
-        pdf.setFontSize(10);
-        pdf.setTextColor(128, 128, 128);
-        pdf.text('PRIVATE & CONFIDENTIAL', 20, 32);
-        
-        pdf.setFontSize(10);
-        pdf.setTextColor(0, 0, 0);
-        // The slip is issued by the employer organization, not the platform
-        pdf.text(user?.organization?.name ?? BRAND_NAME, 140, 25);
-        pdf.text(`Date: ${new Date().toLocaleDateString()}`, 140, 30);
-
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(20, 40, 190, 40);
-
-        // 2. Employee Info Box
-        pdf.setFillColor(245, 247, 250);
-        pdf.rect(20, 45, 170, 40, 'F');
-        
-        pdf.setFontSize(9);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text('Employee Name', 25, 53);
-        pdf.text('Employee ID', 110, 53);
-        pdf.text('Department', 25, 73);
-        pdf.text('Role', 110, 73);
-        
-        pdf.setFontSize(11);
-        pdf.setTextColor(0, 0, 0);
-        pdf.text(currentSlip.employeeName, 25, 60);
-        pdf.text(currentSlip.employeeId, 110, 60);
-        pdf.text(currentSlip.department, 25, 80);
-        pdf.text(currentSlip.role, 110, 80);
-
-        // 3. Pay Period
-        pdf.setFontSize(10);
-        pdf.text(`Pay Period: ${currentSlip.payPeriodStart} to ${currentSlip.payPeriodEnd}`, 20, 100);
-
-        // 4. Salary Breakdown Table
-        const startY = 110;
-        pdf.setDrawColor(220, 220, 220);
-        pdf.rect(20, startY, 170, 60);
-        
-        // Rows
-        const row = (label: string, value: string, y: number, isBold = false) => {
-            pdf.setFontSize(10);
-            if (isBold) pdf.setFont('helvetica', 'bold');
-            else pdf.setFont('helvetica', 'normal');
-            
-            pdf.text(label, 25, y);
-            // Replace the Unicode PKR symbol with safe 'Rs.' for the PDF
-            const safeValue = value.replace('₨', 'Rs.');
-            pdf.text(safeValue, 185, y, { align: 'right' });
-        };
-
-        row('Base Salary', PKR(currentSlip.baseSalary), startY + 15);
-        row('Accrued Payments (Bonus)', PKR(currentSlip.accruedPayments || 0), startY + 30);
-        row('Advance Payments (Deductions)', `- ${PKR(currentSlip.advancePayments || 0)}`, startY + 45);
-        
-        pdf.setDrawColor(0, 0, 0);
-        pdf.setLineWidth(0.5);
-        pdf.line(25, startY + 50, 185, startY + 50);
-        
-        row('Net Payable Amount', PKR(currentSlip.totalSalary), startY + 56, true);
-
-        // 5. Footer
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text('This is a computer generated document and does not require a signature.', 105, 180, { align: 'center' });
-        pdf.text(`Generated with ${BRAND_NAME}`, 105, 185, { align: 'center' });
+        drawSlip(pdf, currentSlip, user?.organization?.name ?? BRAND_NAME);
 
         const filename = `Salary_Slip_${currentSlip.employeeName.replace(/\s+/g, '_')}_${currentSlip.payPeriodStart}.pdf`;
         pdf.save(filename);
@@ -275,28 +314,67 @@ export function FinanceDashboard() {
     try {
         const res = await apiFetch(`/finance/salary-slip/${emp.id}`);
         if (res.success) {
-            const s = res.data;
-            const slip: SalarySlip = {
-                id: emp.id,
-                employeeName: s.employee_name,
-                employeeId: s.employee_id,
-                email: s.email,
-                department: s.department,
-                role: s.role,
-                payPeriodStart: s.pay_period_start.split('T')[0],
-                payPeriodEnd: s.pay_period_end.split('T')[0],
-                baseSalary: parseFloat(s.base_salary),
-                advancePayments: parseFloat(s.advance_payments),
-                accruedPayments: parseFloat(s.accrued_payments),
-                totalSalary: parseFloat(s.total_salary),
-                paymentStatus: s.payment_status,
-                processedAt: s.processed_at,
-            };
-            setCurrentSlip(slip);
+            setCurrentSlip(toSlip(res.data, emp.id));
             setIsSlipOpen(true);
         }
     } catch (error) {
         toast.error('Failed to generate salary slip');
+    }
+  };
+
+  // ==========================================
+  // Payroll run (UC6) — POST /finance/payroll/run, GET /finance/salary-slips
+  // ==========================================
+
+  const runPayroll = async () => {
+    setConfirmRunOpen(false);
+    setIsRunning(true);
+    try {
+      const res = await apiFetch('/finance/payroll/run', { method: 'POST', body: JSON.stringify({ month: runMonth }) });
+      setRunResult({ month: runMonth, processed: res.data.processed.length, skipped: res.data.skipped });
+      refreshFinance();
+      toast.success(`Payroll saved for ${res.data.processed.length} employee(s)`);
+    } catch (error: any) {
+      toast.error(error.message || 'Payroll run failed');
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  // One PDF, one slip per page, in the existing slip layout
+  const downloadAllSlips = async () => {
+    if (!runResult) return;
+    try {
+      toast.loading('Generating PDF...', { id: 'pdf-all' });
+      const res = await apiFetch(`/finance/salary-slips?month=${runResult.month}`);
+      if (!res.data.length) { toast.error('No slips for this month', { id: 'pdf-all' }); return; }
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      res.data.forEach((row: any, i: number) => {
+        if (i > 0) pdf.addPage();
+        drawSlip(pdf, toSlip(row, row.user_id), user?.organization?.name ?? BRAND_NAME);
+      });
+      pdf.save(`Salary_Slips_${runResult.month}.pdf`);
+      toast.success(`${res.data.length} slip(s) downloaded`, { id: 'pdf-all' });
+    } catch (error: any) {
+      toast.error(error.message || 'Could not download slips', { id: 'pdf-all' });
+    }
+  };
+
+  // The calculator saves through the same PATCH /finance/salary/:id as the edit dialog:
+  // deductions and advances are both stored as advances, so net = base + bonus - deductions - advances.
+  const saveCalculation = async () => {
+    const emp = payrolls.find(e => String(e.id) === calcEmployee);
+    if (!emp) { toast.error('Choose an employee first'); return; }
+    setIsSaving(true);
+    try {
+      await updatePayroll(emp.id, {
+        base_salary: Number(calc.base || 0),
+        advance_payments: Number(calc.deductions || 0) + Number(calc.advances || 0),
+        accrued_payments: Number(calc.bonus || 0),
+        payment_status: (emp.payment_status ?? 'pending') as PaymentStatus,
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -355,32 +433,22 @@ export function FinanceDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Finance Team Portal" theme={theme} />
-      <main className="container mx-auto px-4 py-8 space-y-6">
+      <main className="px-6 py-5 space-y-6">
         {/* Welcome Hero */}
-        <WelcomeHero theme={theme}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold mb-1 text-foreground">Financial Overview</h2>
-              <p className="text-sm text-muted-foreground">Manage payroll, expenses, and financial metrics</p>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{active.length}</p>
-                <p className="text-xs text-muted-foreground">Active Employees</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">$ {(totalRevenue / 1000).toFixed(1)}k</p>
-                <p className="text-xs text-muted-foreground">Revenue</p>
-              </div>
-            </div>
-          </div>
-        </WelcomeHero>
+        <WelcomeHero
+          title="Financial overview"
+          description="Manage payroll, salary slips, expenses and the month's figures."
+          metrics={[
+            { label: 'Active employees', value: active.length },
+            { label: 'Revenue', value: `$${(totalRevenue / 1000).toFixed(1)}k` },
+          ]}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={<DollarSign className="h-5 w-5 text-violet-500" />} title="Total Salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} accentColor={theme.accent} />
-          <StatCard icon={<TrendingDown className="h-5 w-5 text-orange-500" />} title="Advance Payments" value={PKR(totalAdvances)} subtitle="Paid in advance" valueClassName="text-orange-600" accentColor={theme.accent} />
-        <StatCard icon={<TrendingUp className="h-5 w-5 text-green-500" />} title="Total Incoming" value={`$ ${totalRevenue.toLocaleString()}`} subtitle="Revenue this month" valueClassName="text-green-600" accentColor={theme.accent} trend={{ value: 8 }} />
-        <StatCard icon={<Calculator className="h-5 w-5 text-blue-500" />} title="Monthly Expenses" value={PKR(totalSalaries + totalExpenses)} subtitle="Total outgoing" valueClassName="text-blue-600" accentColor={theme.accent} trend={{ value: -3 }} />
+          <StatCard tone="primary" icon={<DollarSign />} title="Total salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} />
+          <StatCard tone="warning" icon={<TrendingDown />} title="Advance payments" value={PKR(totalAdvances)} subtitle="Paid in advance" />
+        <StatCard tone="success" icon={<TrendingUp />} title="Total incoming" value={`$ ${totalRevenue.toLocaleString()}`} subtitle="Revenue this month" />
+        <StatCard tone="indigo" icon={<Calculator />} title="Monthly expenses" value={PKR(totalSalaries + totalExpenses)} subtitle="Total outgoing" />
         </div>
 
         {/* Auto Salary Calculator — standalone tool, maps to processPayroll formula */}
@@ -412,9 +480,73 @@ export function FinanceDashboard() {
                 <p className={cls.hint}>Total Calculated</p>
                 <p className="text-3xl font-bold">₨ {calcTotal.toLocaleString()}</p>
               </div>
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <div className={cls.field}>
+                  <Label>Employee</Label>
+                  <Select value={calcEmployee} onValueChange={(v) => {
+                    setCalcEmployee(v);
+                    const emp = payrolls.find(e => String(e.id) === v);
+                    if (emp) setCalc(prev => ({ ...prev, base: String(emp.base_salary || '') }));
+                  }}>
+                    <SelectTrigger className="w-[240px]"><SelectValue placeholder="Choose an employee" /></SelectTrigger>
+                    <SelectContent>{payrolls.map(e => <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <Button disabled={!calcEmployee || isSaving} onClick={saveCalculation}>Save to employee</Button>
+              </div>
             </CardContent>
           )}
         </Card>
+
+        {/* Payroll run (UC6): pay every active employee for a month, then download all slips */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Payroll run</CardTitle>
+            <CardDescription>Calculate and save the pay of every active employee for a month, then download all salary slips.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className={cls.field}>
+                <Label htmlFor="run-month">Month</Label>
+                <Input id="run-month" type="month" value={runMonth} onChange={e => setRunMonth(e.target.value)} className="w-[200px]" />
+              </div>
+              <Button disabled={!runMonth || isRunning} onClick={() => setConfirmRunOpen(true)}>
+                <FileText className="h-4 w-4 mr-2" />{isRunning ? 'Generating…' : 'Generate all slips'}
+              </Button>
+            </div>
+            {runResult && (
+              <div className="rounded-[10px] border border-border p-4 space-y-3">
+                <p className="text-sm">
+                  <strong>{runResult.processed}</strong> employee{runResult.processed === 1 ? '' : 's'} processed for {runResult.month}
+                  {runResult.skipped.length > 0 && <>, <strong>{runResult.skipped.length}</strong> skipped</>}.
+                </p>
+                {runResult.skipped.length > 0 && (
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {runResult.skipped.map(s => <li key={s.user_id}>{s.name}: {s.reason}</li>)}
+                  </ul>
+                )}
+                <Button variant="outline" disabled={!runResult.processed} onClick={downloadAllSlips}>
+                  <Download className="h-4 w-4 mr-2" />Download all slips
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={confirmRunOpen} onOpenChange={setConfirmRunOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Generate all slips for {runMonth}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The pay of every active employee is calculated and saved for this month. Running it again for the same month updates the records instead of duplicating them.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={runPayroll}>Generate</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Employee Salary Table — data from GET /finance/employees (getEmployeesWithPayroll) */}
         <Card className="shadow-sm">
@@ -460,8 +592,8 @@ export function FinanceDashboard() {
                         <Badge variant={emp.is_active ? 'default' : 'secondary'}>{emp.is_active ? 'Active' : 'Inactive'}</Badge>
                       </TableCell>
                       <TableCell className={cls.tableCell}>{PKR(emp.base_salary)}</TableCell>
-                      <TableCell className={`${cls.tableCell} text-orange-600`}>{PKR(emp.advance_payments)}</TableCell>
-                      <TableCell className={`${cls.tableCell} text-green-600`}>{PKR(emp.accrued_payments || 0)}</TableCell>
+                      <TableCell className={`${cls.tableCell} text-warning`}>{PKR(emp.advance_payments)}</TableCell>
+                      <TableCell className={`${cls.tableCell} text-success`}>{PKR(emp.accrued_payments || 0)}</TableCell>
                       <TableCell className={`${cls.tableCell} ${cls.heading}`}>{PKR(emp.total_salary)}</TableCell>
                       <TableCell className={cls.tableCell}>
                         <Badge className={PAYMENT_COLORS[emp.payment_status as PaymentStatus] || PAYMENT_COLORS.pending}>{emp.payment_status}</Badge>
@@ -497,7 +629,7 @@ export function FinanceDashboard() {
                 <CardTitle>Monthly Expenses</CardTitle>
                 <CardDescription>Operational expenses for the current month</CardDescription>
               </div>
-              <Button onClick={() => openExpenseModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg">
+              <Button onClick={() => openExpenseModal()} className="bg-success hover:bg-success text-white shadow-lg">
                 <Plus className="h-5 w-5 mr-2" /> ADD NEW EXPENSE
               </Button>
             </div>
@@ -522,16 +654,16 @@ export function FinanceDashboard() {
                         <TableCell className={`${cls.tableCell} font-mono`}>{PKR(Number(exp.amount))}</TableCell>
                         <TableCell className={`${cls.tableCell} ${cls.mono} text-xs`}>{exp.expense_date?.split('T')[0]}</TableCell>
                         <TableCell className={cls.tableCell}>
-                          <Badge className={exp.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                          <Badge className={exp.status === 'paid' ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning'}>
                             {exp.status}
                           </Badge>
                         </TableCell>
                         <TableCell className={cls.tableCell}>
                           <div className="flex gap-2 items-center">
-                            <Button variant="outline" size="sm" className="border-blue-500 text-blue-700 hover:bg-blue-50" onClick={() => openExpenseModal(exp as any)}>
+                            <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary-soft" onClick={() => openExpenseModal(exp as any)}>
                               <Edit className="h-4 w-4 mr-1" /> Edit
                             </Button>
-                            <Button variant="outline" size="sm" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => handleDeleteExpenseRow(exp.id)}>
+                            <Button variant="outline" size="sm" className="border-danger text-danger hover:bg-danger-bg" onClick={() => handleDeleteExpenseRow(exp.id)}>
                               <Trash2 className="h-4 w-4 mr-1" /> Delete
                             </Button>
                           </div>
@@ -610,7 +742,7 @@ export function FinanceDashboard() {
               </DialogDescription>
             </DialogHeader>
             {currentSlip && (
-              <div id="salary-slip-content" className="space-y-4 p-6 bg-white rounded-xl text-gray-900 border border-gray-200 shadow-xl">
+              <div id="salary-slip-content" className="space-y-4 p-6 bg-white rounded-xl text-foreground border border-border shadow-xl">
                 <div className="flex justify-between items-start border-b pb-4">
                     <div className="space-y-1">
                         <h2 className="text-2xl font-bold text-[#2C3E50]">Official Salary Slip</h2>
@@ -625,19 +757,19 @@ export function FinanceDashboard() {
                 <div className="grid grid-cols-2 gap-3 p-4 rounded-lg bg-muted/50 border">
                   <div>
                     <p className="text-xs text-muted-foreground">Employee Name</p>
-                    <p className="font-bold text-gray-900">{currentSlip.employeeName}</p>
+                    <p className="font-bold text-foreground">{currentSlip.employeeName}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Employee ID</p>
-                    <p className="font-mono text-sm font-bold text-gray-900">{currentSlip.employeeId}</p>
+                    <p className="font-mono text-sm font-bold text-foreground">{currentSlip.employeeId}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Department</p>
-                    <p className="text-sm font-semibold text-gray-800">{currentSlip.department}</p>
+                    <p className="text-sm font-semibold text-foreground">{currentSlip.department}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Role</p>
-                    <p className="text-sm font-semibold text-gray-800">{currentSlip.role}</p>
+                    <p className="text-sm font-semibold text-foreground">{currentSlip.role}</p>
                   </div>
                 </div>
 
@@ -645,19 +777,19 @@ export function FinanceDashboard() {
                 <div className="space-y-2 p-4 rounded-lg border">
                   <div className="flex justify-between items-center py-1.5 border-b">
                     <span className="text-sm text-muted-foreground">Base Salary</span>
-                    <span className="font-mono font-bold text-gray-900">{PKR(currentSlip.baseSalary)}</span>
+                    <span className="font-mono font-bold text-foreground">{PKR(currentSlip.baseSalary)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                    <span className="text-sm text-green-600 font-medium">+ Bonus</span>
-                    <span className="font-mono font-bold text-green-600">{PKR(currentSlip.accruedPayments || 0)}</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border">
+                    <span className="text-sm text-success font-medium">+ Bonus</span>
+                    <span className="font-mono font-bold text-success">{PKR(currentSlip.accruedPayments || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                    <span className="text-sm text-orange-600 font-medium">− Advance Payments</span>
-                    <span className="font-mono font-bold text-orange-600">{PKR(currentSlip.advancePayments || 0)}</span>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border">
+                    <span className="text-sm text-warning font-medium">− Advance Payments</span>
+                    <span className="font-mono font-bold text-warning">{PKR(currentSlip.advancePayments || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-t-2 border-gray-200 mt-2">
-                    <span className="font-bold text-gray-900">Net Pay</span>
-                    <span className="font-mono font-bold text-xl text-gray-900">{PKR(currentSlip.totalSalary)}</span>
+                  <div className="flex justify-between items-center py-2 border-t-2 border-border mt-2">
+                    <span className="font-bold text-foreground">Net Pay</span>
+                    <span className="font-mono font-bold text-xl text-foreground">{PKR(currentSlip.totalSalary)}</span>
                   </div>
                 </div>
 

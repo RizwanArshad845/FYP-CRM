@@ -4,9 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { DollarSign, Clock, Target, CalendarDays } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { useClients } from '../../context/ClientContext';
+import { fieldLookup } from '../../utils/clientFields';
 
 export function MonthlyReview() {
   const [data, setData] = useState<any>(null);
+  // The two breakdowns follow the client layout's names, and hide with their field
+  const field = fieldLookup(useClients().clientFields);
+  const servicesField = field('client_services');
+  const areaField = field('service_area');
   const [loading, setLoading] = useState(true);
   
   const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -62,53 +68,53 @@ export function MonthlyReview() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+        <Card className=" border-success/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-success flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Achieved Amount
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-700 dark:text-green-400">${Number(data.totalAchieved).toLocaleString()}</div>
+            <div className="text-3xl font-bold text-success ">${Number(data.totalAchieved).toLocaleString()}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+        <Card className=" border-primary/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-primary flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Attendance %
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">{data.attendancePct}%</div>
+            <div className="text-3xl font-bold text-primary ">{data.attendancePct}%</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+        <Card className=" border-primary/20">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-400 flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-primary flex items-center gap-2">
               <Target className="h-4 w-4" />
               Performance %
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-700 dark:text-purple-400">{data.performancePct}%</div>
+            <div className="text-3xl font-bold text-primary ">{data.performancePct}%</div>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        {servicesField && <Card>
           <CardHeader>
-            <CardTitle>Client Services Sold</CardTitle>
+            <CardTitle>{servicesField.label}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Service</TableHead>
+                  <TableHead>{servicesField.label}</TableHead>
                   <TableHead className="text-right">Count</TableHead>
                 </TableRow>
               </TableHeader>
@@ -125,17 +131,17 @@ export function MonthlyReview() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card>
+        {areaField && <Card>
           <CardHeader>
-            <CardTitle>Service Areas Sold</CardTitle>
+            <CardTitle>{areaField.label}</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Area</TableHead>
+                  <TableHead>{areaField.label}</TableHead>
                   <TableHead className="text-right">Count</TableHead>
                 </TableRow>
               </TableHeader>
@@ -152,7 +158,7 @@ export function MonthlyReview() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
     </div>
   );

@@ -19,6 +19,9 @@ export const errorHandler = (err, req, res, next) => {
     }
     // Postgres bad input (e.g. "abc" for an integer id or date). Not-null violations
     // stay 500 on purpose: they mean a handler forgot a column such as tenant_id.
+    if (err.code === '22001') {
+        return res.status(400).json({ success: false, error: 'A value is too long' });
+    }
     if (err.code === '22P02' || err.code === '22007' || err.code === '22008') {
         return res.status(400).json({ success: false, error: 'Invalid or missing input' });
     }

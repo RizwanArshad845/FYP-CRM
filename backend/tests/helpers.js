@@ -15,6 +15,12 @@ export const as = (token) => ({
     delete: (url) => request(app).delete(url).set('Authorization', `Bearer ${token}`),
 });
 
+// A client body with every field the client layout requires by default (plan 6.1)
+export const clientBody = (companyName, extra = {}) => ({
+    companyName, customerName: 'Test Customer', email: 'customer@example.com', contactNo1: '555-0100',
+    paymentAmount: 100, productSold: 'Local SEO Service', ...extra,
+});
+
 export const ADMIN_PASSWORD = 'AdminPass123!';
 export const EMPLOYEE_PASSWORD = 'EmployeePass123!';
 

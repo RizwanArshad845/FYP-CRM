@@ -9,10 +9,10 @@ import { cls } from '../../styles/classes';
 import { useConcerns, Concern } from '../../context/ConcernContext';
 
 const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    open: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'in-progress': 'bg-blue-100 text-blue-800 border-blue-200',
-    resolved: 'bg-green-100 text-green-800 border-green-200'
+    pending: 'bg-warning-bg text-warning border-warning/30',
+    open: 'bg-warning-bg text-warning border-warning/30',
+    'in-progress': 'bg-primary-soft text-primary border-primary/30',
+    resolved: 'bg-success-bg text-success border-success/30'
 };
 
 export function ConcernsPanel() {
@@ -64,7 +64,7 @@ export function ConcernsPanel() {
                                             <SelectItem value="resolved">Resolved</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDelete(c.id, isInternal)}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-danger" onClick={() => handleDelete(c.id, isInternal)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -81,7 +81,7 @@ export function ConcernsPanel() {
     return (
         <Card className="shadow-sm">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-amber-500" />Concerns Management</CardTitle>
+                <CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-warning" />Concerns Management</CardTitle>
                 <CardDescription>Track and resolve operational issues and client concerns.</CardDescription>
             </CardHeader>
             <CardContent>

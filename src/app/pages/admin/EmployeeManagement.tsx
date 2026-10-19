@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Search, UserPlus, Mail, Shield, Banknote, Clock, Pencil, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Mail, Shield, Banknote, Clock, Pencil, Trash2, Upload } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,12 +28,14 @@ import { Label } from '../../components/ui/label';
 import { useEmployees } from '../../context/EmployeeContext';
 import { usePortals } from '../../hooks/usePortals';
 import { TierSelect } from '../../components/shared/TierSelect';
+import { EmployeesStep } from '../onboarding/EmployeesStep';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { AlertCircle, ShieldAlert } from 'lucide-react';
 
 export function EmployeeManagement() {
-  const { employees, isLoading, addEmployee, updateEmployee, deleteEmployee, roles, departments } = useEmployees();
+  const { employees, isLoading, addEmployee, updateEmployee, deleteEmployee, roles, departments, refresh } = useEmployees();
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -45,7 +47,7 @@ export function EmployeeManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
   // One-time display of a server-generated temporary password
   const [issuedPassword, setIssuedPassword] = useState<{ email: string; password: string } | null>(null);
-  const { labelFor, tierLabel } = usePortals();
+  const { labelFor, tierLabel, portals } = usePortals();
   const roleKey = (roleId: string) => roles.find(r => r.id.toString() === roleId)?.name;
 
   const handleAddEmployee = async (e: React.FormEvent) => {
@@ -174,6 +176,29 @@ export function EmployeeManagement() {
               <CardTitle>Employee Directory</CardTitle>
               <CardDescription>Manage your team, roles, and access controls</CardDescription>
             </div>
+            <div className="flex gap-2">
+            {/* Same CSV component as the onboarding Employees step (plan 5.4) */}
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />Import CSV
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Import employees</DialogTitle>
+                  <DialogDescription>Valid rows are saved; rows with problems are skipped and listed.</DialogDescription>
+                </DialogHeader>
+                {isImportOpen && (
+                  <EmployeesStep
+                    portals={portals}
+                    departments={departments}
+                    endpoint="/users/import"
+                    onCreated={() => { setIsImportOpen(false); refresh(); }}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -284,6 +309,7 @@ export function EmployeeManagement() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
             <Dialog open={!!issuedPassword} onOpenChange={(open) => { if (!open) setIssuedPassword(null); }}>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
@@ -429,7 +455,7 @@ export function EmployeeManagement() {
                     <div className={cls.muted}>
                       <p className={cls.hintXs}>Role</p>
                       <div className={`${cls.inline} font-semibold text-xs mt-0.5`}>
-                        <Shield className="h-3 w-3 text-blue-500" />
+                        <Shield className="h-3 w-3 text-primary" />
                         <span>{labelFor(emp.role)}{emp.tier ? ` · ${tierLabel(emp.role, emp.tier)}` : ''}</span>
                       </div>
                     </div>
@@ -442,7 +468,7 @@ export function EmployeeManagement() {
                   <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t">
                     <div>
                       <p className={cls.hintXs}>Base Salary</p>
-                      <div className={`${cls.inline} font-bold text-sm text-green-600`}>
+                      <div className={`${cls.inline} font-bold text-sm text-success`}>
                         <Banknote className="h-3.5 w-3.5" />
                         <span>₨ {emp.base_salary?.toLocaleString('en-PK') ?? 0}</span>
                       </div>
@@ -457,13 +483,13 @@ export function EmployeeManagement() {
                   </div>
 
                   <div className={`${cls.actions} mt-4 pt-2 border-t justify-end`}>
-                    <Button variant="ghost" size="sm" className="text-xs h-8 text-blue-600" onClick={() => handleEditClick(emp)}>
+                    <Button variant="ghost" size="sm" className="text-xs h-8 text-primary" onClick={() => handleEditClick(emp)}>
                       <Pencil className="h-3 w-3 mr-1" />Edit
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs h-8 text-red-600"
+                      className="text-xs h-8 text-danger"
                       onClick={() => handleDeleteEmployee(emp.id)}
                     >
                       <Trash2 className="h-3 w-3 mr-1" />Delete
@@ -493,16 +519,16 @@ export function EmployeeManagement() {
       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <AlertDialogContent className="max-w-xl">
           <AlertDialogHeader>
-            <div className="flex items-center gap-2 text-red-600 mb-2">
+            <div className="flex items-center gap-2 text-danger mb-2">
               <ShieldAlert className="h-6 w-6" />
               <AlertDialogTitle className="text-xl">Critical Security Warning</AlertDialogTitle>
             </div>
             <AlertDialogDescription className="space-y-4">
-              <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg">
-                <p className="font-bold text-red-800 dark:text-red-400 mb-2">
+              <div className="p-4 bg-danger-bg border border-danger-border rounded-lg">
+                <p className="font-bold text-danger mb-2">
                   This is a PERMANENT Hard-Delete / Purge action.
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm text-red-700 dark:text-red-300">
+                <ul className="list-disc list-inside space-y-1 text-sm text-danger ">
                   <li>ALL Attendance logs will be permanently erased.</li>
                   <li>ALL Payroll and Salary history will be wiped.</li>
                   <li>ALL Performance Reviews will be destroyed.</li>
@@ -510,15 +536,15 @@ export function EmployeeManagement() {
                 </ul>
               </div>
 
-              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 rounded-lg">
+              <div className="p-4 bg-primary-soft border border-primary/30 rounded-lg">
                 <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
                   <div>
-                    <p className="font-semibold text-blue-800 dark:text-blue-400 text-sm">Recommendation</p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    <p className="font-semibold text-primary text-sm">Recommendation</p>
+                    <p className="text-sm text-primary mt-1">
                       Use <span className="font-bold">Deactivate</span> if this employee is leaving the company but you want to keep their history for legal or reporting records.
                     </p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    <p className="text-sm text-primary mt-1">
                       Use <span className="font-bold">Delete</span> <u>only</u> to remove duplicate or accidental entries.
                     </p>
                   </div>
@@ -533,7 +559,7 @@ export function EmployeeManagement() {
                 e.preventDefault();
                 confirmHardDelete();
               }}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-danger hover:bg-danger text-white"
               disabled={isDeleting}
             >
               {isDeleting ? 'Purging...' : 'Proceed to Purge'}

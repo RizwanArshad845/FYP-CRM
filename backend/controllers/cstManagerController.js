@@ -1,6 +1,7 @@
+import { z } from 'zod';
 import pool, { withTransaction } from '../config/db.js';
 import { applyFieldVisibility } from '../policy/index.js';
-import { assertUsersInTenant, getClientInTenant } from '../utils/tenant.js';
+import { assertUsersInTenant, getClientInTenant, httpError } from '../utils/tenant.js';
 import { getAgentPerformance, updateTargetAchieved } from '../services/metrics.js';
 
 // Assign a CST Agent to an onboarding client
@@ -13,6 +14,35 @@ export const assignCstAgent = async (req, res) => {
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
     res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
+};
+
+// UC4: inbox clients, each with the active CST agent who has the fewest active
+// clients (ties by first name), from one grouped query.
+export const getUnassignedClients = async (req, res) => {
+    const { rows } = await pool.query(`
+        WITH load AS (
+            SELECT u.id, u.first_name, u.last_name,
+                   COUNT(c.id) FILTER (WHERE c.status = 'active') AS active_count
+            FROM users u
+            JOIN user_portal_access upa ON upa.user_id = u.id
+            JOIN organization_portals op ON op.id = upa.organization_portal_id
+            JOIN portal_types pt ON pt.id = op.portal_type_id AND pt.key = 'cst'
+            LEFT JOIN clients c ON c.cst_agent_id = u.id AND c.tenant_id = u.tenant_id
+            WHERE u.tenant_id = $1 AND u.status = 'active'
+            GROUP BY u.id, u.first_name, u.last_name
+        ), pick AS (
+            SELECT * FROM load ORDER BY active_count, first_name, id LIMIT 1
+        )
+        SELECT c.*,
+               CASE WHEN pick.id IS NULL THEN NULL ELSE json_build_object(
+                   'id', pick.id, 'name', pick.first_name || ' ' || pick.last_name, 'active_count', pick.active_count::int
+               ) END AS suggested_agent
+        FROM clients c
+        LEFT JOIN pick ON true
+        WHERE c.tenant_id = $1 AND c.cst_agent_id IS NULL AND c.status IN ('onboarding', 'new', 'existing')
+        ORDER BY c.created_at DESC
+    `, [req.user.tenantId]);
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', rows) });
 };
 
 export const unassignCstAgent = async (req, res) => {
@@ -149,7 +179,23 @@ export const deleteStrategy = async (req, res) => {
     res.json({ success: true, message: 'Strategy deleted successfully' });
 };
 
-// Approve or reject a deactivation request; approval deactivates the client
+// UC5: approving a request discards its client with the request's reason; rejecting
+// leaves the client unchanged. Runs inside the caller's transaction.
+const applyDecision = async (db, request, decision, reviewerId, tenantId) => {
+    const { rows } = await db.query(
+        'UPDATE client_deactivation_requests SET status = $1, reviewed_by = $2 WHERE id = $3 AND tenant_id = $4 RETURNING *',
+        [decision, reviewerId, request.id, tenantId]
+    );
+    if (decision === 'approved') {
+        await db.query(`
+            UPDATE clients SET status = 'discarded', discard_reason = $1, discarded_at = now(), updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2 AND tenant_id = $3
+        `, [request.reason, request.client_id, tenantId]);
+    }
+    return rows[0];
+};
+
+// Approve or reject one deactivation request
 export const resolveDeactivation = async (req, res) => {
     const { status } = req.body;
     if (!['approved', 'rejected'].includes(status)) {
@@ -158,22 +204,40 @@ export const resolveDeactivation = async (req, res) => {
     const tenantId = req.user.tenantId;
 
     const row = await withTransaction(async (db) => {
-        const result = await db.query(
-            'UPDATE client_deactivation_requests SET status = $1, reviewed_by = $2 WHERE id = $3 AND tenant_id = $4 RETURNING *',
-            [status, req.user.id, req.params.id, tenantId]
+        const found = await db.query(
+            'SELECT * FROM client_deactivation_requests WHERE id = $1 AND tenant_id = $2 FOR UPDATE',
+            [req.params.id, tenantId]
         );
-        const request = result.rows[0];
-        if (request && status === 'approved') {
-            await db.query(
-                "UPDATE clients SET status = 'deactivated', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2",
-                [request.client_id, tenantId]
-            );
-        }
-        return request;
+        return found.rows[0] && applyDecision(db, found.rows[0], status, req.user.id, tenantId);
     });
 
     if (!row) return res.status(404).json({ success: false, error: 'Request not found' });
     res.json({ success: true, data: row });
+};
+
+export const resolveBulkSchema = z.object({
+    ids: z.array(z.number().int().positive()).min(1).max(200),
+    decision: z.enum(['approved', 'rejected']),
+});
+
+// Several decisions in one transaction: every request must be pending and in the
+// organization, otherwise nothing is saved.
+export const resolveDeactivationBulk = async (req, res) => {
+    const { decision } = req.body;
+    const ids = [...new Set(req.body.ids)];
+    const tenantId = req.user.tenantId;
+
+    const rows = await withTransaction(async (db) => {
+        const found = await db.query(
+            "SELECT * FROM client_deactivation_requests WHERE id = ANY($1::int[]) AND tenant_id = $2 AND status = 'pending' FOR UPDATE",
+            [ids, tenantId]
+        );
+        if (found.rows.length !== ids.length) throw httpError(400, 'Every request must be pending and in this organization');
+        const out = [];
+        for (const request of found.rows) out.push(await applyDecision(db, request, decision, req.user.id, tenantId));
+        return out;
+    });
+    res.json({ success: true, data: rows });
 };
 
 export const getAgentPerformanceMetrics = async (req, res) => {

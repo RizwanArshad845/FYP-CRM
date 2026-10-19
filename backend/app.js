@@ -22,6 +22,7 @@ import templatesRoutes from './routes/templatesRoutes.js';
 import boardRoutes from './routes/boardRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
 import organizationRoutes from './routes/organizationRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
@@ -51,9 +52,20 @@ app.get('/api/health', (req, res) => {
 // Public (each router protects its own non-public routes)
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/change-password', authLimiter);
+// Organization lookup for /<slug>/login pages: public, so limit enumeration
+app.use('/api/auth/organization', rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: () => env.NODE_ENV === 'test',
+    message: { success: false, error: 'Too many requests, please try again later' },
+}));
 app.use('/api/auth', authRoutes);
 app.use('/api/onboarding/organization', authLimiter);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/platform/auth/login', authLimiter);
+app.use('/api/platform', platformRoutes);
 
 // Everything below requires a valid token
 app.use('/api/organization', protect, organizationRoutes);

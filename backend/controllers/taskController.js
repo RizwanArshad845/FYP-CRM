@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import pool, { withTransaction } from '../config/db.js';
 import { assertUserInScope, ownerScope, scopeOf } from '../utils/tenant.js';
 
@@ -36,6 +37,17 @@ export const getTasks = async (req, res) => {
 };
 
 // Delegate a task to someone in the delegator's scope (team for Managers, org for Admins)
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'must be a date (YYYY-MM-DD)');
+export const createTaskSchema = z.object({
+    title: z.string().trim().min(1, 'title is required').max(255),
+    description: z.string().max(5000).optional().nullable(),
+    assigned_to: z.coerce.number().int().positive().optional().nullable(),
+    due_date: z.union([z.literal(''), isoDate]).optional().nullable(),
+    priority: z.string().trim().max(20).optional().nullable(),
+    category: z.string().trim().max(100).optional().nullable(),
+});
+export const updateTaskSchema = createTaskSchema.partial();
+
 export const createTask = async (req, res) => {
     const { title, description, assigned_to, due_date, priority, category } = req.body;
     const toId = assigned_to ? Number(assigned_to) : null;
@@ -88,11 +100,15 @@ const assignerClause = (user, nextParam) =>
 
 export const updateTask = async (req, res) => {
     const { title, description, priority, category, due_date } = req.body;
-    const own = assignerClause(req.user, 8);
+    const own = assignerClause(req.user, 9);
     const result = await pool.query(
-        `UPDATE tasks SET title = $1, description = $2, priority = $3, category = $4, due_date = $5, updated_at = CURRENT_TIMESTAMP
+        // Fields left out keep their value; an empty due date clears it
+        `UPDATE tasks SET title = COALESCE($1, title), description = COALESCE($2, description), priority = COALESCE($3, priority),
+                category = COALESCE($4, category), due_date = CASE WHEN $8::boolean THEN NULL ELSE COALESCE($5, due_date) END,
+                updated_at = CURRENT_TIMESTAMP
          WHERE id = $6 AND tenant_id = $7${own.sql} RETURNING *`,
-        [title, description, priority, category, due_date === '' ? null : due_date, req.params.id, req.user.tenantId, ...own.params]
+        [title ?? null, description ?? null, priority ?? null, category ?? null, due_date || null, req.params.id, req.user.tenantId,
+            due_date === '', ...own.params]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Task not found' });
     res.json({ success: true, data: result.rows[0] });

@@ -31,7 +31,7 @@ export function SalesDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Sales Team Portal" theme={theme} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="px-6 py-5">
         <div className="w-full">
 
           {activeModule === 'followup' && (
@@ -45,7 +45,7 @@ export function SalesDashboard() {
               <Tabs defaultValue={activeTab || 'recordings'} className="w-full">
                 <TabsList className="mb-6 flex-wrap w-full h-auto gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
                   <TabsTrigger value="recordings" className="flex-1 rounded-lg data-[state=active]:shadow-sm"><Mic className="h-4 w-4 mr-2" />Call Recordings</TabsTrigger>
-                  <TabsTrigger value="important_recordings" className="flex-1 rounded-lg data-[state=active]:shadow-sm"><Mic className="h-4 w-4 mr-2 text-rose-500" />Important Calls</TabsTrigger>
+                  <TabsTrigger value="important_recordings" className="flex-1 rounded-lg data-[state=active]:shadow-sm"><Mic className="h-4 w-4 mr-2 text-danger" />Important Calls</TabsTrigger>
                 </TabsList>
                 <TabsContent value="recordings"><SalesRecordings /></TabsContent>
                 <TabsContent value="important_recordings"><ImportantRecordings /></TabsContent>

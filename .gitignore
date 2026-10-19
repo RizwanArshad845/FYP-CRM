@@ -53,3 +53,9 @@ Thumbs.db
 
 # Local embedded Postgres data (npm run db:local)
 .local-db/
+
+# Personal notes, never committed
+myfolder/
+
+# Downloaded design skills (not part of the app)
+.claude/skills/

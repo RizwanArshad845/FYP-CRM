@@ -75,18 +75,18 @@ export const cls = {
     avatarText: 'font-medium text-primary',
 
     // ── Table ─────────────────────────────────────────────────────
-    /** border-b even:bg-table-stripe hover:bg-table-hover transition-colors */
-    tableRow: 'border-b even:bg-table-stripe hover:bg-table-hover transition-colors',
+    /** border-b border-row-divider hover:bg-table-hover transition-colors */
+    tableRow: 'border-b border-row-divider hover:bg-table-hover transition-colors',
     /** text-left px-3 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground */
-    tableHead: 'text-left px-4 py-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground',
+    tableHead: 'text-left px-[14px] py-[10px] bg-th border-b border-border font-semibold text-xs uppercase tracking-[0.4px] text-muted-foreground',
     /** px-3 py-2.5 */
-    tableCell: 'px-4 py-4',
+    tableCell: 'px-[14px] py-[11px] text-[13.5px]',
 
     // ── Form ──────────────────────────────────────────────────────
     /** space-y-2 */
     field: 'space-y-2',
     /** w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary */
-    input: 'w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary',
+    input: 'w-full border border-input-border rounded-[8px] px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary',
 
     // ── Section headers with accent ───────────────────────────────
     /** font-bold text-lg text-heading-foreground border-b pb-2 flex items-center gap-2 tracking-tight */

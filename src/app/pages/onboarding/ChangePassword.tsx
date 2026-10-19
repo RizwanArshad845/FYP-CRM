@@ -1,26 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { useAuth, nextRouteFor } from '../../context/AuthContext';
+import { useAuth, nextRouteFor, useOrgPath } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Card, CardContent } from '../../components/ui/card';
 import { SetupShell } from './SetupShell';
 
 // Required after signing in with a temporary password; also usable any time.
 export function ChangePassword() {
   const { user, isLoading, applySession, logout } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) navigate('/login');
-  }, [user, isLoading, navigate]);
+    if (!isLoading && !user) navigate(to('/login'));
+  }, [user, isLoading, navigate, to]);
 
   if (!user) return null;
   const forced = user.mustChangePassword;
@@ -48,13 +48,12 @@ export function ChangePassword() {
 
   return (
     <SetupShell
+      wide={false}
       title={forced ? 'Choose your password' : 'Change password'}
       subtitle={forced
         ? `Welcome to ${user.organization?.name ?? 'your organization'}, ${user.first_name}. Replace the temporary password you were given before continuing.`
         : undefined}
     >
-      <Card>
-        <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="current">{forced ? 'Temporary password' : 'Current password'}</Label>
@@ -74,8 +73,6 @@ export function ChangePassword() {
               <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save password'}</Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
     </SetupShell>
   );
 }

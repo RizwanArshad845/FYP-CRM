@@ -8,10 +8,16 @@ import { BookOpen, Trash2, Save } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClientInbox, type ClientStrategy } from '../../context/ClientInboxContext';
+import { useClients } from '../../context/ClientContext';
+import { fieldLookup, formatValue } from '../../utils/clientFields';
 
 export function StrategiesPanel() {
     const { inboxClients, strategies, updateStrategy, deleteStrategy } = useClientInbox();
     const allClients = inboxClients;
+    const field = fieldLookup(useClients().clientFields);
+    const product = field('product_sold');
+    // Notes from the sales form shown under each strategy, when switched on
+    const noteFields = ['client_concerns', 'tips_for_tech'].map(field).filter((f) => f !== undefined);
 
     const [expanded, setExpanded] = useState<number | null>(null);
     const [drafts, setDrafts] = useState<Record<number, string>>({});
@@ -55,7 +61,7 @@ export function StrategiesPanel() {
                                         <BookOpen className="h-4 w-4 text-primary" />
                                         <div>
                                             <CardTitle className="text-base">{client.company_name}</CardTitle>
-                                            <CardDescription>Agent: {client.assigned_name || 'Unassigned'} · {client.product_sold}</CardDescription>
+                                            <CardDescription>Agent: {client.assigned_name || 'Unassigned'}{product && ` · ${formatValue(product, client)}`}</CardDescription>
                                         </div>
                                     </div>
                                     <div className={cls.inline}>
@@ -97,20 +103,14 @@ export function StrategiesPanel() {
                                         </div>
                                     </div>
 
-                                    {(client.client_concerns || client.tips_for_tech) && (
+                                    {noteFields.some((f) => formatValue(f, client) !== '—') && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                                            {client.client_concerns && (
-                                                <div className={`${cls.muted} text-sm`}>
-                                                    <p className={`${cls.hintXs} mb-1`}>Client Concerns (from Sales)</p>
-                                                    <p>{client.client_concerns}</p>
+                                            {noteFields.filter((f) => formatValue(f, client) !== '—').map((f) => (
+                                                <div key={f.key} className={`${cls.muted} text-sm`}>
+                                                    <p className={`${cls.hintXs} mb-1`}>{f.label} (from Sales)</p>
+                                                    <p>{formatValue(f, client)}</p>
                                                 </div>
-                                            )}
-                                            {client.tips_for_tech && (
-                                                <div className={`${cls.muted} bg-blue-50 text-sm`}>
-                                                    <p className={`${cls.hintXs} mb-1`}>Tips for Tech (from Sales)</p>
-                                                    <p>{client.tips_for_tech}</p>
-                                                </div>
-                                            )}
+                                            ))}
                                         </div>
                                     )}
                                 </CardContent>

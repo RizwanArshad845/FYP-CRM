@@ -20,6 +20,10 @@ export const protect = async (req, res, next) => {
     } catch {
         return res.status(401).json({ success: false, error: 'Not authorized, token failed' });
     }
+    // Platform admin tokens never open tenant routes (plan 4.2)
+    if (decoded.scope === 'platform') {
+        return res.status(401).json({ success: false, error: 'Not authorized' });
+    }
 
     try {
         const result = await pool.query(`

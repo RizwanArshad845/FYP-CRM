@@ -14,6 +14,7 @@
     "dev:local": "node backend/scripts/devLocal.js",
     "dev:supabase": "node backend/scripts/devLocal.js --supabase",
     "db:info": "node backend/scripts/dbInfo.js",
+    "platform:create-admin": "node backend/scripts/createPlatformAdmin.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",

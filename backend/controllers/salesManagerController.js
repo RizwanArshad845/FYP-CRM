@@ -31,13 +31,15 @@ export const updateTarget = async (req, res) => {
     const { target_month, target_amount, user_id, achieved_amount } = req.body;
     await assertUsersInTenant(req.user.tenantId, [user_id]);
 
+    // Fields left out keep their value
     const result = await pool.query(`
         UPDATE monthly_targets SET
-            target_month = $1, target_amount = $2, user_id = $3,
+            target_month = COALESCE($1, target_month), target_amount = COALESCE($2, target_amount),
+            user_id = COALESCE($3, user_id),
             achieved_amount = COALESCE($4, achieved_amount),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $5 AND tenant_id = $6 RETURNING *
-    `, [target_month, target_amount, user_id, achieved_amount ?? null, req.params.id, req.user.tenantId]);
+    `, [target_month || null, target_amount ?? null, user_id || null, achieved_amount ?? null, req.params.id, req.user.tenantId]);
 
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Target not found' });
     res.json({ success: true, data: result.rows[0] });

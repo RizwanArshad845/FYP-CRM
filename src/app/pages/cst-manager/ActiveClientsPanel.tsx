@@ -10,19 +10,22 @@ import { toast } from 'sonner';
 import { useClients, ManagedClient } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
+import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
 
 export function ActiveClientsPanel() {
     const { clients, deactivationRequests, toggleActive, resolveDeactivationRequest } = useClients();
     const { can } = usePortals();
     const [search, setSearch] = useState('');
+    const [view, setView] = useState<ClientView>('table');
+    const shown = clients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase()));
 
     return (
         <div className={cls.page}>
             {/* Pending Deactivation Requests from CST Agents */}
             {deactivationRequests.length > 0 && (
-                <Card className="border-2 border-yellow-300 dark:border-yellow-700">
+                <Card className="border-2 border-warning/30 ">
                     <CardHeader>
-                        <CardTitle className={`${cls.inline} text-yellow-700 dark:text-yellow-400`}>
+                        <CardTitle className={`${cls.inline} text-warning `}>
                             <AlertTriangle className="h-5 w-5" />
                             Pending Deactivation Requests
                         </CardTitle>
@@ -30,7 +33,7 @@ export function ActiveClientsPanel() {
                     </CardHeader>
                     <CardContent className={cls.list}>
                         {deactivationRequests.map(req => (
-                                <div key={req.client_id} className={`${cls.item} border-yellow-200`}>
+                                <div key={req.client_id} className={`${cls.item} border-warning/30`}>
                                     <div className={`${cls.row} mb-3 flex-wrap gap-2`}>
                                         <div>
                                             <p className={cls.heading}>{req.client_name}</p>
@@ -46,10 +49,10 @@ export function ActiveClientsPanel() {
                                             variant="destructive"
                                             onClick={() => {
                                                 resolveDeactivationRequest(req.id, true, req.client_id);
-                                                toast.success(`${req.client_name} has been deactivated.`);
+                                                toast.success(`${req.client_name} has been discarded.`);
                                             }}
                                         >
-                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Deactivate
+                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Discard
                                         </Button>
                                         <Button
                                             size="sm"
@@ -85,6 +88,8 @@ export function ActiveClientsPanel() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    <ClientViewToggle view={view} onChange={setView} />
+                    {view === 'kanban' ? <PipelineKanbanBoard clients={shown} /> : (
                     <div className="overflow-x-auto">
                         <Table className="w-full text-sm">
                             <TableHeader className="bg-muted/50">
@@ -95,7 +100,7 @@ export function ActiveClientsPanel() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y">
-                                {clients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).map(c => (
+                                {shown.map(c => (
                                     <TableRow key={c.id} className={`${cls.tableRow} ${!c.isActive ? 'opacity-60' : ''}`}>
                                         <TableCell className={`${cls.tableCell} ${cls.heading}`}>{c.company_name}</TableCell>
                                         <TableCell className={cls.tableCell}>{c.assigned_name || 'Unassigned'}</TableCell>
@@ -127,6 +132,7 @@ export function ActiveClientsPanel() {
                             </TableBody>
                         </Table>
                     </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

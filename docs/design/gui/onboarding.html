@@ -1,0 +1,37 @@
+<html><head><link rel="stylesheet" href="base.css"><style>
+.wrap{height:720px;display:flex;flex-direction:column}
+.hdr{height:58px;background:#1e2a44;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.hdr b{font-size:20px;letter-spacing:.5px}.hdr span{font-size:13px;color:#cfd8ea}
+.box{width:900px;margin:22px auto 0;padding:24px 30px}
+.steps{display:flex;justify-content:space-between;margin-bottom:22px}
+.st{flex:1;display:flex;align-items:center;gap:8px;font-size:13px;color:#8a93a3}
+.st i{width:26px;height:26px;border-radius:50%;border:2px solid #cfd6e3;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;font-size:12px;background:#fff}
+.st.done i{background:#1d7a3e;border-color:#1d7a3e;color:#fff}.st.done{color:#1d7a3e}
+.st.cur i{background:#3b6fe0;border-color:#3b6fe0;color:#fff}.st.cur{color:#1f2937;font-weight:700}
+h2{font-size:19px;margin-bottom:4px}.sub{font-size:13px;color:#6b7383;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+.pt{border:1px solid #dfe4ee;border-radius:9px;padding:13px 14px;display:flex;gap:11px;align-items:flex-start;background:#fff}
+.pt.on{border-color:#3b6fe0;background:#f2f6ff}
+.cb{width:18px;height:18px;border-radius:4px;border:2px solid #b9c2d3;flex:none;margin-top:1px}
+.pt.on .cb{background:#3b6fe0;border-color:#3b6fe0;position:relative}.pt.on .cb:after{content:"\2713";color:#fff;font-size:12px;font-weight:700;position:absolute;left:2px;top:-1px}
+.pt b{display:block;font-size:14px;margin-bottom:3px}.pt small{font-size:12px;color:#6b7383}
+.lock{font-size:11px;color:#2d55b8;margin-left:4px}
+.lab{display:flex;gap:12px;margin-bottom:20px}.lab div{flex:1}.lab label{display:block;font-size:12px;color:#6b7383;margin-bottom:5px}
+.in{border:1px solid #cfd6e3;border-radius:8px;padding:9px 12px;font-size:13.5px;background:#fff}
+.foot{display:flex;justify-content:space-between;align-items:center}
+</style></head><body><div class="wrap">
+<div class="hdr"><b>AICRE</b><span>Organization setup: Bright Path Solutions</span></div>
+<div class="card box">
+<div class="steps"><div class="st done"><i>&#10003;</i>Organization</div><div class="st cur"><i>2</i>Portals</div><div class="st"><i>3</i>Tier labels</div><div class="st"><i>4</i>Employees</div><div class="st"><i>5</i>Finish</div></div>
+<h2>Select the portals your organization will use</h2><div class="sub">Portals come from a fixed list. You can change this later in Organization Settings.</div>
+<div class="grid">
+<div class="pt on"><div class="cb"></div><div><b>Admin<span class="lock">always on</span></b><small>Employees, tasks, reviews and settings</small></div></div>
+<div class="pt on"><div class="cb"></div><div><b>Sales</b><small>Clients, follow ups and calls</small></div></div>
+<div class="pt on"><div class="cb"></div><div><b>Sales Manager</b><small>Targets, recordings and imports</small></div></div>
+<div class="pt on"><div class="cb"></div><div><b>Customer Success</b><small>Notes, flags, concerns and requests</small></div></div>
+<div class="pt on"><div class="cb"></div><div><b>Customer Success Manager</b><small>Assignment, approvals and strategies</small></div></div>
+<div class="pt"><div class="cb"></div><div><b>Finance</b><small>Payroll, salary slips and expenses</small></div></div>
+</div>
+<div class="lab"><div><label>Member tier label</label><div class="in">Agent</div></div><div><label>Manager tier label</label><div class="in">Team Lead</div></div><div><label>Admin tier label</label><div class="in">Administrator</div></div></div>
+<div class="foot"><span class="btn">Back</span><span class="btn p">Save and continue</span></div>
+</div></div></body></html>

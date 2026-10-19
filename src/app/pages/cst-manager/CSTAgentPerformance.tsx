@@ -37,9 +37,9 @@ function calcPercentage(achieved: number, target: number) {
 }
 
 function percentageColor(pct: number) {
-    if (pct >= 100) return 'text-green-600 bg-green-100 dark:bg-green-900/30';
-    if (pct >= 75) return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30';
-    return 'text-red-600 bg-red-100 dark:bg-red-900/30';
+    if (pct >= 100) return 'text-success bg-success-bg ';
+    if (pct >= 75) return 'text-warning bg-warning-bg ';
+    return 'text-danger bg-danger-bg ';
 }
 
 export function CSTAgentPerformance() {
@@ -268,10 +268,10 @@ export function CSTAgentPerformance() {
                                                     </TableCell>
                                                     <TableCell className={cls.tableCell}>
                                                         <div className={cls.inline}>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleEditClick(agent)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary-soft" onClick={() => handleEditClick(agent)}>
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteTarget(agent.target_id)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-danger hover:text-danger hover:bg-danger-bg" onClick={() => handleDeleteTarget(agent.target_id)}>
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
@@ -303,10 +303,10 @@ export function CSTAgentPerformance() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600" onClick={() => handleEditClick(agent)}>
+                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-primary" onClick={() => handleEditClick(agent)}>
                                                             <Edit className="h-3.5 w-3.5" />
                                                         </Button>
-                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteTarget(agent.target_id)}>
+                                                        <Button variant="outline" size="icon" className="h-8 w-8 text-danger" onClick={() => handleDeleteTarget(agent.target_id)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                         <div className={`px-2 py-1 rounded-md font-bold text-sm ${percentageColor(pct)}`}>

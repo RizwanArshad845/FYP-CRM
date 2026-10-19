@@ -1,4 +1,4 @@
-import { httpError } from '../utils/tenant.js';
+import { PORTAL_FAMILY, httpError } from '../utils/tenant.js';
 import {
     ACTIONS, FIELD_GROUPS, TIERS, eligibleAction, eligibleFieldGroup, isConfigurable,
 } from '../policy/index.js';
@@ -6,13 +6,18 @@ import {
 export const DEFAULT_DEPARTMENTS = ['Administration', 'Sales', 'Customer Success', 'Finance', 'Human Resources'];
 export const ONBOARDING_STEPS = ['portals', 'labels', 'employees', 'review', 'done'];
 
+// First path segments the app uses itself; an organization slug must never equal one.
+export const RESERVED_SLUGS = new Set([
+    'api', 'login', 'signup', 'platform', 'onboarding', 'change-password', 'clock-in', 'dashboard', 'assets',
+]);
+
 const slugify = (name) => name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'org';
 
 // Unique slug: "acme", then "acme-2", "acme-3", ...
 export const uniqueSlug = async (db, name) => {
     const base = slugify(name);
     const { rows } = await db.query("SELECT slug FROM organizations WHERE slug = $1 OR slug LIKE $1 || '-%'", [base]);
-    const taken = new Set(rows.map((r) => r.slug));
+    const taken = new Set([...rows.map((r) => r.slug), ...RESERVED_SLUGS]);
     if (!taken.has(base)) return base;
     for (let i = 2; ; i++) if (!taken.has(`${base}-${i}`)) return `${base}-${i}`;
 };
@@ -87,6 +92,23 @@ export const setPortalLabels = async (db, tenantId, portals) => {
     }
 };
 
+// The same tier labels on every enabled portal (the Admin portal only has the Admin tier).
+// A label equal to the tier's own name, or blank, means "keep the default".
+export const setTierLabels = async (db, tenantId, tierLabels) => {
+    const clean = Object.fromEntries(
+        Object.entries(tierLabels)
+            .filter(([tier, label]) => TIERS.includes(tier) && typeof label === 'string' && label.trim() && label.trim() !== tier)
+            .map(([tier, label]) => [tier, label.trim()])
+    );
+    const adminOnly = clean.Admin ? { Admin: clean.Admin } : {};
+    await db.query(`
+        UPDATE organization_portals op
+        SET tier_labels = CASE WHEN pt.key = 'admin' THEN $2::jsonb ELSE $3::jsonb END, updated_at = CURRENT_TIMESTAMP
+        FROM portal_types pt
+        WHERE op.portal_type_id = pt.id AND op.tenant_id = $1 AND op.enabled
+    `, [tenantId, JSON.stringify(adminOnly), JSON.stringify(clean)]);
+};
+
 // --- Permission dials ---------------------------------------------------------
 // Per (portal, tier) restrictions on top of the fixed policy catalog. Only
 // non-admin portals and Manager/Member tiers are configurable.
@@ -118,12 +140,19 @@ export const getPermissions = async (db, tenantId) => {
         label: p.label,
         tiers: CONFIGURABLE_TIERS.map((tier) => ({
             tier,
+            // Every field group, and every action of the portal's team, so the screen shows the
+            // whole fixed list (Figure 4.6). Entries above the catalog ceiling are listed as
+            // not eligible: always off and locked.
             actions: Object.entries(ACTIONS)
-                .filter(([key]) => eligibleAction(key, p.key, tier))
-                .map(([key, a]) => ({ key, label: a.label, allowed: actionMap.get(`${p.id}|${tier}|${key}`) !== false })),
-            fields: Object.entries(FIELD_GROUPS)
-                .filter(([key]) => eligibleFieldGroup(key, p.key))
-                .map(([key, g]) => ({ key, label: g.label, visible: fieldMap.get(`${p.id}|${tier}|${key}`) !== false })),
+                .filter(([, a]) => a.portals.some((k) => (PORTAL_FAMILY[p.key] ?? [p.key]).includes(k)))
+                .map(([key, a]) => {
+                    const eligible = eligibleAction(key, p.key, tier);
+                    return { key, label: a.label, eligible, allowed: eligible && actionMap.get(`${p.id}|${tier}|${key}`) !== false };
+                }),
+            fields: Object.entries(FIELD_GROUPS).map(([key, g]) => {
+                const eligible = eligibleFieldGroup(key, p.key);
+                return { key, label: g.label, eligible, visible: eligible && fieldMap.get(`${p.id}|${tier}|${key}`) !== false };
+            }),
         })),
     }));
 };

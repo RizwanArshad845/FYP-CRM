@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { z } from 'zod';
+import pool, { withTransaction } from '../config/db.js';
 import { TIERS } from '../policy/catalog.js';
+import { getOrganizationPortals } from './sessionService.js';
 
 export const BCRYPT_ROUNDS = 10;
 
@@ -67,7 +70,7 @@ export const createUserRecord = async (client, {
     }
 
     const existing = await client.query('SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)', [email]);
-    if (existing.rows[0]) throw new ServiceError(409, `A user with email ${email} already exists`);
+    if (existing.rows[0]) throw new ServiceError(409, 'An account with this email already exists.');
 
     const tempPassword = password ? null : generateTempPassword();
     const passwordHash = await bcrypt.hash(password || tempPassword, BCRYPT_ROUNDS);
@@ -107,4 +110,89 @@ export const syncPortalAccess = async (client, tenantId, userId, portalKey, tier
         SET organization_portal_id = EXCLUDED.organization_portal_id, tier = EXCLUDED.tier
     `, [tenantId, userId, portal.organization_portal_id, finalTier]);
     return { ...portal, tier: finalTier };
+};
+
+// --- Employee batch import (onboarding wizard and Employee Management) ---------
+
+const employeeSchema = z.object({
+    first_name: z.string().trim().min(1, 'first name is required').max(100),
+    last_name: z.string().trim().min(1, 'last name is required').max(100),
+    email: z.string().trim().email('invalid email').max(255),
+    portal_key: z.string().trim().min(1).max(50),
+    // Optional, case-insensitive ("manager" works for CSV); defaults to the portal's tier
+    tier: z.preprocess(
+        (v) => (typeof v === 'string' && v.trim() ? v.trim()[0].toUpperCase() + v.trim().slice(1).toLowerCase() : undefined),
+        z.enum(TIERS, { message: 'tier must be Admin, Manager or Member' }).optional(),
+    ),
+    department: z.string().trim().max(100).optional().nullable(),
+});
+
+export const employeesSchema = z.object({
+    employees: z.array(z.unknown()).min(1).max(200),
+});
+
+/**
+ * Validates every row, then creates the valid ones in one transaction and skips the
+ * rest. Returns { created (with one-time tempPassword), rowErrors [{ row, error }] },
+ * rows numbered from 1. `afterCreate(db)` runs in the same transaction when any row is saved.
+ */
+export const importEmployees = async (tenantId, rawRows, afterCreate) => {
+    const rowErrors = [];
+    const rows = [];
+    const seenEmails = new Set();
+
+    rawRows.forEach((raw, index) => {
+        const parsed = employeeSchema.safeParse(raw);
+        if (!parsed.success) {
+            rowErrors.push({ row: index + 1, error: parsed.error.issues.map((i) => i.message).join(', ') });
+            return;
+        }
+        const email = parsed.data.email.toLowerCase();
+        if (seenEmails.has(email)) {
+            rowErrors.push({ row: index + 1, error: `duplicate email ${email} in this batch` });
+            return;
+        }
+        seenEmails.add(email);
+        rows.push({ index, ...parsed.data, email });
+    });
+
+    const [portals, departments, existing] = await Promise.all([
+        getOrganizationPortals(tenantId),
+        pool.query('SELECT id, LOWER(name) AS name FROM departments WHERE tenant_id = $1', [tenantId]),
+        pool.query('SELECT LOWER(email) AS email FROM users WHERE LOWER(email) = ANY($1::text[])', [[...seenEmails]]),
+    ]);
+    const enabledPortals = new Set(portals.filter((p) => p.enabled).map((p) => p.key));
+    const deptByName = new Map(departments.rows.map((d) => [d.name, d.id]));
+    const takenEmails = new Set(existing.rows.map((r) => r.email));
+
+    const valid = rows.filter((row) => {
+        const problems = [];
+        if (!enabledPortals.has(row.portal_key)) problems.push(`portal "${row.portal_key}" is not enabled`);
+        if (takenEmails.has(row.email)) problems.push(`a user with email ${row.email} already exists`);
+        if (row.department && !deptByName.has(row.department.toLowerCase())) problems.push(`unknown department "${row.department}"`);
+        if (problems.length) rowErrors.push({ row: row.index + 1, error: problems.join(', ') });
+        return !problems.length;
+    });
+    rowErrors.sort((a, b) => a.row - b.row);
+    if (!valid.length) return { created: [], rowErrors };
+
+    const created = await withTransaction(async (db) => {
+        const out = [];
+        for (const row of valid) {
+            const { user, tempPassword } = await createUserRecord(db, {
+                tenantId,
+                firstName: row.first_name,
+                lastName: row.last_name,
+                email: row.email,
+                portalKey: row.portal_key,
+                tier: row.tier,
+                departmentId: row.department ? deptByName.get(row.department.toLowerCase()) : null,
+                mustChangePassword: true,
+            });
+            out.push({ ...user, portal_key: row.portal_key, tempPassword });
+        }
+        if (afterCreate) await afterCreate(db);
+        return out;
+    });
+    return { created, rowErrors };
 };

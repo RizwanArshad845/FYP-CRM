@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { as, setupOrg } from './helpers.js';
+import { as, clientBody, setupOrg } from './helpers.js';
 
 // Org B creates one of everything; Org A (every role) must never see or touch it.
 let A;
@@ -13,7 +13,7 @@ beforeAll(async () => {
     B = await setupOrg();
 
     const client = await as(B.sales_manager.token).post('/api/clients', {
-        companyName: 'B Corp', customerName: 'Bob', email: 'bob@b.com', sales_agent_id: B.sales.id,
+        ...clientBody('B Corp'), customerName: 'Bob', email: 'bob@b.com', sales_agent_id: B.sales.id,
     });
     b.client = client.body.data.id;
     await as(B.cst_manager.token).patch(`/api/clients/${b.client}/assign`, { agentId: B.cst.id });

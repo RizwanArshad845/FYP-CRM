@@ -17,9 +17,9 @@ function targetPct(achieved: number, target: number) {
 }
 
 function pctColor(pct: number) {
-    if (pct >= 80) return 'text-emerald-600';
-    if (pct >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (pct >= 80) return 'text-success';
+    if (pct >= 60) return 'text-warning';
+    return 'text-danger';
 }
 
 export function TargetsPanel() {

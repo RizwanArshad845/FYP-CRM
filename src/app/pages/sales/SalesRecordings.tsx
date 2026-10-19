@@ -18,9 +18,9 @@ import { LoadingScreen } from '../../components/shared/LoadingScreen';
 type RecordingStatus = 'available' | 'processing' | 'failed';
 
 const STATUS_COLORS: Record<RecordingStatus, string> = {
-  available: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  processing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  available: 'bg-success-bg text-success ',
+  processing: 'bg-warning-bg text-warning ',
+  failed: 'bg-danger-bg text-danger ',
 };
 
 export function SalesRecordings() {
@@ -160,13 +160,13 @@ export function SalesRecordings() {
                         <p className={cls.hint}>{r.agent_name}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                          <Badge className={(STATUS_COLORS[r.status as RecordingStatus]) || 'bg-blue-100'}>{r.status}</Badge>
+                          <Badge className={(STATUS_COLORS[r.status as RecordingStatus]) || 'bg-primary-soft'}>{r.status}</Badge>
                           {isOwner && (
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleOpenEdit(r)}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary hover:text-primary hover:bg-primary-soft" onClick={() => handleOpenEdit(r)}>
                                   <Pencil className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteRow(r.id)}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-danger hover:text-danger hover:bg-danger-bg" onClick={() => handleDeleteRow(r.id)}>
                                   <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -193,7 +193,7 @@ export function SalesRecordings() {
 
                     {r.recording_url?.includes('drive.google.com') && (
                       <div className="pt-2">
-                          <Button variant="outline" size="sm" className="w-full text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => window.open(r.recording_url, '_blank')}>
+                          <Button variant="outline" size="sm" className="w-full text-primary border-primary/30 hover:bg-primary-soft" onClick={() => window.open(r.recording_url, '_blank')}>
                               <ExternalLink className="h-3.5 w-3.5 mr-2" />Open in Google Drive
                           </Button>
                       </div>

@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { Check } from 'lucide-react';
-import { useAuth, nextRouteFor } from '../../context/AuthContext';
+import { Copy } from 'lucide-react';
+import { useAuth, nextRouteFor, useOrgPath } from '../../context/AuthContext';
 import { apiFetch } from '../../utils/api';
 import type { Organization, PortalConfig } from '../../types/crm';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { cn } from '../../components/ui/utils';
-import { SetupShell } from './SetupShell';
+import { SetupShell, SetupStepper } from './SetupShell';
 import { LabelsEditor, PortalsEditor } from './PortalEditors';
 import { EmployeesStep } from './EmployeesStep';
 
@@ -22,27 +21,29 @@ interface WizardState {
   departments: { id: number; name: string }[];
 }
 
+// Wizard steps 2-5 of the five-step stepper; step 1 (Organization) is the signup page.
 const STEPS = [
-  { key: 'portals', title: 'Portals', hint: 'Choose the workspaces your company needs.' },
-  { key: 'labels', title: 'Team names', hint: 'Optionally rename portals and role titles.' },
-  { key: 'employees', title: 'Employees', hint: 'Invite your team.' },
-  { key: 'review', title: 'Review', hint: 'Check everything and finish.' },
+  { key: 'portals', title: 'Select the portals your organization will use', hint: 'Portals come from a fixed list. You can change this later in Organization Settings.' },
+  { key: 'labels', title: 'Name the tiers in each portal', hint: 'Optionally rename portals and their tiers. Names are for display only.' },
+  { key: 'employees', title: 'Add your employees', hint: 'Give each employee one portal and one tier. Add them one by one or upload a CSV.' },
+  { key: 'review', title: 'Review and finish', hint: 'Check everything, then start working in your portals.' },
 ] as const;
 type StepKey = typeof STEPS[number]['key'];
 
 export function OnboardingWizard() {
   const { user, isLoading, applySession } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const [state, setState] = useState<WizardState | null>(null);
   const [view, setView] = useState<StepKey>('portals');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) { navigate('/login'); return; }
+    if (!user) { navigate(to('/login')); return; }
     const next = nextRouteFor(user);
-    if (next !== '/onboarding') navigate(next);
-  }, [user, isLoading, navigate]);
+    if (next !== to('/onboarding')) navigate(next);
+  }, [user, isLoading, navigate, to]);
 
   const load = useCallback(async (resume: boolean) => {
     try {
@@ -79,7 +80,7 @@ export function OnboardingWizard() {
       const res = await apiFetch('/onboarding/complete', { method: 'POST' });
       applySession(res.data);
       toast.success('Your organization is ready');
-      navigate('/clock-in');
+      navigate(to('/clock-in'));
     } catch (error: any) {
       toast.error(error.message || 'Could not finish setup');
     } finally {
@@ -88,7 +89,7 @@ export function OnboardingWizard() {
   };
 
   if (!user || !state) {
-    return <SetupShell title="Setting up…" wide><div className="animate-pulse text-muted-foreground">Loading…</div></SetupShell>;
+    return <SetupShell headerRight="Organization setup"><div className="animate-pulse text-muted-foreground">Loading…</div></SetupShell>;
   }
 
   const current = STEPS.findIndex((s) => s.key === view);
@@ -97,40 +98,29 @@ export function OnboardingWizard() {
   const tierOf = (key: string, tier: string) =>
     state.portals.find((p) => p.key === key)?.tierLabels?.[tier as keyof PortalConfig['tierLabels']] || tier;
 
-  return (
-    <SetupShell title={`Set up ${state.organization.name}`} subtitle={STEPS[current].hint} wide>
-      <ol className="mb-8 grid grid-cols-4 gap-2">
-        {STEPS.map((s, i) => {
-          const done = i < current;
-          const clickable = i <= reached && !saving;
-          return (
-            <li key={s.key}>
-              <button
-                type="button"
-                disabled={!clickable}
-                onClick={() => setView(s.key)}
-                className={cn(
-                  'w-full text-left rounded-lg border-t-4 pt-2 text-sm transition-colors',
-                  i === current ? 'border-blue-600 text-foreground font-medium' : done ? 'border-blue-300 text-muted-foreground' : 'border-gray-200 text-muted-foreground',
-                  clickable ? 'cursor-pointer' : 'cursor-default',
-                )}
-              >
-                <span className="flex items-center gap-1.5">
-                  {done && <Check className="h-3.5 w-3.5 text-blue-600" />}
-                  {i + 1}. {s.title}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+  const loginUrl = `${window.location.origin}${to('/login')}`;
 
+  return (
+    <SetupShell
+      headerRight={`Organization setup: ${state.organization.name}`}
+      stepper={(
+        <SetupStepper
+          current={current + 1}
+          canOpen={(i) => i > 0 && i - 1 <= reached && !saving}
+          onOpen={(i) => setView(STEPS[i - 1].key)}
+        />
+      )}
+      title={STEPS[current].title}
+      subtitle={STEPS[current].hint}
+    >
       {view === 'portals' && (
         <PortalsEditor
           portals={state.portals}
           saving={saving}
-          submitLabel="Continue"
-          onSave={(portals) => save('/onboarding/portals', { portals }, 'labels')}
+          tierLabels
+          submitLabel="Save and continue"
+          secondaryAction={<Button variant="outline" disabled>Back</Button>}
+          onSave={(portals, tierLabels) => save('/onboarding/portals', { portals, tier_labels: tierLabels }, 'labels')}
         />
       )}
 
@@ -138,8 +128,8 @@ export function OnboardingWizard() {
         <LabelsEditor
           portals={state.portals}
           saving={saving}
-          submitLabel="Continue"
-          secondaryAction={<Button variant="ghost" onClick={() => setView('portals')}>Back</Button>}
+          submitLabel="Save and continue"
+          secondaryAction={<Button variant="outline" onClick={() => setView('portals')}>Back</Button>}
           onSave={(portals) => save('/onboarding/labels', { portals }, 'employees')}
         />
       )}
@@ -177,6 +167,15 @@ export function OnboardingWizard() {
             </Card>
           </div>
           <Card>
+            <CardHeader><CardTitle className="text-base">Your organization's sign-in link</CardTitle></CardHeader>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <span>Your team signs in at <a href={loginUrl} className="font-bold text-primary hover:underline">{loginUrl}</a></span>
+              <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(loginUrl).then(() => toast.success('Copied'))}>
+                <Copy className="h-4 w-4" /> Copy link
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
             <CardHeader><CardTitle className="text-base">Team ({state.employees.length})</CardTitle></CardHeader>
             <CardContent>
               <ul className="divide-y text-sm">
@@ -191,7 +190,7 @@ export function OnboardingWizard() {
             </CardContent>
           </Card>
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => setView('employees')}>Back</Button>
+            <Button variant="outline" onClick={() => setView('employees')}>Back</Button>
             <Button onClick={finish} disabled={saving}>{saving ? 'Finishing…' : 'Finish setup'}</Button>
           </div>
         </div>

@@ -59,9 +59,9 @@ function AssignToSalesManagerPanel() {
   };
 
   return (
-    <Card className="border-2 border-blue-200 dark:border-blue-800">
+    <Card className="border-2 border-primary/30 ">
       <CardHeader>
-        <CardTitle className={`${cls.inline} text-blue-700 dark:text-blue-400`}>
+        <CardTitle className={`${cls.inline} text-primary `}>
           <ShieldCheck className="h-5 w-5" />
           Assign Task to Sales Manager
         </CardTitle>
@@ -172,9 +172,9 @@ function AssignToCSTManagerPanel() {
   };
 
   return (
-    <Card className="border-2 border-emerald-200 dark:border-emerald-800">
+    <Card className="border-2 border-success/30 ">
       <CardHeader>
-        <CardTitle className={`${cls.inline} text-emerald-700 dark:text-emerald-400`}>
+        <CardTitle className={`${cls.inline} text-success `}>
           <Users className="h-5 w-5" />
           Assign Task to CST Manager
         </CardTitle>
@@ -234,7 +234,7 @@ function AssignToCSTManagerPanel() {
           </div>
         </div>
         <Button
-          className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="mt-4 bg-success hover:bg-success text-white"
           onClick={handleAssign}
           disabled={isAssigning}
         >

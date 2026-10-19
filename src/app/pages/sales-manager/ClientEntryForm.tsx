@@ -1,85 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from 'sonner';
-import { Save, Send, X } from 'lucide-react';
+import { Download, Save, Send, Upload, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { usePortals } from '../../hooks/usePortals';
+import { parseCsvFile, SkippedRows } from '../onboarding/EmployeesStep';
+import type { ClientField } from '../../types/crm';
 import { cls } from '../../styles/classes';
 import { useAuth } from '../../context/AuthContext';
 import { useClients } from '../../context/ClientContext';
+import { ClientFieldsForm } from '../../components/shared/ClientFieldsForm';
 import { useClientInbox } from '../../context/ClientInboxContext';
 import { apiFetch } from '../../utils/api';
-import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
-type FormData = {
-  companyName: string; customerName: string; paymentAmount: string; productsSold: string[]; otherProduct: string;
-  email: string; email2: string; serviceArea: string; contactNo1: string; contactNo2: string; gbpLink: string;
-  websiteLink: string; yelpLink: string; facebook: string; twitter: string;
-  linkedin: string; instagram: string; clientConcerns: string; tipsForTech: string; notes: string;
-  clientServices: string; cin: string; paymentGateway: string;
-};
+import { formatValue, missingRequired, toClientBody, visibleFields, type ClientFormValues } from '../../utils/clientFields';
 
-const EMPTY_FORM: FormData = {
-  companyName: '', customerName: '', paymentAmount: '', productsSold: [], otherProduct: '',
-  email: '', email2: '', serviceArea: '', contactNo1: '', contactNo2: '', gbpLink: '',
-  websiteLink: '', yelpLink: '', facebook: '', twitter: '',
-  linkedin: '', instagram: '', clientConcerns: '', tipsForTech: '', notes: '',
-  clientServices: '', cin: '', paymentGateway: '',
-};
-
-const TEXT_AREAS: { id: keyof FormData; label: string; placeholder: string }[] = [
-  { id: 'clientConcerns', label: 'Client Concerns', placeholder: 'Any specific concerns or requirements...' },
-  { id: 'tipsForTech', label: 'Tips for CST Team', placeholder: 'Important information for the CST team...' },
-  { id: 'notes', label: 'General Notes', placeholder: 'Any additional notes...' },
-];
-
-// Field component defined OUTSIDE the parent to prevent React from
-// re-mounting inputs on every keystroke (which caused the 1-letter glitch).
-function Field({ id, label, type = 'text', required = false, placeholder = '', value, onChange }: {
-  id: string; label: string; type?: string; required?: boolean; placeholder?: string;
-  value: string; onChange: (val: string) => void;
-}) {
-  return (
-    <div className={cls.field}>
-      <Label htmlFor={id}>{label}{required && ' *'}</Label>
-      <Input id={id} type={type} required={required} placeholder={placeholder}
-        value={value} onChange={e => onChange(e.target.value)} />
-    </div>
-  );
-}
-
+// Client entry for the Sales Manager. The fields, their names, order and required
+// marks come from the organization's client layout (Organization settings > Client fields).
 export function ClientEntryForm() {
-  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const [values, setValues] = useState<ClientFormValues>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingClients, setPendingClients] = useState<any[]>([]);
   const { user } = useAuth();
-  const { fetchData } = useClients();
+  const { fetchData, clientFields } = useClients();
+  const [importOpen, setImportOpen] = useState(false);
+  const { can } = usePortals();
   const { fetchData: fetchInbox } = useClientInbox();
-  const [states, setStates] = useState<string[]>([]);
-  const [stateSearch, setStateSearch] = useState('');
-  const [showStates, setShowStates] = useState(false);
-
-  // Fetch US States on mount
-  useEffect(() => {
-    fetch('https://countriesnow.space/api/v0.1/countries/states', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ country: 'United States' })
-    })
-      .then(r => r.json())
-      .then(res => {
-        if (res.data && res.data.states) {
-          setStates(res.data.states.map((s: any) => s.name));
-        }
-      })
-      .catch(err => console.error('Failed to fetch states', err));
-  }, []);
-
-  const set = (field: keyof FormData, value: string) =>
-    setFormData(prev => ({ ...prev, [field]: value }));
 
   // Fetch pending submissions on mount — show all onboarding clients
   useEffect(() => {
@@ -94,8 +41,9 @@ export function ClientEntryForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.companyName || !formData.customerName || (formData.productsSold.length === 0 && !formData.otherProduct.trim())) {
-      toast.error('Please fill required fields (Company, Customer, Product)');
+    const missing = missingRequired(clientFields, values);
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(', ')}`);
       return;
     }
 
@@ -103,30 +51,12 @@ export function ClientEntryForm() {
     try {
       const res = await apiFetch('/clients', {
         method: 'POST',
-        body: JSON.stringify({
-          companyName: formData.companyName,
-          customerName: formData.customerName,
-          email: formData.email,
-          email_2: formData.email2 || null,
-          paymentAmount: parseFloat(formData.paymentAmount),
-          productSold: [...formData.productsSold, formData.otherProduct.trim()].filter(Boolean).join(', '),
-          serviceArea: formData.serviceArea,
-          contactNo1: formData.contactNo1,
-          contactNo2: formData.contactNo2,
-          clientConcerns: formData.clientConcerns,
-          tipsForTech: formData.tipsForTech,
-          notes: formData.notes,
-          clientServices: formData.clientServices,
-          digitalPresence: formData.websiteLink || formData.gbpLink || formData.yelpLink || formData.facebook || formData.twitter || formData.linkedin || formData.instagram,
-          cin: formData.cin,
-          paymentGateway: formData.paymentGateway,
-          sales_agent_id: user?.id
-        })
+        body: JSON.stringify({ ...toClientBody(clientFields, values), sales_agent_id: user?.id }),
       });
 
       if (res.success) {
         toast.success('Client submitted successfully!');
-        setFormData(EMPTY_FORM);
+        setValues({});
         setPendingClients(prev => [res.data, ...prev]);
 
         // Trigger global refresh so CST Manager or Admin dashboards see it instantly
@@ -145,168 +75,30 @@ export function ClientEntryForm() {
 
   const handleClear = () => {
     if (confirm('Clear the form?')) {
-      setFormData(EMPTY_FORM);
+      setValues({});
       toast.info('Form cleared');
     }
   };
 
+  // Two fields of the layout shown on each pending card, when switched on
+  const summary = visibleFields(clientFields).filter((f) => ['product_sold', 'payment_amount'].includes(f.key));
+
   return (
     <form onSubmit={handleSubmit}>
       <Card>
-        <CardHeader>
-          <CardTitle>Sales Information Entry for CST Team</CardTitle>
-          <CardDescription>Enter client information and sales details</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle>Sales Information Entry for CST Team</CardTitle>
+            <CardDescription>Enter client information and sales details</CardDescription>
+          </div>
+          {can('client.import') && (
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />Import CSV
+            </Button>
+          )}
         </CardHeader>
         <CardContent className={cls.page}>
-          {/* Client Information */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-emerald-500" />
-              Client Information
-            </h3>
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4`}>
-              <Field id="companyName" label="Company Name" required placeholder="ABC Corporation" value={formData.companyName} onChange={v => set('companyName', v)} />
-              <Field id="customerName" label="Customer Name" required placeholder="John Doe" value={formData.customerName} onChange={v => set('customerName', v)} />
-              <Field id="paymentAmount" label="Payment Amount ($)" type="number" required placeholder="5000" value={formData.paymentAmount} onChange={v => set('paymentAmount', v)} />
-              <Field id="email" label="Email 1" type="email" required placeholder="contact@company.com" value={formData.email} onChange={v => set('email', v)} />
-              <Field id="email2" label="Email 2" type="email" placeholder="secondary@company.com" value={formData.email2} onChange={v => set('email2', v)} />
-              <div className={cls.field + " relative"}>
-                <Label htmlFor="serviceArea">Service Area (USA State) *</Label>
-                <Input
-                  id="serviceArea"
-                  placeholder="Search state..."
-                  value={formData.serviceArea}
-                  onChange={e => {
-                    set('serviceArea', e.target.value);
-                    setShowStates(true);
-                  }}
-                  onFocus={() => setShowStates(true)}
-                  onBlur={() => setTimeout(() => setShowStates(false), 200)}
-                />
-                {showStates && (
-                  <div className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-white border rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700">
-                    {states
-                      .filter(s => s.toLowerCase().includes(formData.serviceArea.toLowerCase()))
-                      .map(s => (
-                        <div
-                          key={s}
-                          className="px-4 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 text-sm"
-                          onMouseDown={() => {
-                            set('serviceArea', s);
-                            setShowStates(false);
-                          }}
-                        >
-                          {s}
-                        </div>
-                      ))}
-                    {states.filter(s => s.toLowerCase().includes(formData.serviceArea.toLowerCase())).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-muted-foreground italic">No states found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <Field id="clientServices" label="Client Services" placeholder="Handyman, General Contractor..." value={formData.clientServices} onChange={v => set('clientServices', v)} />
-              <div className={cls.field}>
-                <Label>Products / Categories *</Label>
-                <div className="flex flex-col gap-2 mt-2">
-                  {PRODUCTS.map(p => (
-                    <div key={p} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`product-${p}`}
-                        checked={formData.productsSold.includes(p)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setFormData(prev => ({ ...prev, productsSold: [...prev.productsSold, p] }));
-                          } else {
-                            setFormData(prev => ({ ...prev, productsSold: prev.productsSold.filter(item => item !== p) }));
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={`product-${p}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {p}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className={cls.field}>
-                <Label htmlFor="otherProduct">Other / Additional Demand</Label>
-                <Input
-                  id="otherProduct"
-                  placeholder="Enter any other product or demand"
-                  value={formData.otherProduct}
-                  onChange={e => set('otherProduct', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <Field id="cin" label="CIN (Client ID/Number)" placeholder="e.g. 12345678" value={formData.cin} onChange={v => set('cin', v)} />
-              <div className={cls.field}>
-                <Label htmlFor="paymentGateway">Payment Gateway</Label>
-                <Select value={formData.paymentGateway} onValueChange={v => set('paymentGateway', v)}>
-                  <SelectTrigger id="paymentGateway">
-                    <SelectValue placeholder="Select gateway" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Zelle">Zelle</SelectItem>
-                    <SelectItem value="Cash App">Cash App</SelectItem>
-                    <SelectItem value="Stripe">Stripe</SelectItem>
-                    <SelectItem value="Square">Square</SelectItem>
-                    <SelectItem value="Card Charge">Card Charge</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Which payment provider was used for this transaction?</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Contact Details */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-blue-500" />
-              Contact Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field id="contactNo1" label="Contact No. 1 (Primary)" type="tel" required placeholder="+1 (555) 123-4567" value={formData.contactNo1} onChange={v => set('contactNo1', v)} />
-              <Field id="contactNo2" label="Contact No. 2 (Secondary)" type="tel" placeholder="+1 (555) 987-6543" value={formData.contactNo2} onChange={v => set('contactNo2', v)} />
-            </div>
-          </section>
-
-          {/* Digital Presence */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-purple-500" />
-              Digital Presence
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field id="websiteLink" label="Website" type="url" placeholder="https://www.company.com" value={formData.websiteLink} onChange={v => set('websiteLink', v)} />
-              <Field id="gbpLink" label="Google Business Profile" type="url" placeholder="https://g.page/..." value={formData.gbpLink} onChange={v => set('gbpLink', v)} />
-              <Field id="yelpLink" label="Yelp" type="url" placeholder="https://www.yelp.com/..." value={formData.yelpLink} onChange={v => set('yelpLink', v)} />
-              <Field id="facebook" label="Facebook" type="url" placeholder="https://facebook.com/..." value={formData.facebook} onChange={v => set('facebook', v)} />
-              <Field id="twitter" label="Twitter/X" type="url" placeholder="https://twitter.com/..." value={formData.twitter} onChange={v => set('twitter', v)} />
-              <Field id="linkedin" label="LinkedIn" type="url" placeholder="https://linkedin.com/..." value={formData.linkedin} onChange={v => set('linkedin', v)} />
-              <Field id="instagram" label="Instagram" type="url" placeholder="https://instagram.com/..." value={formData.instagram} onChange={v => set('instagram', v)} />
-            </div>
-          </section>
-
-          {/* Additional Information */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-amber-500" />
-              Additional Information
-            </h3>
-            {TEXT_AREAS.map(({ id, label, placeholder }) => (
-              <div key={id} className={cls.field}>
-                <Label htmlFor={id}>{label}</Label>
-                <Textarea id={id} rows={3} placeholder={placeholder}
-                  value={formData[id]} onChange={e => set(id, e.target.value)} />
-              </div>
-            ))}
-          </section>
+          <ClientFieldsForm fields={clientFields} values={values} onChange={setValues} />
 
           {/* Actions */}
           <div className={`${cls.actions} pt-4`}>
@@ -337,22 +129,20 @@ export function ClientEntryForm() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {pendingClients.map((client) => (
-                <Card key={client.id} className="shadow-sm border-l-4 border-yellow-500">
+                <Card key={client.id} className="shadow-sm border-l-4 border-warning">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">{client.company_name}</CardTitle>
                     <CardDescription className="text-xs">{client.customer_name}</CardDescription>
                   </CardHeader>
                   <CardContent className="text-sm">
-                    <div className="flex justify-between mb-1">
-                      <span className={cls.hint}>Product:</span>
-                      <span className="font-medium truncate max-w-[120px]">{client.product_sold}</span>
-                    </div>
-                    <div className="flex justify-between mb-3">
-                      <span className={cls.hint}>Amount:</span>
-                      <span className="font-medium">${client.payment_amount}</span>
-                    </div>
-                    <div className="flex justify-end">
-                      <span className="text-xs font-semibold px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                    {summary.map((f) => (
+                      <div key={f.key} className="flex justify-between gap-3 mb-1">
+                        <span className={cls.hint}>{f.label}:</span>
+                        <span className="font-medium truncate max-w-[140px]">{formatValue(f, client)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-end mt-2">
+                      <span className="text-xs font-semibold px-2 py-1 bg-warning-bg text-warning rounded-full">
                         ONBOARDING PENDING
                       </span>
                     </div>
@@ -363,6 +153,115 @@ export function ClientEntryForm() {
           )}
         </CardContent>
       </Card>
+      <ClientImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        fields={clientFields}
+        onImported={() => { fetchData(); fetchInbox(); }}
+      />
     </form>
+  );
+}
+
+const asCustomValue = (field: ClientField, value: string) =>
+  field.type === 'checkbox' ? ['true', 'yes', '1'].includes(value.toLowerCase()) : value;
+
+// A CSV column matches a field by its key (e.g. company_name) or its label.
+const csvHeader = (f: ClientField) => (f.kind === 'custom' ? f.label : f.key);
+
+// Client CSV import (plan 7.5): template download, then the server validates every row
+// with the client form's rules and reports the rows it skipped.
+function ClientImportDialog({ open, onOpenChange, fields, onImported }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  fields: ClientField[];
+  onImported: () => void;
+}) {
+  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [result, setResult] = useState<{ created: number; skipped: { row: number; label?: string; error: string }[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (!open) { setRows([]); setResult(null); } }, [open]);
+
+  const downloadTemplate = () => {
+    const headers = visibleFields(fields).map(csvHeader);
+    const csv = headers.map((h) => (/[",\n]/.test(h) ? `"${h.replace(/"/g, '""')}"` : h)).join(',') + '\n';
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'client-import-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFile = (file: File) => parseCsvFile(file, (data) => {
+    const byHeader = new Map<string, ClientField>();
+    for (const f of visibleFields(fields)) {
+      byHeader.set(f.key.toLowerCase(), f);
+      byHeader.set(f.label.toLowerCase(), f);
+    }
+    const parsed = data.map((raw) => {
+      const row: Record<string, unknown> = {};
+      const custom: Record<string, unknown> = {};
+      for (const [header, rawValue] of Object.entries(raw)) {
+        const value = String(rawValue ?? '').trim();
+        if (!value) continue;
+        const f = byHeader.get(header);
+        if (!f) continue;
+        if (f.kind === 'custom') custom[f.name!] = asCustomValue(f, value);
+        else row[f.body!] = value;
+      }
+      if (Object.keys(custom).length) row.customFields = custom;
+      return row;
+    }).filter((r) => Object.keys(r).length);
+    if (!parsed.length) { toast.error('No clients found in the file'); return; }
+    setRows(parsed);
+    setResult(null);
+  });
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const res = await apiFetch('/clients/import', { method: 'POST', body: JSON.stringify({ clients: rows }) });
+      setResult({ created: res.data.created.length, skipped: res.data.rowErrors.map((e: any) => ({ ...e, label: String(rows[e.row - 1]?.companyName ?? '') })) });
+      onImported();
+    } catch (error: any) {
+      const rowErrors = error.body?.rowErrors;
+      if (rowErrors) setResult({ created: 0, skipped: rowErrors.map((e: any) => ({ ...e, label: String(rows[e.row - 1]?.companyName ?? '') })) });
+      else toast.error(error.message || 'Import failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Import clients</DialogTitle>
+          <DialogDescription>Rows are checked with the same rules as the client form. Valid rows are saved; the others are listed.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Button type="button" variant="link" className="h-auto px-0" onClick={downloadTemplate}>
+            <Download className="h-4 w-4" />Download template
+          </Button>
+          <Input type="file" accept=".csv,text/csv" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFile(file); e.target.value = ''; }} />
+          {rows.length > 0 && !result && <p className="text-sm">{rows.length} row{rows.length === 1 ? '' : 's'} ready to import.</p>}
+          {result && (
+            <>
+              <p className="text-sm">
+                <strong>{result.created}</strong> client{result.created === 1 ? '' : 's'} imported
+                {result.skipped.length > 0 && <>, <strong>{result.skipped.length}</strong> row{result.skipped.length === 1 ? '' : 's'} skipped</>}.
+              </p>
+              <SkippedRows rows={result.skipped} />
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button type="button" disabled={busy || !rows.length || !!result} onClick={submit}>{busy ? 'Importing…' : 'Import'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

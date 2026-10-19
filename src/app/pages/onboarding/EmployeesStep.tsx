@@ -14,6 +14,34 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 interface Row { first_name: string; last_name: string; email: string; portal_key: string; tier: string; department: string }
 interface Created { id: number; first_name: string; last_name: string; email: string; portal_key: string; tier: Tier; tempPassword: string }
 
+/** Reads a CSV file into rows keyed by trimmed, lower-case header. Shared by the employee and client imports. */
+export const parseCsvFile = (file: File, onRows: (rows: Record<string, string>[]) => void) => {
+  Papa.parse<Record<string, string>>(file, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim().toLowerCase(),
+    complete: ({ data, errors }) => {
+      if (errors.length) toast.warning(`Some CSV lines could not be read (${errors.length})`);
+      onRows(data);
+    },
+  });
+};
+
+/** List of rows the server skipped, with reasons. Shared by the employee and client imports. */
+export function SkippedRows({ rows }: { rows: { row: number; label?: string; error: string }[] }) {
+  if (!rows.length) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>Skipped rows</AlertTitle>
+      <AlertDescription>
+        <ul className="list-disc pl-4">
+          {rows.map((e) => <li key={e.row}>Row {e.row}{e.label ? ` (${e.label})` : ''}: {e.error}</li>)}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 const emptyRow = (portal_key = '', tier = ''): Row => ({ first_name: '', last_name: '', email: '', portal_key, tier, department: '' });
 const NO_DEPARTMENT = '__none__';
 
@@ -27,12 +55,15 @@ const CSV_HEADERS: Record<string, keyof Row> = {
   department: 'department',
 };
 
-export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack }: {
+// Employees by form rows or CSV: the onboarding wizard step, and the Admin portal's
+// "Import CSV" (endpoint /users/import). Valid rows are saved, invalid ones are listed.
+export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack, endpoint = '/onboarding/employees' }: {
   portals: PortalConfig[];
   departments: { id: number; name: string }[];
   onCreated: () => void;
-  onSkip: () => void;
-  onBack: () => void;
+  onSkip?: () => void;
+  onBack?: () => void;
+  endpoint?: string;
 }) {
   const assignable = portals.filter((p) => p.enabled && p.key !== 'admin');
   const defaultPortal = assignable[0]?.key ?? '';
@@ -47,6 +78,7 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
   const [rows, setRows] = useState<Row[]>([newRow()]);
   const [rowErrors, setRowErrors] = useState<{ row: number; error: string }[]>([]);
   const [created, setCreated] = useState<Created[] | null>(null);
+  const [skipped, setSkipped] = useState<{ row: number; email: string; error: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -72,12 +104,7 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
   };
 
   const handleCsv = (file: File) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase(),
-      complete: ({ data, errors }) => {
-        if (errors.length) toast.warning(`Some CSV lines could not be read (${errors.length})`);
+    parseCsvFile(file, (data) => {
         const parsed = data.map((raw) => {
           const row = emptyRow();
           for (const [header, value] of Object.entries(raw)) {
@@ -92,7 +119,6 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
         setRows(parsed);
         setRowErrors([]);
         toast.success(`Loaded ${parsed.length} employee(s) from CSV. Review and submit.`);
-      },
     });
   };
 
@@ -102,13 +128,14 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
     setSaving(true);
     setRowErrors([]);
     try {
-      const res = await apiFetch('/onboarding/employees', {
+      const res = await apiFetch(endpoint, {
         method: 'POST',
         body: JSON.stringify({
           employees: filled.map((r) => ({ ...r, department: r.department || null })),
         }),
       });
       setRows(filled);
+      setSkipped((res.data.rowErrors ?? []).map((e: { row: number; error: string }) => ({ ...e, email: filled[e.row - 1]?.email ?? '' })));
       setCreated(res.data.created);
     } catch (error) {
       // The API reports problems per row; rows are 1-based in the submitted list
@@ -139,6 +166,10 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
   if (created) {
     return (
       <div className="space-y-6">
+        <p className="text-sm">
+          <strong>{created.length}</strong> employee{created.length === 1 ? '' : 's'} added{skipped.length ? <>, <strong>{skipped.length}</strong> row{skipped.length === 1 ? '' : 's'} skipped</> : ''}.
+        </p>
+        <SkippedRows rows={skipped.map((e) => ({ ...e, label: e.email }))} />
         <Alert>
           <AlertTitle>Save these temporary passwords now</AlertTitle>
           <AlertDescription>
@@ -195,7 +226,7 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
 
       {rowErrors.length > 0 && (
         <Alert variant="destructive">
-          <AlertTitle>Nothing was created</AlertTitle>
+          <AlertTitle>No valid rows; nothing was created</AlertTitle>
           <AlertDescription>Fix the highlighted rows and submit again.</AlertDescription>
         </Alert>
       )}
@@ -213,10 +244,10 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
               const err = errorFor(i);
               return (
                 <TableRow key={i} className={err ? 'bg-destructive/5' : undefined}>
-                  <TableCell><Input aria-label="First name" value={r.first_name} onChange={(e) => updateRow(i, 'first_name', e.target.value)} /></TableCell>
-                  <TableCell><Input aria-label="Last name" value={r.last_name} onChange={(e) => updateRow(i, 'last_name', e.target.value)} /></TableCell>
+                  <TableCell><Input aria-label="First name" className="min-w-28" value={r.first_name} onChange={(e) => updateRow(i, 'first_name', e.target.value)} /></TableCell>
+                  <TableCell><Input aria-label="Last name" className="min-w-28" value={r.last_name} onChange={(e) => updateRow(i, 'last_name', e.target.value)} /></TableCell>
                   <TableCell>
-                    <Input aria-label="Email" type="email" value={r.email} onChange={(e) => updateRow(i, 'email', e.target.value)} />
+                    <Input aria-label="Email" type="email" className="min-w-52" value={r.email} onChange={(e) => updateRow(i, 'email', e.target.value)} />
                     {err && <p className="mt-1 text-xs text-destructive">{err}</p>}
                   </TableCell>
                   <TableCell>
@@ -262,9 +293,9 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack 
       </Button>
 
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>Back</Button>
+        <div>{onBack && <Button variant="outline" onClick={onBack}>Back</Button>}</div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onSkip}>Skip for now</Button>
+          {onSkip && <Button variant="outline" onClick={onSkip}>Skip for now</Button>}
           <Button onClick={submit} disabled={saving}>{saving ? 'Adding…' : `Add ${rows.length} employee${rows.length === 1 ? '' : 's'}`}</Button>
         </div>
       </div>

@@ -1,0 +1,22 @@
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Liberation Sans",Arial,sans-serif;color:#1f2937;background:#f3f5f9;width:1280px;height:720px;overflow:hidden;font-size:14px}
+.app{display:flex;height:720px}
+.side{width:220px;background:#1e2a44;color:#cfd8ea;padding:18px 0}
+.brand{color:#fff;font-weight:700;font-size:20px;padding:0 22px 18px;letter-spacing:.5px}
+.brand small{display:block;font-size:11px;font-weight:400;color:#9fb0cf;margin-top:2px}
+.nav a{display:block;padding:10px 22px;color:#cfd8ea;text-decoration:none;font-size:14px}
+.nav a.on{background:#2f4170;color:#fff;border-left:3px solid #5b8def;padding-left:19px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:58px;background:#fff;border-bottom:1px solid #e3e7ef;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.top h1{font-size:19px}
+.user{display:flex;align-items:center;gap:10px;color:#5b6475;font-size:13px}
+.av{width:32px;height:32px;border-radius:50%;background:#5b8def;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.body{padding:20px 24px;flex:1;overflow:hidden}
+.card{background:#fff;border:1px solid #e3e7ef;border-radius:10px}
+.btn{display:inline-block;padding:8px 14px;border-radius:7px;border:1px solid #cfd6e3;background:#fff;font-size:13px;color:#1f2937}
+.btn.p{background:#3b6fe0;border-color:#3b6fe0;color:#fff}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:#6b7383;text-align:left;padding:10px 14px;border-bottom:1px solid #e3e7ef;background:#f8f9fc}
+td{padding:11px 14px;border-bottom:1px solid #eef1f6;font-size:13.5px}
+.tag{display:inline-block;padding:3px 9px;border-radius:12px;font-size:12px}
+.red{background:#fde8e8;color:#b42318}.yel{background:#fff4d6;color:#8a6100}.gr{background:#e6f6ec;color:#1d7a3e}.bl{background:#e8efff;color:#2d55b8}

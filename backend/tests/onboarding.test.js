@@ -27,6 +27,11 @@ describe('organization signup', () => {
         expect(a.user.organization.slug).not.toBe(b.user.organization.slug);
     });
 
+    it('never gives an organization a slug the app uses as a route', async () => {
+        const org = await signupOrg('Login');
+        expect(org.user.organization.slug).toBe('login-2');
+    });
+
     it('rejects a duplicate admin email with 409', async () => {
         const { adminEmail } = await signupOrg();
         const res = await http().post('/api/onboarding/organization').send({
@@ -34,6 +39,7 @@ describe('organization signup', () => {
             admin: { first_name: 'A', last_name: 'B', email: adminEmail, password: 'Password123' },
         });
         expect(res.status).toBe(409);
+        expect(res.body.error).toBe('An account with this email already exists.');
     });
 
     it('validates input', async () => {
@@ -53,14 +59,18 @@ describe('wizard steps', () => {
         expect(res.status).toBe(400);
     });
 
-    it('disables portals and advances to labels', async () => {
+    it('disables portals, applies the three tier labels to every enabled portal and advances to labels', async () => {
         const res = await as(token).put('/api/onboarding/portals', {
             portals: [{ key: 'finance', enabled: false }, { key: 'cst_manager', enabled: false }],
+            tier_labels: { Member: 'Agent', Manager: 'Team Lead', Admin: 'Admin' },
         });
         expect(res.status).toBe(200);
         expect(res.body.data.step).toBe('labels');
-        const finance = res.body.data.portals.find((p) => p.key === 'finance');
-        expect(finance.enabled).toBe(false);
+        const byKey = Object.fromEntries(res.body.data.portals.map((p) => [p.key, p]));
+        expect(byKey.finance.enabled).toBe(false);
+        expect(byKey.sales.tierLabels).toEqual({ Member: 'Agent', Manager: 'Team Lead' });
+        expect(byKey.admin.tierLabels).toEqual({});
+        expect(byKey.finance.tierLabels).toEqual({});
     });
 
     it('saves display labels and advances to employees', async () => {
@@ -79,7 +89,7 @@ describe('wizard steps', () => {
         expect(res.body.data.step).toBe('employees');
     });
 
-    it('rejects the whole batch with per-row errors, creating nothing', async () => {
+    it('saves the valid rows and lists the skipped ones with reasons', async () => {
         const res = await as(token).post('/api/onboarding/employees', {
             employees: [
                 { first_name: 'Ok', last_name: 'Row', email: `${unique('ok')}@example.com`, portal_key: 'sales' },
@@ -87,11 +97,22 @@ describe('wizard steps', () => {
                 { first_name: '', last_name: 'NoName', email: 'not-an-email', portal_key: 'sales' },
             ],
         });
-        expect(res.status).toBe(400);
-        expect(res.body.rowErrors.map((e) => e.row)).toEqual([2, 3]);
+        expect(res.status).toBe(201);
+        expect(res.body.data.created.map((c) => c.first_name)).toEqual(['Ok']);
+        expect(res.body.data.created[0].tempPassword).toBeTruthy();
+        expect(res.body.data.rowErrors.map((e) => e.row)).toEqual([2, 3]);
+        expect(res.body.data.rowErrors[0].error).toMatch(/not enabled/);
 
         const state = await as(token).get('/api/onboarding/state');
-        expect(state.body.data.employees).toHaveLength(1); // only the admin
+        expect(state.body.data.employees).toHaveLength(2); // admin + the valid row
+    });
+
+    it('creates nothing when every row is invalid', async () => {
+        const res = await as(token).post('/api/onboarding/employees', {
+            employees: [{ first_name: 'Bad', last_name: 'Portal', email: `${unique('fin')}@example.com`, portal_key: 'finance' }],
+        });
+        expect(res.status).toBe(400);
+        expect(res.body.rowErrors).toHaveLength(1);
     });
 
     it('creates employees with one-time temporary passwords', async () => {
@@ -185,6 +206,26 @@ describe('organization settings', () => {
 
     it('non-admins cannot change settings', async () => {
         expect((await as(people.sales.token).put('/api/organization', { name: 'Hacked' })).status).toBe(403);
+    });
+
+    it('admins import employees by CSV after onboarding with the same skip rules', async () => {
+        const res = await as(token).post('/api/users/import', {
+            employees: [
+                { first_name: 'Csv', last_name: 'One', email: `${unique('csv')}@example.com`, portal_key: 'sales', tier: 'manager' },
+                { first_name: 'Csv', last_name: 'Two', email: people.sales.email, portal_key: 'sales' },
+            ],
+        });
+        expect(res.status).toBe(201);
+        expect(res.body.data.created).toHaveLength(1);
+        expect(res.body.data.created[0]).toMatchObject({ tier: 'Manager', tempPassword: expect.any(String) });
+        expect(res.body.data.rowErrors).toEqual([{ row: 2, error: expect.stringMatching(/already exists/) }]);
+    });
+
+    it('only admins can import employees', async () => {
+        const res = await as(people.sales.token).post('/api/users/import', {
+            employees: [{ first_name: 'X', last_name: 'Y', email: `${unique('x')}@example.com`, portal_key: 'sales' }],
+        });
+        expect(res.status).toBe(403);
     });
 
     it('admin user creation returns a temp password and forces a change', async () => {

@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { WelcomeHero } from '../../components/shared/WelcomeHero';
+import { StatCard } from '../../components/shared/StatCard';
+import { ClientFieldCell, tableFields } from '../../components/shared/ClientFieldCell';
+import { fieldsBySection, formatValue, visibleFields } from '../../utils/clientFields';
 import { cls } from '../../styles/classes';
 import { getPortalTheme } from '../../styles/portal-themes';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
@@ -21,7 +24,7 @@ import { InternalConcerns } from './InternalConcerns';
 import { CSTMonthlyTargets } from './CSTMonthlyTargets';
 
 import { useClients } from '../../context/ClientContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, useOrgPath } from '../../context/AuthContext';
 import { useCSTSchedule, Schedule as CSTSchedule } from '../../context/CSTScheduleContext';
 import { useConcerns } from '../../context/ConcernContext';
 import { toast } from 'sonner';
@@ -34,20 +37,21 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
+import { ClientViewToggle, PipelineKanbanBoard, type ClientView } from '../../components/shared/PipelineKanbanBoard';
 import { Textarea } from '../../components/ui/textarea';
 
 const theme = getPortalTheme('cst');
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-  low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  high: 'bg-danger-bg text-danger ',
+  medium: 'bg-warning-bg text-warning ',
+  low: 'bg-primary-soft text-primary ',
 };
 
 const TASK_STATUS_COLORS: Record<string, string> = {
   todo: 'bg-muted text-muted-foreground',
-  'in-progress': 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-  done: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  'in-progress': 'bg-primary-soft text-primary ',
+  done: 'bg-success-bg text-success ',
 };
 
 // ── Schedule type matching DB: schedules(id, user_id, title, description, start_time, end_time)
@@ -62,9 +66,9 @@ const FLAG_BORDER_COLORS: Record<string, string> = {
 };
 
 const FLAG_OPTIONS: { value: string; label: string }[] = [
-  { value: 'red-flag', label: '🔴 Red Flag — Urgent issue' },
-  { value: 'yellow-flag', label: '🟡 Yellow Flag — Watch closely' },
-  { value: 'black-flag', label: '⚫ Black Flag — Churn / Cancel' },
+  { value: 'red-flag', label: 'Red Flag — Urgent issue' },
+  { value: 'yellow-flag', label: 'Yellow Flag — Watch closely' },
+  { value: 'black-flag', label: 'Black Flag — Churn / Cancel' },
 ];
 
 // ── Flag dialog (CST Agent only) ──────────────────────────────────────────────
@@ -97,7 +101,7 @@ function FlagDialog({ clientName, clientId, open, onClose }: FlagDialogProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flag Client</DialogTitle>
+          <DialogTitle className={cls.inline}><Flag className="h-5 w-5 text-danger" />Flag Client</DialogTitle>
           <DialogDescription>Flagging <strong>{clientName}</strong> — this will notify the CST Manager.</DialogDescription>
         </DialogHeader>
         <div className={cls.section}>
@@ -129,8 +133,12 @@ function FlagDialog({ clientName, clientId, open, onClose }: FlagDialogProps) {
 
 // ── Client Details Dialog ───────────────────────────────────────────────────────
 function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, open: boolean, onClose: () => void }) {
-  const { clients, getClientNotes } = useClients();
+  const { clients, getClientNotes, clientFields } = useClients();
   const client = clients.find(c => c.id === clientId);
+  // Short values grouped by section on the left, long text on the right
+  const shown = visibleFields(clientFields);
+  const shortSections = fieldsBySection(shown.filter((f) => f.type !== 'textarea'));
+  const longFields = shown.filter((f) => f.type === 'textarea');
   const [notes, setNotes] = useState<any[]>([]);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -170,7 +178,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
         </button>
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-500" />
+            <Users className="h-5 w-5 text-primary" />
             {client.company_name}
           </DialogTitle>
           <DialogDescription>
@@ -181,69 +189,51 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">General Info</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Status</h3>
               <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Customer Name:</span> <span className="font-medium text-right">{client.customer_name}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">CIN:</span> <span className="font-medium text-right">{client.cin || 'N/A'}</span></div>
                 <div className="flex justify-between items-center gap-4"><span className="text-muted-foreground whitespace-nowrap">Status:</span> <Badge variant="outline" className="capitalize px-3 py-1">{client.status}</Badge></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Service Area:</span> <span className="text-right break-words">{client.service_area || 'N/A'}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Assigned To:</span> <span className="text-right">{client.assigned_name || 'Unassigned'}</span></div>
               </div>
             </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Contact Info</h3>
-              <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4"><span className="text-muted-foreground whitespace-nowrap">Email 1:</span> <span className="text-left sm:text-right break-all">{client.email}</span></div>
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4"><span className="text-muted-foreground whitespace-nowrap">Email 2:</span> <span className="text-left sm:text-right break-all">{client.email_2 || 'N/A'}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Phone 1:</span> <span className="text-right">{client.contact_no_1}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Phone 2:</span> <span className="text-right">{client.contact_no_2 || 'N/A'}</span></div>
+            {shortSections.map(({ section, title, fields }) => (
+              <div key={section}>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{title}</h3>
+                <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
+                  {fields.map((f) => (
+                    <div key={f.key} className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4">
+                      <span className="text-muted-foreground whitespace-nowrap">{f.label}:</span>
+                      <span className={`text-left sm:text-right break-words ${f.key === 'payment_amount' ? 'font-bold text-success' : ''}`}>{formatValue(f, client)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Payment & Services</h3>
-              <div className="bg-muted/30 p-5 rounded-xl space-y-3.5 text-base border shadow-sm">
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Amount:</span> <span className="font-bold text-emerald-600 dark:text-emerald-400">${client.payment_amount}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Gateway:</span> <span>{client.payment_gateway || 'N/A'}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Services:</span> <span className="text-right break-words">{client.client_services || 'N/A'}</span></div>
-                <div className="flex justify-between gap-4"><span className="text-muted-foreground whitespace-nowrap">Product Sold:</span> <span className="text-right break-words">{client.product_sold || 'N/A'}</span></div>
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div className="space-y-6">
-            <div className="h-full">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Technical Details</h3>
-              <div className="bg-muted/30 p-5 rounded-xl space-y-5 text-base border shadow-sm h-[calc(100%-28px)]">
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Digital Presence:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed">{client.digital_presence || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Tips for Tech:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed">{client.tips_for_tech || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Client Concerns:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed">{client.client_concerns || 'N/A'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground font-medium block mb-2">Initial Notes:</span>
-                  <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed whitespace-pre-wrap">{client.notes || 'N/A'}</p>
+          {longFields.length > 0 && (
+            <div className="space-y-6">
+              <div className="h-full">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Details</h3>
+                <div className="bg-muted/30 p-5 rounded-xl space-y-5 text-base border shadow-sm h-[calc(100%-28px)]">
+                  {longFields.map((f) => (
+                    <div key={f.key}>
+                      <span className="text-muted-foreground font-medium block mb-2">{f.label}:</span>
+                      <p className="bg-background p-4 rounded-lg border shadow-sm break-words min-h-[70px] text-sm leading-relaxed whitespace-pre-wrap">{formatValue(f, client)}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2 uppercase tracking-wider border-b pb-2">
-            <StickyNote className="h-4 w-4 text-amber-500" /> Added Notes & History
+            <StickyNote className="h-4 w-4 text-warning" /> Added Notes & History
           </h3>
           {isLoadingNotes ? (
             <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               Loading notes...
             </div>
           ) : notes.length === 0 ? (
@@ -256,7 +246,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
                 <div key={note.id} className="bg-muted/30 p-3 rounded-lg border border-l-4 border-l-blue-500">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[10px] text-blue-700">
+                      <div className="w-5 h-5 rounded-full bg-primary-soft flex items-center justify-center text-[10px] text-primary">
                         {note.creator_name?.charAt(0) || 'U'}
                       </div>
                       {note.creator_name}
@@ -279,7 +269,7 @@ function ClientDetailsDialog({ clientId, open, onClose }: { clientId: number, op
 // ── Active Clients panel (role-aware) ─────────────────────────────────────────
 function ActiveClientsPanel() {
   const { user } = useAuth();
-  const { clients, deactivationRequests, toggleActive, requestDeactivation, resolveDeactivationRequest } = useClients();
+  const { clients, deactivationRequests, toggleActive, requestDeactivation, resolveDeactivationRequest, clientFields } = useClients();
   const isCSTManager = user?.role === 'cst_manager';
   const isCSTAgent = user?.role === 'cst';
 
@@ -298,6 +288,10 @@ function ActiveClientsPanel() {
   };
 
   const activeClients = clients.filter(c => c.is_active && c.status === 'active');
+  const cinField = visibleFields(clientFields).find((f) => f.key === 'cin');
+  const gatewayField = visibleFields(clientFields).find((f) => f.key === 'payment_gateway');
+  const [view, setView] = useState<ClientView>('table');
+  const shownClients = activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className={cls.section}>
@@ -306,7 +300,7 @@ function ActiveClientsPanel() {
           <div className={cls.row}>
             <div>
               <CardTitle className={cls.inline}>
-                <div className="h-3 w-3 rounded-full bg-green-500" />
+                <div className="h-3 w-3 rounded-full bg-success" />
                 Active Clients
               </CardTitle>
               <CardDescription>
@@ -324,38 +318,39 @@ function ActiveClientsPanel() {
           </div>
         </CardHeader>
         <CardContent>
+          <ClientViewToggle view={view} onChange={setView} />
+          {view === 'kanban' ? <PipelineKanbanBoard clients={shownClients} /> : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/50 sticky top-0">
                 <TableRow>
                   <TableHead>Client Name</TableHead>
-                  <TableHead>CIN / Details</TableHead>
+                  {cinField && <TableHead>{cinField.label}</TableHead>}
                   <TableHead>Contact Info</TableHead>
-                  <TableHead>Gateway</TableHead>
+                  {gatewayField && <TableHead>{gatewayField.label}</TableHead>}
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y">
-                {activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).map(c => (
-                  <TableRow key={c.id} className={`${!c.is_active ? 'opacity-60' : ''} hover:bg-muted/30 transition-colors cursor-pointer ${detailsTargetId === c.id ? 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/20' : ''}`} onClick={() => setDetailsTargetId(c.id)}>
+                {shownClients.map(c => (
+                  <TableRow key={c.id} className={`${!c.is_active ? 'opacity-60' : ''} hover:bg-muted/30 transition-colors cursor-pointer ${detailsTargetId === c.id ? 'ring-2 ring-primary/30 bg-primary-soft/50 ' : ''}`} onClick={() => setDetailsTargetId(c.id)}>
                     <TableCell>
                       <p className="font-bold">{c.company_name}</p>
                       <p className="text-xs text-muted-foreground">Person: {c.customer_name}</p>
                       <p className="text-xs text-muted-foreground italic">Added: {c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</p>
                     </TableCell>
-                    <TableCell>
-                      <p className="text-sm"><span className="font-semibold">CIN:</span> {c.cin || 'N/A'}</p>
-                      <p className="text-xs text-muted-foreground">Gateway: {c.payment_gateway || 'N/A'}</p>
-                    </TableCell>
+                    {cinField && <TableCell className="text-sm">{formatValue(cinField, c)}</TableCell>}
                     <TableCell>
                       <p className="text-sm">{c.contact_no_1 || 'N/A'}</p>
                       <p className="text-xs text-muted-foreground">{c.email || 'N/A'}</p>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.payment_gateway || 'N/A'}</Badge>
-                    </TableCell>
+                    {gatewayField && (
+                      <TableCell>
+                        <Badge variant="outline">{formatValue(gatewayField, c)}</Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <p className="text-sm">{c.assigned_name || 'Unassigned'}</p>
                     </TableCell>
@@ -365,7 +360,7 @@ function ActiveClientsPanel() {
                           {c.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                         {deactivationRequests.some(r => r.client_id === c.id) && (
-                          <Badge variant="outline" className="text-xs text-orange-700 border-orange-400 bg-orange-50">
+                          <Badge variant="outline" className="text-xs text-warning border-warning/30 bg-warning-bg">
                             Requested
                           </Badge>
                         )}
@@ -379,11 +374,11 @@ function ActiveClientsPanel() {
                       )}
                       {isCSTAgent && (
                         <div className="flex justify-end gap-1 flex-wrap">
-                          <Button size="sm" variant="outline" className="h-7 text-xs border-orange-400 text-orange-700 hover:bg-orange-50" onClick={(e) => { e.stopPropagation(); setFlagTarget({ id: c.id, name: c.company_name }); }}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs border-warning/30 text-warning hover:bg-warning-bg" onClick={(e) => { e.stopPropagation(); setFlagTarget({ id: c.id, name: c.company_name }); }}>
                             <Flag className="h-3 w-3 mr-1" />Flag
                           </Button>
                           {c.is_active && !deactivationRequests.some(r => r.client_id === c.id) && (
-                            <Button size="sm" variant="outline" className="h-7 text-xs border-red-400 text-red-700 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleRequestDeactivation(c.id, c.company_name); }}>
+                            <Button size="sm" variant="outline" className="h-7 text-xs border-danger-border text-danger hover:bg-danger-bg" onClick={(e) => { e.stopPropagation(); handleRequestDeactivation(c.id, c.company_name); }}>
                               <AlertTriangle className="h-3 w-3 mr-1" />Deactivate
                             </Button>
                           )}
@@ -392,7 +387,7 @@ function ActiveClientsPanel() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {activeClients.filter(c => !search || c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_name.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                {shownClients.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No active clients found.</TableCell>
                   </TableRow>
@@ -400,14 +395,15 @@ function ActiveClientsPanel() {
               </TableBody>
             </Table>
           </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Pending Deactivation Requests — CST Manager only */}
       {isCSTManager && deactivationRequests.length > 0 && (
-        <Card className="border-2 border-orange-300 dark:border-orange-700">
+        <Card className="border-2 border-warning/30 ">
           <CardHeader>
-            <CardTitle className={`${cls.inline} text-orange-700 dark:text-orange-400`}>
+            <CardTitle className={`${cls.inline} text-warning `}>
               <AlertTriangle className="h-5 w-5" />
               Pending Deactivation Requests
             </CardTitle>
@@ -415,7 +411,7 @@ function ActiveClientsPanel() {
           </CardHeader>
           <CardContent className={cls.list}>
             {deactivationRequests.map(req => (
-              <div key={req.client_id} className={`${cls.item} border-orange-200 dark:border-orange-800`}>
+              <div key={req.client_id} className={`${cls.item} border-warning/30 `}>
                 <div className={`${cls.row} mb-3 flex-wrap gap-2`}>
                   <div>
                     <p className={cls.heading}>{req.client_name}</p>
@@ -432,7 +428,7 @@ function ActiveClientsPanel() {
                       resolveDeactivationRequest(req.id, true, req.client_id);
                     }}
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Deactivate
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Discard
                   </Button>
                   <Button
                     size="sm"
@@ -555,7 +551,7 @@ function NotesPanel() {
       {/* Client Selector */}
       <Card className="lg:col-span-1">
         <CardHeader>
-          <CardTitle className={cls.inline}><Users className="h-5 w-5 text-blue-500" />Manage Client Notes</CardTitle>
+          <CardTitle className={cls.inline}><Users className="h-5 w-5 text-primary" />Manage Client Notes</CardTitle>
           <CardDescription>Search and select a client to manage their history</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -588,19 +584,19 @@ function NotesPanel() {
           </Select>
 
           {selectedClient && (
-            <div className={`${cls.muted} p-4 rounded-lg border border-blue-100 dark:border-blue-900/30`}>
+            <div className={`${cls.muted} p-4 rounded-lg border border-primary/30 `}>
               <h4 className="font-semibold mb-2 text-sm">Add New Note</h4>
               <Textarea
                 placeholder="Enter notes here... (Use new lines for points)"
                 value={newNote}
                 onChange={e => setNewNote(e.target.value)}
                 rows={5}
-                className="mb-3 text-sm focus-visible:ring-blue-500"
+                className="mb-3 text-sm focus-visible:ring-primary"
               />
               <Button
                 onClick={handleAddNote}
                 disabled={isAdding || !newNote.trim()}
-                className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
+                className="w-full h-9 bg-primary hover:bg-primary text-white min-w-[120px]"
               >
                 {isAdding ? (
                   <>Adding Record...</>
@@ -618,7 +614,7 @@ function NotesPanel() {
         <CardHeader className="border-b pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle className={cls.inline}><StickyNote className="h-5 w-5 text-amber-500" />Client History &amp; Records</CardTitle>
+              <CardTitle className={cls.inline}><StickyNote className="h-5 w-5 text-warning" />Client History &amp; Records</CardTitle>
               <CardDescription>
                 {selectedClient
                   ? `Timeline for ${clients.find(c => c.id === selectedClient)?.company_name}`
@@ -654,10 +650,10 @@ function NotesPanel() {
           ) : (
             <div className="space-y-4">
               {filteredNotes.map(note => (
-                <div key={note.id} className={`${cls.item} relative group border-l-4 border-l-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors`}>
+                <div key={note.id} className={`${cls.item} relative group border-l-4 border-l-blue-500 hover:bg-primary-soft/50 transition-colors`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[10px] font-bold text-blue-700">
+                      <div className="h-6 w-6 rounded-full bg-primary-soft flex items-center justify-center text-[10px] font-bold text-primary">
                         {note.creator_name?.charAt(0) || 'U'}
                       </div>
                       <div>
@@ -669,7 +665,7 @@ function NotesPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-blue-600 hover:bg-blue-100"
+                        className="h-7 w-7 text-primary hover:bg-primary-soft"
                         onClick={() => {
                           setEditingNoteId(note.id);
                           setEditNoteText(note.note_text);
@@ -680,7 +676,7 @@ function NotesPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-red-600 hover:bg-red-100"
+                        className="h-7 w-7 text-danger hover:bg-danger-bg"
                         onClick={() => handleDeleteNote(note.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -698,7 +694,7 @@ function NotesPanel() {
                       />
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingNoteId(null)} disabled={isUpdatingNote}>Cancel</Button>
-                        <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]" onClick={handleUpdateNote} disabled={isUpdatingNote}>
+                        <Button size="sm" className="h-7 text-xs bg-primary hover:bg-primary text-white min-w-[100px]" onClick={handleUpdateNote} disabled={isUpdatingNote}>
                           {isUpdatingNote ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </div>
@@ -725,7 +721,9 @@ export function CSTDashboard() {
   const [portfolioSearch, setPortfolioSearch] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { clients, unflagClient, isLoading: clientsLoading } = useClients();
+  const to = useOrgPath();
+  const { clients, unflagClient, isLoading: clientsLoading, clientFields } = useClients();
+  const portfolioColumns = tableFields(clientFields);
   const { schedules, addSchedule, updateSchedule, deleteSchedule, isLoading: scheduleLoading } = useCSTSchedule();
   const { internalConcerns } = useConcerns();
   const [searchParams] = useSearchParams();
@@ -828,55 +826,37 @@ export function CSTDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Customer Success Team Portal" theme={theme} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="px-6 py-5">
         {/* Welcome Hero */}
         <div className="w-full">
           {activeModule === 'overview' && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-              {/* <WelcomeHero theme={theme}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-semibold mb-1 text-foreground">Client Success Hub</h2>
-                    <p className="text-sm text-muted-foreground">Manage clients, onboarding, and daily operations</p>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-foreground">{onboardingClients.length}</p>
-                      <p className="text-xs text-muted-foreground">Onboarding</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-red-500 dark:text-red-400">{flaggedClients.length}</p>
-                      <p className="text-xs text-muted-foreground">Flagged</p>
-                    </div>
-                  </div>
-                </div>
-              </WelcomeHero> */}
+              <WelcomeHero
+                title="Client success hub"
+                description="Onboard new clients, resolve flagged issues and keep every account healthy."
+                metrics={[
+                  { label: 'Onboarding', value: onboardingClients.length },
+                  { label: 'Flagged', value: flaggedClients.length, alert: flaggedClients.length > 0 },
+                ]}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=clients&tab=onboarding')}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                      Pending Onboarding
-                      <UserPlus className="h-4 w-4 text-blue-500" />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{onboardingClients.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Clients awaiting setup</p>
-                  </CardContent>
-                </Card>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/dashboard?module=clients&tab=flagged')}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                      Flagged Issues
-                      <Flag className="h-4 w-4 text-red-500" />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{flaggedClients.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Clients requiring attention</p>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StatCard
+                  icon={<UserPlus />}
+                  tone="primary"
+                  title="Pending onboarding"
+                  value={onboardingClients.length}
+                  subtitle="Clients awaiting setup"
+                  onClick={() => navigate(to('/dashboard?module=clients&tab=onboarding'))}
+                />
+                <StatCard
+                  icon={<Flag />}
+                  tone="danger"
+                  title="Flagged issues"
+                  value={flaggedClients.length}
+                  subtitle="Clients requiring attention"
+                  onClick={() => navigate(to('/dashboard?module=clients&tab=flagged'))}
+                />
               </div>
 
               <Card>
@@ -902,13 +882,8 @@ export function CSTDashboard() {
                     <Table className="w-full text-xs text-left border-collapse">
                       <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
                         <TableRow className="border-b border-border">
-                          {[
-                            'Status', 'Flag', 'Cin', 'Company Name', 'Customer Name', 'Service AREA',
-                            'Contact No.1', 'Contact No.2', 'Email',
-                            'Tech Notes', 'Notes', 'Date', '$', 'Merchant',
-                            'SERVICES'
-                          ].map(h => (
-                            <TableHead key={h} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[120px] whitespace-nowrap bg-muted">
+                          {['Status', 'Flag', ...portfolioColumns.map((f) => f.label), 'Date'].map((h, i) => (
+                            <TableHead key={i} className="px-4 py-3 font-bold text-foreground uppercase tracking-wider border-r border-border last:border-r-0 min-w-[120px] whitespace-nowrap bg-muted">
                               {h}
                             </TableHead>
                           ))}
@@ -926,7 +901,7 @@ export function CSTDashboard() {
                           .map((c, idx) => {
                             const isHighlighted = searchParams.get('client') === String(c.id);
                             return (
-                              <TableRow key={c.id} className={`hover:bg-muted/50 transition-colors ${isHighlighted ? 'ring-2 ring-yellow-400 bg-yellow-100/70 dark:bg-yellow-950/30' : 'bg-background'}`} id={isHighlighted ? 'highlighted-client' : undefined}>
+                              <TableRow key={c.id} className={`hover:bg-muted/50 transition-colors ${isHighlighted ? 'ring-2 ring-warning/30 bg-warning-bg/70 ' : 'bg-background'}`} id={isHighlighted ? 'highlighted-client' : undefined}>
                                 <TableCell className="px-4 py-3 border-r border-border">
                                   <Badge
                                     variant={c.status === 'active' ? 'default' : c.status === 'flagged' ? 'destructive' : 'secondary'}
@@ -938,37 +913,22 @@ export function CSTDashboard() {
                                 <TableCell className="px-4 py-3 border-r border-border">
                                   {c.flag_type ? (
                                     <Badge
-                                      className={`text-[10px] uppercase font-bold px-1.5 h-5 ${c.flag_type === 'red-flag' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
-                                          c.flag_type === 'yellow-flag' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300' :
-                                            c.flag_type === 'black-flag' ? 'bg-gray-900 text-white dark:bg-gray-700' : 'bg-muted text-muted-foreground'
+                                      className={`text-[10px] uppercase font-bold px-1.5 h-5 ${c.flag_type === 'red-flag' ? 'bg-danger-bg text-danger ' :
+                                          c.flag_type === 'yellow-flag' ? 'bg-warning-bg text-warning ' :
+                                            c.flag_type === 'black-flag' ? 'bg-navy text-white ' : 'bg-muted text-muted-foreground'
                                         }`}
                                     >
-                                      {c.flag_type === 'red-flag' ? '🔴 Red' : c.flag_type === 'yellow-flag' ? '🟡 Yellow' : c.flag_type === 'black-flag' ? '⚫ Black' : c.flag_type}
+                                      {c.flag_type === 'red-flag' ? 'Red' : c.flag_type === 'yellow-flag' ? 'Yellow' : c.flag_type === 'black-flag' ? 'Black' : c.flag_type}
                                     </Badge>
                                   ) : '—'}
                                 </TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-medium text-blue-600 dark:text-blue-400">{c.cin || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-bold text-foreground sticky left-0 bg-inherit shadow-[1px_0_0_0_rgba(0,0,0,0.1)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">{c.company_name}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.customer_name}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.service_area || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_1}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.contact_no_2 || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">
-                                  <p>{c.email || '—'}</p>
-                                  {c.email_2 && <p className="text-[10px] text-muted-foreground mt-0.5">{c.email_2}</p>}
-                                </TableCell>
-
-                                <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.tips_for_tech}>{c.tips_for_tech || '—'}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border max-w-[200px] truncate" title={c.notes}>{c.notes || '—'}</TableCell>
+                                {portfolioColumns.map((f) => <ClientFieldCell key={f.key} field={f} client={c} className="px-4 py-3 border-r border-border" />)}
                                 <TableCell className="px-4 py-3 border-r border-border whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-bold text-emerald-600 dark:text-emerald-400">${c.payment_amount}</TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border font-medium uppercase text-[10px]"><Badge variant="outline">{c.payment_gateway || '—'}</Badge></TableCell>
-                                <TableCell className="px-4 py-3 border-r border-border">{c.client_services || '—'}</TableCell>
                               </TableRow>
                             );
                           })}
                         {clients.length === 0 && (
-                          <TableRow><TableCell colSpan={15} className="text-center py-12 text-muted-foreground bg-muted/20">No clients found in portfolio.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={portfolioColumns.length + 3} className="text-center py-12 text-muted-foreground bg-muted/20">No clients found in portfolio.</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -996,7 +956,7 @@ export function CSTDashboard() {
                     <CardHeader>
                       <div className={cls.row}>
                         <div>
-                          <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-blue-500" />Clients to be Onboarded</CardTitle>
+                          <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-primary" />Clients to be Onboarded</CardTitle>
                           <CardDescription>{onboardingClients.length} clients in onboarding</CardDescription>
                         </div>
                         <div className="relative">
@@ -1034,7 +994,7 @@ export function CSTDashboard() {
                     <CardHeader>
                       <div className={cls.row}>
                         <div>
-                          <CardTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flagged Clients</CardTitle>
+                          <CardTitle className={cls.inline}><Flag className="h-5 w-5 text-danger" />Flagged Clients</CardTitle>
                           <CardDescription>Clients requiring immediate attention</CardDescription>
                         </div>
                         <div className="relative">
@@ -1063,7 +1023,7 @@ export function CSTDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                                className="border-success text-success hover:bg-success-bg"
                                 onClick={() => unflagClient(c.id)}
                               >
                                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
@@ -1105,10 +1065,10 @@ export function CSTDashboard() {
                 <CardHeader>
                   <div className={cls.row}>
                     <div>
-                      <CardTitle className={cls.inline}><Calendar className="h-5 w-5 text-blue-500" />Personal Calendar</CardTitle>
+                      <CardTitle className={cls.inline}><Calendar className="h-5 w-5 text-primary" />Personal Calendar</CardTitle>
                       <CardDescription>{schedules.length} scheduled items · {formatDate(new Date().toISOString())}</CardDescription>
                     </div>
-                    <Button onClick={() => openScheduleModal()} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                    <Button onClick={() => openScheduleModal()} className="bg-primary hover:bg-primary text-white shadow-lg">
                       <Plus className="h-4 w-4 mr-2" />Add Entry
                     </Button>
                   </div>
@@ -1145,10 +1105,10 @@ export function CSTDashboard() {
                               <span className={`${cls.hintXs}`}>{formatDate(sch.start_time)}</span>
                             </div>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm" className="border-blue-500 text-blue-700 hover:bg-blue-50" onClick={() => openScheduleModal(sch)}>
+                              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary-soft" onClick={() => openScheduleModal(sch)}>
                                 <Edit className="h-3.5 w-3.5 mr-1" />Edit
                               </Button>
-                              <Button variant="outline" size="sm" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => handleDeleteScheduleRow(sch.id)}>
+                              <Button variant="outline" size="sm" className="border-danger text-danger hover:bg-danger-bg" onClick={() => handleDeleteScheduleRow(sch.id)}>
                                 <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
                               </Button>
                             </div>
@@ -1182,7 +1142,7 @@ export function CSTDashboard() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className={cls.inline}>
-              {editingScheduleId ? <Edit className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-blue-500" />}
+              {editingScheduleId ? <Edit className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
               {editingScheduleId ? 'Edit Schedule Entry' : 'Add New Schedule Entry'}
             </DialogTitle>
             <DialogDescription>Plan your daily tasks and interactions.</DialogDescription>
@@ -1219,7 +1179,7 @@ export function CSTDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsScheduleOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleScheduleSubmit} disabled={isSubmitting}>
+            <Button className="bg-primary hover:bg-primary text-white" onClick={handleScheduleSubmit} disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : (editingScheduleId ? 'Update Entry' : 'Save Entry')}
             </Button>
           </DialogFooter>

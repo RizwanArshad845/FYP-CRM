@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import pool, { withTransaction } from '../config/db.js';
-import { createUserRecord } from '../services/userService.js';
+import { createUserRecord, importEmployees } from '../services/userService.js';
 import { buildSession, getOrganizationPortals } from '../services/sessionService.js';
 import {
-    advanceStep, createOrganization, setPortalLabels, setPortalsEnabled,
+    advanceStep, createOrganization, setPortalLabels, setPortalsEnabled, setTierLabels,
 } from '../services/organizationService.js';
 import { signToken } from './authController.js';
 import { TIERS } from '../policy/catalog.js';
@@ -26,6 +26,8 @@ export const signupSchema = z.object({
 
 export const portalsSchema = z.object({
     portals: z.array(z.object({ key: portalKey, enabled: z.boolean() })).min(1).max(20),
+    // Wizard Portals step: one Member / Manager / Admin label for every enabled portal
+    tier_labels: z.record(z.enum(TIERS), z.string().trim().max(100)).optional(),
 });
 
 export const labelsSchema = z.object({
@@ -36,22 +38,7 @@ export const labelsSchema = z.object({
     })).min(1).max(20),
 });
 
-const employeeSchema = z.object({
-    first_name: z.string().trim().min(1, 'first name is required').max(100),
-    last_name: z.string().trim().min(1, 'last name is required').max(100),
-    email: z.string().trim().email('invalid email').max(255),
-    portal_key: portalKey,
-    // Optional, case-insensitive ("manager" works for CSV); defaults to the portal's tier
-    tier: z.preprocess(
-        (v) => (typeof v === 'string' && v.trim() ? v.trim()[0].toUpperCase() + v.trim().slice(1).toLowerCase() : undefined),
-        z.enum(TIERS, { message: 'tier must be Admin, Manager or Member' }).optional(),
-    ),
-    department: z.string().trim().max(100).optional().nullable(),
-});
-
-export const employeesSchema = z.object({
-    employees: z.array(z.unknown()).min(1).max(200),
-});
+export { employeesSchema } from '../services/userService.js';
 
 // --- Public: create organization + first admin, return a session ---
 
@@ -76,7 +63,7 @@ export const signup = async (req, res) => {
 
     res.status(201).json({
         success: true,
-        token: signToken({ id: user.id, tenant_id: org.id }),
+        token: await signToken(user.id),
         user: await buildSession(user.id),
     });
 };
@@ -123,6 +110,7 @@ export const getState = async (req, res) => {
 export const updatePortals = async (req, res) => {
     await withTransaction(async (db) => {
         await setPortalsEnabled(db, req.user.tenantId, req.body.portals);
+        if (req.body.tier_labels) await setTierLabels(db, req.user.tenantId, req.body.tier_labels);
         await advanceStep(db, req.user.tenantId, 'labels');
     });
     res.json({ success: true, data: await wizardState(req.user.tenantId) });
@@ -137,77 +125,18 @@ export const updateLabels = async (req, res) => {
 };
 
 /**
- * Batch-create employees (manual rows or CSV). All rows are validated first;
- * if any row fails, nothing is created and per-row errors are returned.
- * Temporary passwords are returned once and never stored in plain text.
+ * Batch-create employees (manual rows or CSV). Valid rows are saved, invalid rows
+ * are skipped and reported (UC2 alternative 8B). Temporary passwords are returned once.
  */
 export const addEmployees = async (req, res) => {
     const tenantId = req.user.tenantId;
-    const errors = [];
-    const rows = [];
-    const seenEmails = new Set();
-
-    req.body.employees.forEach((raw, index) => {
-        const parsed = employeeSchema.safeParse(raw);
-        if (!parsed.success) {
-            errors.push({ row: index + 1, error: parsed.error.issues.map((i) => i.message).join(', ') });
-            return;
-        }
-        const email = parsed.data.email.toLowerCase();
-        if (seenEmails.has(email)) {
-            errors.push({ row: index + 1, error: `duplicate email ${email} in this batch` });
-            return;
-        }
-        seenEmails.add(email);
-        rows.push({ index, ...parsed.data, email });
-    });
-
-    const [portals, departments, existing] = await Promise.all([
-        getOrganizationPortals(tenantId),
-        pool.query('SELECT id, LOWER(name) AS name FROM departments WHERE tenant_id = $1', [tenantId]),
-        pool.query('SELECT LOWER(email) AS email FROM users WHERE LOWER(email) = ANY($1::text[])', [[...seenEmails]]),
-    ]);
-    const enabledPortals = new Set(portals.filter((p) => p.enabled).map((p) => p.key));
-    const deptByName = new Map(departments.rows.map((d) => [d.name, d.id]));
-    const takenEmails = new Set(existing.rows.map((r) => r.email));
-
-    for (const row of rows) {
-        if (!enabledPortals.has(row.portal_key)) {
-            errors.push({ row: row.index + 1, error: `portal "${row.portal_key}" is not enabled` });
-        }
-        if (takenEmails.has(row.email)) {
-            errors.push({ row: row.index + 1, error: `a user with email ${row.email} already exists` });
-        }
-        if (row.department && !deptByName.has(row.department.toLowerCase())) {
-            errors.push({ row: row.index + 1, error: `unknown department "${row.department}"` });
-        }
-    }
-
-    if (errors.length) {
-        errors.sort((a, b) => a.row - b.row);
-        return res.status(400).json({ success: false, error: 'Some rows are invalid; nothing was created', rowErrors: errors });
-    }
-
-    const created = await withTransaction(async (db) => {
-        const out = [];
-        for (const row of rows) {
-            const { user, tempPassword } = await createUserRecord(db, {
-                tenantId,
-                firstName: row.first_name,
-                lastName: row.last_name,
-                email: row.email,
-                portalKey: row.portal_key,
-                tier: row.tier,
-                departmentId: row.department ? deptByName.get(row.department.toLowerCase()) : null,
-                mustChangePassword: true,
-            });
-            out.push({ ...user, portal_key: row.portal_key, tempPassword });
-        }
+    const { created, rowErrors } = await importEmployees(tenantId, req.body.employees, async (db) => {
         await advanceStep(db, tenantId, 'review');
-        return out;
     });
-
-    res.status(201).json({ success: true, data: { created, state: await wizardState(tenantId) } });
+    if (!created.length) {
+        return res.status(400).json({ success: false, error: 'No valid rows; nothing was created', rowErrors });
+    }
+    res.status(201).json({ success: true, data: { created, rowErrors, state: await wizardState(tenantId) } });
 };
 
 // Skip adding employees for now (they can be added later from Employee Management)

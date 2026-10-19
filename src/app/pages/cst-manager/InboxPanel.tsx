@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -14,12 +14,16 @@ import { useEmployees } from '../../context/EmployeeContext';
 import { useClients } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
+import { apiFetch } from '../../utils/api';
+import { fieldLookup, formatValue } from '../../utils/clientFields';
+
+type Suggestion = { id: number; name: string; active_count: number };
 
 function statusBadge(status: InboxClient['status']) {
-    if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    if (status === 'active') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    if (status === 'flagged') return 'bg-red-100 text-red-700 border-red-200';
-    return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (status === 'onboarding') return 'bg-warning-bg text-warning border-warning/30';
+    if (status === 'active') return 'bg-success-bg text-success border-success/30';
+    if (status === 'flagged') return 'bg-danger-bg text-danger border-danger-border';
+    return 'bg-primary-soft text-primary border-primary/30';
 }
 
 export function InboxPanel() {
@@ -39,9 +43,32 @@ export function InboxPanel() {
     const [agentId, setAgentId] = useState<number | null>(null);
 
     const [editDialogOpen, setEditDialogOpen] = useState(false);
-    const [editForm, setEditForm] = useState<any>(null);
-    const { updateClient } = useClients();
+    const { fetchData: fetchClients, clientFields } = useClients();
+    const field = fieldLookup(clientFields);
+    // Fields of the layout shown on each inbox card, when switched on
+    const cardFields = ['product_sold', 'payment_amount', 'service_area', 'contact_no_1'].map(field).filter((f) => f !== undefined);
+    const noteFields = ['client_concerns', 'tips_for_tech'].map(field).filter((f) => f !== undefined);
     const { fetchData: fetchInbox } = useClientInbox();
+
+    // UC4: the least loaded CST agent for each unassigned client (server-side)
+    const [suggestions, setSuggestions] = useState<Record<number, Suggestion | null>>({});
+    const canAssign = can('client.assign');
+    useEffect(() => {
+        if (!canAssign) return;
+        apiFetch('/cst-manager/unassigned-clients')
+            .then((res) => setSuggestions(Object.fromEntries(res.data.map((c: any) => [Number(c.id), c.suggested_agent]))))
+            .catch(() => setSuggestions({}));
+    }, [inboxClients, canAssign]);
+
+    const acceptSuggestion = async (client: InboxClient, agent: Suggestion) => {
+        try {
+            await apiFetch(`/cst-manager/clients/${client.id}/assign-cst`, { method: 'PATCH', body: JSON.stringify({ cst_agent_id: agent.id }) });
+            toast.success(`${client.company_name} assigned to ${agent.name}`);
+            await Promise.all([fetchInbox(), fetchClients()]);
+        } catch (error: any) {
+            toast.error(error.message || 'Assignment failed');
+        }
+    };
 
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
     const [discardReason, setDiscardReason] = useState('');
@@ -72,19 +99,6 @@ export function InboxPanel() {
         setSelected(null);
     };
 
-    const handleUpdate = async () => {
-        if (!selected || !editForm) return;
-        const data = {
-            ...editForm,
-            product_sold: editForm.product_sold.join(', ')
-        };
-        const success = await updateClient(selected.id, data);
-        if (success) {
-            setEditDialogOpen(false);
-            fetchInbox(); // Refresh inbox list
-        }
-    };
-
     const handleDiscard = async () => {
         if (!selected || !discardReason.trim()) {
             toast.error('Please provide a reason for discarding');
@@ -101,7 +115,7 @@ export function InboxPanel() {
         <div className={cls.page}>
             <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <h2 className="text-lg font-semibold">Pending Client Submissions</h2>
-                <Badge className="bg-yellow-100 text-yellow-700 border border-yellow-200">
+                <Badge className="bg-warning-bg text-warning border border-warning/30">
                     {pending.length} pending
                 </Badge>
                 <div className="relative ml-auto">
@@ -113,7 +127,7 @@ export function InboxPanel() {
             {pending.length === 0 ? (
                 <Card>
                     <CardContent className="flex flex-col items-center py-12 gap-3 text-muted-foreground">
-                        <CheckCircle2 className="h-10 w-10 text-emerald-400" />
+                        <CheckCircle2 className="h-10 w-10 text-success" />
                         <p className="font-medium">All clients have been reviewed!</p>
                     </CardContent>
                 </Card>
@@ -134,23 +148,22 @@ export function InboxPanel() {
                             </CardHeader>
                             <CardContent className={cls.list}>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div><p className={cls.hintXs}>Product</p><p className={cls.heading}>{client.product_sold}</p></div>
-                                    <div><p className={cls.hintXs}>Payment</p><p className={cls.heading}>${Number(client.payment_amount || 0).toLocaleString()}</p></div>
-                                    <div><p className={cls.hintXs}>Area</p><p className={cls.heading}>{client.service_area}</p></div>
+                                    {cardFields.map((f) => (
+                                        <div key={f.key}><p className={cls.hintXs}>{f.label}</p><p className={cls.heading}>{formatValue(f, client)}</p></div>
+                                    ))}
                                     <div><p className={cls.hintXs}>Submitted By</p><p className={cls.heading}>{client.submitted_by_name}</p></div>
-                                    <div><p className={cls.hintXs}>Contact</p><p className={cls.heading}>{client.contact_no_1}</p></div>
                                     <div><p className={cls.hintXs}>Date</p><p className={cls.heading}>{client.created_at ? new Date(client.created_at).toLocaleDateString() : 'N/A'}</p></div>
                                 </div>
-                                {client.client_concerns && (
-                                    <div className={cls.muted}>
-                                        <p className={cls.hintXs}>Client Concerns</p>
-                                        <p className="text-sm mt-1">{client.client_concerns}</p>
+                                {noteFields.filter((f) => formatValue(f, client) !== '—').map((f) => (
+                                    <div key={f.key} className={cls.muted}>
+                                        <p className={cls.hintXs}>{f.label}</p>
+                                        <p className="text-sm mt-1">{formatValue(f, client)}</p>
                                     </div>
-                                )}
-                                {client.tips_for_tech && (
-                                    <div className={`${cls.muted} bg-blue-50`}>
-                                        <p className={cls.hintXs}>Tips for Tech</p>
-                                        <p className="text-sm mt-1">{client.tips_for_tech}</p>
+                                ))}
+                                {canAssign && suggestions[client.id] && (
+                                    <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-primary-soft px-3 py-2 text-[13px]">
+                                        <span>Suggested: <strong>{suggestions[client.id]!.name}</strong> ({suggestions[client.id]!.active_count} active)</span>
+                                        <Button size="sm" onClick={() => acceptSuggestion(client, suggestions[client.id]!)}>Accept</Button>
                                     </div>
                                 )}
                                 <div className="flex gap-2">
@@ -160,7 +173,7 @@ export function InboxPanel() {
                                         </Button>
                                     )}
                                     {can('client.discard') && (
-                                        <Button variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => openDiscard(client)}>
+                                        <Button variant="outline" className="flex-1 text-danger border-danger-border hover:bg-danger-bg" onClick={() => openDiscard(client)}>
                                             <XCircle className="h-4 w-4 mr-2" />Discard
                                         </Button>
                                     )}
@@ -188,7 +201,7 @@ export function InboxPanel() {
                         {selected && (
                             <div className={cls.muted}>
                                 <p className={cls.label}>{selected.company_name}</p>
-                                <p className={cls.hintXs}>Product: {selected.product_sold} · Payment: ${Number(selected.payment_amount || 0).toLocaleString()}</p>
+                                <p className={cls.hintXs}>{cardFields.slice(0, 2).map((f) => `${f.label}: ${formatValue(f, selected)}`).join(' · ')}</p>
                             </div>
                         )}
                         <div className={cls.field}>
@@ -215,7 +228,7 @@ export function InboxPanel() {
             <Dialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-red-600 flex items-center gap-2"><XCircle className="h-5 w-5" />Discard Client Submission</DialogTitle>
+                        <DialogTitle className="text-danger flex items-center gap-2"><XCircle className="h-5 w-5" />Discard Client Submission</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to reject and discard {selected?.company_name}? This will remove them from the inbox permanently.
                         </DialogDescription>

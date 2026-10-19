@@ -1,75 +1,109 @@
 import { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
 import type { PermissionChange, PortalConfig, PortalPermissions, Tier } from '../../types/crm';
 import { PORTAL_THEMES } from '../../styles/portal-themes';
 import { usePortals } from '../../hooks/usePortals';
-import { Checkbox } from '../../components/ui/checkbox';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
 import { Switch } from '../../components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { cn } from '../../components/ui/utils';
 
 export const TIERS: Tier[] = ['Member', 'Manager', 'Admin'];
 
-// Used by both the onboarding wizard and Organization Settings.
+// Portal card text of Figure 4.2; the landing page reuses it.
+export const PORTAL_CARDS: Record<string, { name: string; description: string }> = {
+  admin: { name: 'Admin', description: 'Employees, tasks, reviews and settings' },
+  sales: { name: 'Sales', description: 'Clients, follow ups and calls' },
+  sales_manager: { name: 'Sales Manager', description: 'Targets, recordings and imports' },
+  cst: { name: 'Customer Success', description: 'Notes, flags, concerns and requests' },
+  cst_manager: { name: 'Customer Success Manager', description: 'Assignment, approvals and strategies' },
+  finance: { name: 'Finance', description: 'Payroll, salary slips and expenses' },
+};
 
-export function PortalsEditor({ portals, onSave, saving, submitLabel, secondaryAction }: {
+// Used by both the onboarding wizard and Organization Settings. With `tierLabels`
+// (wizard Portals step) it also asks for one Member / Manager / Admin label for every portal.
+export function PortalsEditor({ portals, onSave, saving, submitLabel, secondaryAction, tierLabels = false }: {
   portals: PortalConfig[];
-  onSave: (changes: { key: string; enabled: boolean }[]) => void;
+  onSave: (changes: { key: string; enabled: boolean }[], tierLabels?: Record<Tier, string>) => void;
   saving: boolean;
   submitLabel: string;
   secondaryAction?: React.ReactNode;
+  tierLabels?: boolean;
 }) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
+  const [labels, setLabels] = useState<Record<Tier, string>>({ Member: 'Member', Manager: 'Manager', Admin: 'Admin' });
   useEffect(() => {
     setEnabled(Object.fromEntries(portals.map((p) => [p.key, p.enabled])));
+    const sample = portals.find((p) => p.enabled && p.key !== 'admin')?.tierLabels ?? {};
+    const admin = portals.find((p) => p.key === 'admin')?.tierLabels ?? {};
+    setLabels({ Member: sample.Member || 'Member', Manager: sample.Manager || 'Manager', Admin: admin.Admin || 'Admin' });
   }, [portals]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <div className="mb-[18px] grid grid-cols-1 gap-3 md:grid-cols-3">
         {portals.map((p) => {
           const locked = p.key === 'admin';
-          const on = enabled[p.key] ?? p.enabled;
+          const on = locked || (enabled[p.key] ?? p.enabled);
+          const card = PORTAL_CARDS[p.key] ?? { name: p.defaultLabel, description: p.description };
           return (
-            <label
+            <button
               key={p.key}
-              htmlFor={`portal-${p.key}`}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              aria-disabled={locked}
+              onClick={() => !locked && setEnabled((s) => ({ ...s, [p.key]: !on }))}
               className={cn(
-                'flex gap-3 rounded-xl border bg-card p-4 transition-colors border-l-4',
-                PORTAL_THEMES[p.key]?.borderAccent,
-                on ? 'shadow-sm' : 'opacity-60',
-                locked ? 'cursor-default' : 'cursor-pointer hover:bg-accent/40',
+                'flex items-start gap-[11px] rounded-[9px] border px-[14px] py-[13px] text-left',
+                on ? 'border-primary bg-primary-soft' : 'border-[#dfe4ee] bg-card',
+                locked ? 'cursor-default' : 'cursor-pointer',
               )}
             >
-              <Checkbox
-                id={`portal-${p.key}`}
-                checked={on}
-                disabled={locked}
-                onCheckedChange={(v) => setEnabled((s) => ({ ...s, [p.key]: Boolean(v) }))}
-                className="mt-0.5"
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{p.defaultLabel}</span>
-                  <Badge variant="secondary" className="text-[10px]">default: {p.defaultTier}</Badge>
-                  {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Always enabled" />}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
-              </div>
-            </label>
+              <span className={cn(
+                'mt-px flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[4px] border-2 text-[12px] font-bold text-white',
+                on ? 'border-primary bg-primary' : 'border-[#b9c2d3]',
+              )}>{on ? '✓' : ''}</span>
+              <span>
+                <b className="mb-[3px] block text-[14px]">
+                  {card.name}
+                  {locked && <span className="ml-1 text-[11px] font-normal text-info">always on</span>}
+                </b>
+                <small className="text-[12px] text-muted-foreground">{card.description}</small>
+              </span>
+            </button>
           );
         })}
       </div>
+
+      {tierLabels && (
+        <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+          {(['Member', 'Manager', 'Admin'] as Tier[]).map((t) => (
+            <div key={t}>
+              <label htmlFor={`tier-label-${t}`} className="mb-[5px] block text-[12px] font-normal text-muted-foreground">{t} tier label</label>
+              <Input
+                id={`tier-label-${t}`}
+                maxLength={100}
+                value={labels[t]}
+                placeholder={t}
+                onChange={(e) => setLabels((l) => ({ ...l, [t]: e.target.value }))}
+                className="h-auto px-3 py-[9px] text-[13.5px]"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>{secondaryAction}</div>
         <Button
           disabled={saving}
-          onClick={() => onSave(portals.map((p) => ({ key: p.key, enabled: p.key === 'admin' ? true : (enabled[p.key] ?? p.enabled) })))}
+          onClick={() => onSave(
+            portals.map((p) => ({ key: p.key, enabled: p.key === 'admin' ? true : (enabled[p.key] ?? p.enabled) })),
+            tierLabels ? labels : undefined,
+          )}
         >
           {saving ? 'Saving…' : submitLabel}
         </Button>
@@ -162,6 +196,10 @@ export function LabelsEditor({ portals, onSave, saving, submitLabel, secondaryAc
 // Two restriction dials per (portal, tier): which data groups they see and which
 // actions they may take. Entries come from the fixed server catalog, so an org
 // can only switch things off, never invent new permissions.
+// Tiers in the order Member, Manager (the Admin tier is never restricted)
+const sortTiers = <T extends { tier: Tier }>(tiers: T[]) => [...tiers].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
+const firstTier = (tiers: { tier: Tier }[]): Tier => sortTiers(tiers)[0]?.tier ?? 'Member';
+
 export function PermissionsEditor({ permissions, onSave, saving }: {
   permissions: PortalPermissions[];
   onSave: (changes: PermissionChange[]) => void;
@@ -169,9 +207,20 @@ export function PermissionsEditor({ permissions, onSave, saving }: {
 }) {
   const { tierLabel } = usePortals();
   const [draft, setDraft] = useState<PortalPermissions[]>(permissions);
-  useEffect(() => setDraft(permissions), [permissions]);
+  const [portalKey, setPortalKey] = useState('');
+  const [tier, setTier] = useState<Tier>('Member');
+  useEffect(() => {
+    setDraft(permissions);
+    // Keep the current selection when it still exists, else start at the first portal and tier
+    const portal = permissions.find((p) => p.key === portalKey) ?? permissions[0];
+    if (portal && portal.key !== portalKey) {
+      setPortalKey(portal.key);
+      setTier(firstTier(portal.tiers));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissions]);
 
-  const toggle = (portalKey: string, tier: Tier, kind: 'actions' | 'fields', key: string, value: boolean) =>
+  const toggle = (kind: 'actions' | 'fields', key: string, value: boolean) =>
     setDraft((d) => d.map((p) => (p.key !== portalKey ? p : {
       ...p,
       tiers: p.tiers.map((t) => (t.tier !== tier ? t : {
@@ -181,72 +230,92 @@ export function PermissionsEditor({ permissions, onSave, saving }: {
       })),
     })));
 
+  // Only eligible entries can be overridden; the rest are fixed by the catalog.
   const changes = (): PermissionChange[] => draft.flatMap((p) => p.tiers.map((t) => ({
     portalKey: p.key,
     tier: t.tier,
-    actions: Object.fromEntries(t.actions.map((a) => [a.key, a.allowed])),
-    fields: Object.fromEntries(t.fields.map((f) => [f.key, f.visible])),
+    actions: Object.fromEntries(t.actions.filter((a) => a.eligible).map((a) => [a.key, a.allowed])),
+    fields: Object.fromEntries(t.fields.filter((f) => f.eligible).map((f) => [f.key, f.visible])),
   })));
 
   if (!draft.length) return <p className="text-sm text-muted-foreground">Enable a portal other than Admin to configure permissions.</p>;
 
+  const portal = draft.find((p) => p.key === portalKey) ?? draft[0];
+  const current = portal.tiers.find((t) => t.tier === tier) ?? portal.tiers[0];
+  const tierText = (t: Tier) => {
+    const label = tierLabel(portal.key, t);
+    return label !== t ? `${t} (${label})` : t;
+  };
+  const selectBox = 'w-[240px] rounded-[8px] border border-input-border bg-card px-3 py-[9px]';
+  const selectTrigger = 'w-full border-0 bg-transparent p-0 text-[13.5px] shadow-none focus-visible:ring-0 data-[size=default]:h-auto dark:bg-transparent';
+
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Restrict what each tier can see and do. Everything is on by default and nothing here can grant more than the tier
-        already allows. Admins are never restricted.
-      </p>
-      <div className="space-y-4">
-        {draft.map((p) => (
-          <Card key={p.key} className={cn('border-l-4', PORTAL_THEMES[p.key]?.borderAccent)}>
-            <CardContent className="pt-6 space-y-3">
-              <h3 className="font-semibold">{p.label}</h3>
-              <Tabs defaultValue={p.tiers[0]?.tier}>
-                <TabsList>
-                  {p.tiers.map((t) => <TabsTrigger key={t.tier} value={t.tier}>{tierLabel(p.key, t.tier)}</TabsTrigger>)}
-                </TabsList>
-                {p.tiers.map((t) => (
-                  <TabsContent key={t.tier} value={t.tier} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    <PermissionList
-                      title="Can see"
-                      items={t.fields.map((f) => ({ key: f.key, label: f.label, on: f.visible }))}
-                      idPrefix={`${p.key}-${t.tier}-field`}
-                      onToggle={(key, v) => toggle(p.key, t.tier, 'fields', key, v)}
-                    />
-                    <PermissionList
-                      title="Can do"
-                      items={t.actions.map((a) => ({ key: a.key, label: a.label, on: a.allowed }))}
-                      idPrefix={`${p.key}-${t.tier}-action`}
-                      onToggle={(key, v) => toggle(p.key, t.tier, 'actions', key, v)}
-                    />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </CardContent>
-          </Card>
-        ))}
+    <div>
+      <div className="mb-4 flex flex-wrap gap-4">
+        <div className={selectBox}>
+          <label className="mb-[5px] block text-[12px] font-normal text-muted-foreground">Portal</label>
+          <Select value={portal.key} onValueChange={(key) => { setPortalKey(key); setTier(firstTier(draft.find((p) => p.key === key)?.tiers ?? [])); }}>
+            <SelectTrigger aria-label="Portal" className={selectTrigger}><SelectValue /></SelectTrigger>
+            <SelectContent>{draft.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className={selectBox}>
+          <label className="mb-[5px] block text-[12px] font-normal text-muted-foreground">Tier</label>
+          <Select value={current.tier} onValueChange={(t) => setTier(t as Tier)}>
+            <SelectTrigger aria-label="Tier" className={selectTrigger}><SelectValue /></SelectTrigger>
+            <SelectContent>{sortTiers(portal.tiers).map((t) => <SelectItem key={t.tier} value={t.tier}>{tierText(t.tier)}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="flex justify-end">
-        <Button disabled={saving} onClick={() => onSave(changes())}>{saving ? 'Saving…' : 'Save permissions'}</Button>
+
+      <div className="flex flex-col gap-[18px] md:flex-row">
+        <PermissionList
+          title="Field groups"
+          caption="Which data this tier can see, in screens and assistant answers"
+          items={current.fields.map((f) => ({ key: f.key, label: f.label, on: f.visible, eligible: f.eligible }))}
+          idPrefix={`${portal.key}-${current.tier}-field`}
+          onToggle={(key, v) => toggle('fields', key, v)}
+        />
+        <PermissionList
+          title="Actions"
+          caption="Which operations this tier can perform"
+          items={current.actions.map((a) => ({ key: a.key, label: a.label, on: a.allowed, eligible: a.eligible }))}
+          idPrefix={`${portal.key}-${current.tier}-action`}
+          onToggle={(key, v) => toggle('actions', key, v)}
+        />
+      </div>
+
+      <div className="mt-[14px] flex items-center justify-between gap-4 text-[12.5px] text-muted-foreground">
+        <span>Both lists come from fixed catalogs; entries can be switched on or off but not created.</span>
+        <Button disabled={saving} onClick={() => onSave(changes())}>{saving ? 'Saving…' : 'Save changes'}</Button>
       </div>
     </div>
   );
 }
 
-function PermissionList({ title, items, idPrefix, onToggle }: {
+function PermissionList({ title, caption, items, idPrefix, onToggle }: {
   title: string;
-  items: { key: string; label: string; on: boolean }[];
+  caption: string;
+  items: { key: string; label: string; on: boolean; eligible: boolean }[];
   idPrefix: string;
   onToggle: (key: string, value: boolean) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
-      {items.length === 0 && <p className="text-sm text-muted-foreground">Nothing to configure.</p>}
+    <div className="flex-1 rounded-[10px] border border-border bg-card px-4 py-[14px]">
+      <h3 className="mb-1 text-[15px] font-bold tracking-normal">{title}</h3>
+      <p className="mb-[10px] text-[12.5px] text-muted-foreground">{caption}</p>
       {items.map((item) => (
-        <div key={item.key} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-          <Label htmlFor={`${idPrefix}-${item.key}`} className="font-normal">{item.label}</Label>
-          <Switch id={`${idPrefix}-${item.key}`} checked={item.on} onCheckedChange={(v) => onToggle(item.key, v)} />
+        <div key={item.key} className="flex items-center justify-between gap-3 border-b border-row-divider py-[10px] text-[13.5px]">
+          <label htmlFor={`${idPrefix}-${item.key}`} className={cn('text-[13.5px] font-normal', !item.eligible && 'text-muted-foreground')}>
+            {item.label}
+          </label>
+          <Switch
+            id={`${idPrefix}-${item.key}`}
+            checked={item.on}
+            disabled={!item.eligible}
+            title={item.eligible ? undefined : 'Not available for this tier'}
+            onCheckedChange={(v) => onToggle(item.key, v)}
+          />
         </div>
       ))}
     </div>

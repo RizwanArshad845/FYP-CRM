@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { as, http, setupOrg, unique } from './helpers.js';
+import { as, clientBody, http, setupOrg, unique } from './helpers.js';
 
 // Same organization, different people: agents may only touch their own records.
 let org;
@@ -73,7 +73,7 @@ describe('notepads and concerns', () => {
 describe('clients and targets', () => {
     let clientId;
     beforeAll(async () => {
-        clientId = (await as(org.cst_manager.token).post('/api/clients', { companyName: 'Assigned Co' })).body.data.id;
+        clientId = (await as(org.sales_manager.token).post('/api/clients', clientBody('Assigned Co'))).body.data.id;
         await as(org.cst_manager.token).patch(`/api/clients/${clientId}/assign`, { agentId: org.cst.id });
     });
 
@@ -95,14 +95,16 @@ describe('clients and targets', () => {
         expect(Number(own.body.data.achieved_amount)).toBe(50);
     });
 
-    it('deactivation approval records the real reviewer and deactivates the client', async () => {
+    it('deactivation approval records the real reviewer and discards the client', async () => {
         const reqRes = await as(org.cst.token).post('/api/cst/deactivation-requests', { client_id: clientId, reason: 'churned' });
         expect(reqRes.status).toBe(201);
         expect(reqRes.body.data.requested_by).toBe(org.cst.id);
         const resolved = await as(org.cst_manager.token).patch(`/api/cst-manager/deactivation-requests/${reqRes.body.data.id}/resolve`, { status: 'approved', reviewed_by: 999999 });
         expect(resolved.status).toBe(200);
         const client = (await as(org.cst_manager.token).get('/api/clients')).body.data.find((c) => c.id === clientId);
-        expect(client.status).toBe('deactivated');
+        expect(client.status).toBe('discarded');
+        expect(client.discard_reason).toBe('churned');
+        expect(client.discarded_at).toBeTruthy();
     });
 });
 

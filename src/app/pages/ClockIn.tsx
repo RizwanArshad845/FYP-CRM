@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth, pendingSetupRoute } from '../context/AuthContext';
+import { useAuth, pendingSetupRoute, useOrgPath } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Clock, CheckCircle, LogOut, User, AlertTriangle, CalendarDays, Timer } from 'lucide-react';
@@ -20,14 +20,15 @@ interface AttendanceDay {
 }
 
 const STATUS_DOT = {
-  present: 'bg-green-500',
-  absent: 'bg-red-500',
-  today: 'bg-blue-500 animate-pulse',
+  present: 'bg-success',
+  absent: 'bg-danger',
+  today: 'bg-primary animate-pulse',
 };
 
 export function ClockIn() {
   const { user, isLoading, clockIn, clockOut, breakIn, breakOut, logout, staleSession, clearStaleSession } = useAuth();
   const navigate = useNavigate();
+  const to = useOrgPath();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursWorked, setHoursWorked] = useState(0);
   const [breakHours, setBreakHours] = useState(0);
@@ -37,7 +38,7 @@ export function ClockIn() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) { navigate('/login'); return; }
+    if (!user) { navigate(to('/login')); return; }
     const setup = pendingSetupRoute(user);
     if (setup) { navigate(setup); return; }
 
@@ -81,7 +82,7 @@ export function ClockIn() {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, to]);
 
   if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading your profile...</div></div>;
   if (!user) return null;
@@ -125,7 +126,7 @@ export function ClockIn() {
   };
 
   const handleAccessPortal = () => {
-    navigate('/dashboard');
+    navigate(to('/dashboard'));
   };
 
   const handleLogout = () => setLogoutOpen(true);
@@ -133,7 +134,7 @@ export function ClockIn() {
   const doLogout = async (clockOutAlso: boolean) => {
     setLogoutOpen(false);
     await logout(clockOutAlso);
-    navigate('/login');
+    navigate(to('/login'));
   };
 
   const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -172,8 +173,8 @@ export function ClockIn() {
         <Card className="border-2 shadow-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className={`p-4 rounded-full transition-colors ${user.clockedIn ? 'bg-green-100 dark:bg-green-900/30' : 'bg-muted'}`}>
-                <Clock className={`h-12 w-12 transition-colors ${user.clockedIn ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
+              <div className={`p-4 rounded-full transition-colors ${user.clockedIn ? 'bg-success-bg ' : 'bg-muted'}`}>
+                <Clock className={`h-12 w-12 transition-colors ${user.clockedIn ? 'text-success ' : 'text-muted-foreground'}`} />
               </div>
             </div>
             <CardTitle className="text-4xl font-bold tracking-tight">{formatTime(currentTime)}</CardTitle>
@@ -185,7 +186,7 @@ export function ClockIn() {
             <div className="text-center p-4 bg-muted/50 rounded-xl">
               {user.clockedIn ? (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+                  <div className="flex items-center justify-center gap-2 text-success ">
                     <CheckCircle className="h-5 w-5" />
                     <span className="font-semibold">Clocked In</span>
                   </div>
@@ -199,7 +200,7 @@ export function ClockIn() {
                     <span className="text-2xl font-bold font-mono text-foreground">{formatHours(hoursWorked)}</span>
                   </div>
                   {user.onBreak && (
-                    <div className="mt-2 text-amber-600 font-medium animate-pulse">
+                    <div className="mt-2 text-warning font-medium animate-pulse">
                       Currently on Break: {formatHours(breakHours)}
                     </div>
                   )}
@@ -229,14 +230,14 @@ export function ClockIn() {
                 </Button>
               ) : (
                 <>
-                  <Button onClick={() => navigate('/dashboard')} className="w-full h-14 text-lg" size="lg" disabled={user.onBreak}>
+                  <Button onClick={() => navigate(to('/dashboard'))} className="w-full h-14 text-lg" size="lg" disabled={user.onBreak}>
                     Access Portal
                   </Button>
 
                   {user.onBreak ? (
                     <Button
                       onClick={handleBreakOut}
-                      className="w-full h-14 text-lg bg-amber-500 hover:bg-amber-600 text-white"
+                      className="w-full h-14 text-lg bg-warning hover:bg-warning text-white"
                       size="lg"
                       disabled={isProcessing}
                     >
@@ -247,7 +248,7 @@ export function ClockIn() {
                     <Button
                       onClick={handleBreakIn}
                       variant="outline"
-                      className="w-full h-14 text-lg border-amber-500 text-amber-600 hover:bg-amber-50"
+                      className="w-full h-14 text-lg border-warning text-warning hover:bg-warning-bg"
                       size="lg"
                       disabled={isProcessing}
                     >
@@ -271,8 +272,8 @@ export function ClockIn() {
             </div>
 
             {!user.clockedIn && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-center">
-                <p className="text-sm text-amber-800 dark:text-amber-200">⚠️ Portal access is locked until you clock in</p>
+              <div className="p-3 bg-warning-bg border border-warning/30 rounded-lg text-center">
+                <p className="text-sm text-warning">Portal access is locked until you clock in</p>
               </div>
             )}
           </CardContent>
@@ -280,16 +281,16 @@ export function ClockIn() {
 
         {/* Stale session warning */}
         {staleSession && (
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl animate-fade-in">
+          <div className="p-4 bg-warning-bg border border-warning/30 rounded-xl animate-fade-in">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <AlertTriangle className="h-5 w-5 text-warning mt-0.5 shrink-0" />
               <div className="flex-1">
-                <p className="font-semibold text-amber-800 dark:text-amber-200 text-sm">Missed Clock-Out Detected</p>
-                <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">
+                <p className="font-semibold text-warning text-sm">Missed Clock-Out Detected</p>
+                <p className="text-warning text-xs mt-0.5">
                   Last clock-in: <span className="font-mono font-bold">{new Date(staleSession.clockInTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 </p>
               </div>
-              <Button variant="link" size="sm" onClick={clearStaleSession} className="text-amber-600 hover:text-amber-800 text-xs shrink-0 h-auto p-0">Dismiss</Button>
+              <Button variant="link" size="sm" onClick={clearStaleSession} className="text-warning hover:text-warning text-xs shrink-0 h-auto p-0">Dismiss</Button>
             </div>
           </div>
         )}
@@ -344,7 +345,7 @@ export function ClockIn() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
               Confirm Logout
             </DialogTitle>
             <DialogDescription>

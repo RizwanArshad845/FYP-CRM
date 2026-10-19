@@ -1,13 +1,16 @@
 import express from 'express';
-import { assignCstAgent, unassignCstAgent, resolveDeactivation, getTargets, upsertTarget, updateTarget, updateAchieved, updateAchievedClients, getStrategies, upsertStrategy, deleteStrategy, deleteTarget, getAgentPerformanceMetrics } from '../controllers/cstManagerController.js';
+import { assignCstAgent, unassignCstAgent, resolveDeactivation, resolveDeactivationBulk, resolveBulkSchema, getUnassignedClients, getTargets, upsertTarget, updateTarget, updateAchieved, updateAchievedClients, getStrategies, upsertStrategy, deleteStrategy, deleteTarget, getAgentPerformanceMetrics } from '../controllers/cstManagerController.js';
 
 import { allow } from '../policy/index.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
 router.patch('/clients/:id/assign-cst', allow('client.assign'), assignCstAgent);
 router.patch('/clients/:id/unassign-cst', allow('client.assign'), unassignCstAgent);
+router.get('/unassigned-clients', allow('client.assign'), getUnassignedClients);
 router.patch('/deactivation-requests/:id/resolve', allow('deactivation.resolve'), resolveDeactivation);
+router.post('/deactivation-requests/resolve-bulk', allow('deactivation.resolve'), validate(resolveBulkSchema), resolveDeactivationBulk);
 
 router.get('/targets', getTargets);
 router.post('/targets', allow('cst_target.manage'), upsertTarget);

@@ -32,9 +32,9 @@ function calcPercentage(achieved: number, target: number) {
 }
 
 function percentageColor(pct: number) {
-    if (pct >= 100) return 'text-green-600 bg-green-100 dark:bg-green-900/30';
-    if (pct >= 75) return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30';
-    return 'text-red-600 bg-red-100 dark:bg-red-900/30';
+    if (pct >= 100) return 'text-success bg-success-bg ';
+    if (pct >= 75) return 'text-warning bg-warning-bg ';
+    return 'text-danger bg-danger-bg ';
 }
 
 function renderAchievementBadge(pct: number, index: number) {
@@ -42,22 +42,22 @@ function renderAchievementBadge(pct: number, index: number) {
     if (pct > 0) {
         if (index === 0) {
             return (
-                <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-white font-bold shadow-sm animate-pulse border-none">
-                    🏆 1st Leader
+                <Badge className=" text-white font-bold shadow-sm animate-pulse border-none">
+                    1st place
                 </Badge>
             );
         }
         if (index === 1) {
             return (
-                <Badge className="bg-gradient-to-r from-slate-400 to-slate-300 hover:from-slate-500 hover:to-slate-400 text-white font-bold shadow-sm border-none">
-                    🥈 2nd Place
+                <Badge className=" text-white font-bold shadow-sm border-none">
+                    2nd place
                 </Badge>
             );
         }
         if (index === 2) {
             return (
-                <Badge className="bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-800 hover:to-amber-700 text-white font-bold shadow-sm border-none">
-                    🥉 3rd Place
+                <Badge className=" text-white font-bold shadow-sm border-none">
+                    3rd place
                 </Badge>
             );
         }
@@ -66,29 +66,29 @@ function renderAchievementBadge(pct: number, index: number) {
     // Goal percentage status badges
     if (pct >= 100) {
         return (
-            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold border-none">
-                🎯 Target Met
+            <Badge className="bg-success hover:bg-success text-white font-bold border-none">
+                Target met
             </Badge>
         );
     }
     if (pct >= 75) {
         return (
-            <Badge className="bg-blue-500 hover:bg-blue-600 text-white font-semibold border-none">
-                🚀 High Flyer
+            <Badge className="bg-primary hover:bg-primary text-white font-semibold border-none">
+                High performer
             </Badge>
         );
     }
     if (pct >= 50) {
         return (
-            <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold border-none">
-                📈 On Track
+            <Badge className="bg-primary hover:bg-primary text-white font-semibold border-none">
+                On track
             </Badge>
         );
     }
     if (pct > 0) {
         return (
-            <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50/50 font-medium">
-                ⭐ Contributor
+            <Badge variant="outline" className="text-warning border-warning/30 bg-warning-bg/50 font-medium">
+                Contributor
             </Badge>
         );
     }
@@ -252,7 +252,7 @@ export function TeamPerformance() {
                                                     <TableCell className={`${cls.tableCell} font-mono font-medium`}>
                                                         {formatCurrency(agent.total_target)}
                                                     </TableCell>
-                                                    <TableCell className={`${cls.tableCell} font-mono font-bold text-green-600`}>
+                                                    <TableCell className={`${cls.tableCell} font-mono font-bold text-success`}>
                                                         {formatCurrency(agent.total_achieved)}
                                                     </TableCell>
                                                     <TableCell className={cls.tableCell}>
@@ -308,7 +308,7 @@ export function TeamPerformance() {
                                                     </div>
                                                     <div>
                                                         <p className={`${cls.hint} mb-1`}>Achieved</p>
-                                                        <p className={`${cls.heading} font-mono text-green-600`}>{formatCurrency(agent.total_achieved)}</p>
+                                                        <p className={`${cls.heading} font-mono text-success`}>{formatCurrency(agent.total_achieved)}</p>
                                                     </div>
                                                 </div>
                                             </CardContent>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { apiFetch, getToken } from '../utils/api';
 import { toast } from 'sonner';
+import type { ClientField, PipelineStage } from '../types/crm';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface ManagedClient {
@@ -29,6 +30,11 @@ export interface ManagedClient {
     discard_reason?: string;
     discarded_at?: string;
     flag_type?: string;
+    custom_fields?: Record<string, string | number | boolean> | null;
+    stage_id?: number | null;
+    stage_changed_at?: string | null;
+    stage_name?: string | null;
+    last_contact?: string | null;
 
     // Virtual/UI fields
     assigned_name?: string;
@@ -46,6 +52,8 @@ export interface DeactivationRequest {
     client_id: number;
     client_name: string;
     requested_by: string;  // agent name
+    reason?: string;
+    flag_type?: string | null;
     created_at: string;  // ISO string
     requestedAt?: string; // For backward compatibility
 }
@@ -56,6 +64,8 @@ interface ClientContextType {
     toggleActive: (id: number) => void;
     requestDeactivation: (clientId: number, clientName: string, agentName: string) => void;
     resolveDeactivationRequest: (requestId: number, approve: boolean, clientId: number) => void;
+    /** UC5: approve or reject several requests in one transaction */
+    resolveDeactivationRequests: (requestIds: number[], approve: boolean) => Promise<boolean>;
     flagClient: (id: number, type: string, reason: string) => Promise<void>;
     unflagClient: (id: number) => Promise<void>;
     updateClient: (id: number, data: any) => Promise<boolean>;
@@ -64,6 +74,9 @@ interface ClientContextType {
     updateClientNote: (noteId: number, noteText: string) => Promise<boolean>;
     deleteClientNote: (noteId: number) => Promise<boolean>;
     fetchData: () => Promise<void>;
+    /** The organization's client layout (standard and custom fields) and pipeline stages */
+    clientFields: ClientField[];
+    pipelineStages: PipelineStage[];
     isLoading: boolean;
 }
 
@@ -80,6 +93,7 @@ const CLIENT_UPDATE_KEYS: Record<string, string> = {
     digital_presence: 'digitalPresence',
     client_services: 'clientServices',
     payment_gateway: 'paymentGateway',
+    custom_fields: 'customFields',
 };
 
 // ── Context ────────────────────────────────────────────────────────────────────
@@ -89,6 +103,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     const [clients, setClients] = useState<ManagedClient[]>([]);
     const [deactivationRequests, setDeactivationRequests] = useState<DeactivationRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [clientFields, setClientFields] = useState<ClientField[]>([]);
+    const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>([]);
 
     const fetchData = async () => {
         const token = getToken();
@@ -98,10 +114,14 @@ export function ClientProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-            const [clientsRes, requestsRes] = await Promise.all([
+            const [clientsRes, requestsRes, fieldsRes, stagesRes] = await Promise.all([
                 apiFetch('/clients'),
-                apiFetch('/clients/deactivation-requests')
+                apiFetch('/clients/deactivation-requests'),
+                apiFetch('/clients/fields'),
+                apiFetch('/clients/pipeline-stages'),
             ]);
+            setClientFields(fieldsRes.data ?? []);
+            setPipelineStages(stagesRes.data ?? []);
 
             if (clientsRes.success) {
                 const mapped: ManagedClient[] = clientsRes.data.map((c: any) => ({
@@ -120,6 +140,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
                     client_id: Number(r.client_id),
                     client_name: r.company_name,
                     requested_by: r.requested_by,
+                    reason: r.reason,
+                    flag_type: r.flag_type,
                     created_at: r.created_at,
                     requestedAt: r.created_at
                 }));
@@ -189,7 +211,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
 
             if (res.success) {
                 if (approve) {
-                    setClients(prev => prev.map(c => c.id === clientId ? { ...c, isActive: false, status: 'deactivated' } : c));
+                    setClients(prev => prev.map(c => c.id === clientId ? { ...c, status: 'discarded' } : c));
                 }
                 setDeactivationRequests(prev => prev.filter(r => r.id !== requestId));
                 toast.success(`Request ${approve ? 'approved' : 'rejected'}`);
@@ -197,6 +219,21 @@ export function ClientProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error('Resolution error:', error);
             toast.error('Failed to resolve request');
+        }
+    };
+
+    const resolveDeactivationRequests = async (requestIds: number[], approve: boolean) => {
+        try {
+            await apiFetch('/cst-manager/deactivation-requests/resolve-bulk', {
+                method: 'POST',
+                body: JSON.stringify({ ids: requestIds, decision: approve ? 'approved' : 'rejected' }),
+            });
+            await fetchData();
+            toast.success(`${requestIds.length} request${requestIds.length === 1 ? '' : 's'} ${approve ? 'approved' : 'rejected'}`);
+            return true;
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to resolve requests');
+            return false;
         }
     };
 
@@ -249,8 +286,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             }
             toast.error(res.error || 'Update failed');
             return false;
-        } catch (error) {
-            toast.error('Connection error');
+        } catch (error: any) {
+            toast.error(error.message || 'Connection error');
             return false;
         }
     };
@@ -314,9 +351,9 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     return (
         <ClientContext.Provider value={{
             clients, deactivationRequests, toggleActive, requestDeactivation,
-            resolveDeactivationRequest, flagClient, unflagClient, updateClient,
+            resolveDeactivationRequest, resolveDeactivationRequests, flagClient, unflagClient, updateClient,
             getClientNotes, addClientNote, updateClientNote, deleteClientNote,
-            fetchData, isLoading
+            fetchData, clientFields, pipelineStages, isLoading
         }}>
             {children}
         </ClientContext.Provider>

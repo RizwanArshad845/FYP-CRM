@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import pool from '../config/db.js';
-import { as, addActiveEmployees, setupOrg, signupOrg } from './helpers.js';
+import { as, addActiveEmployees, clientBody, setupOrg, signupOrg } from './helpers.js';
 
 // Policy chokepoint: catalog ceiling + per-org restriction dials.
 let org;
@@ -19,7 +19,7 @@ beforeAll(async () => {
     await as(admin).post('/api/onboarding/complete');
     other = await setupOrg();
     const res = await as(org.sales_manager.token).post('/api/clients', {
-        companyName: 'Policy Co', customerName: 'Pat', email: 'pat@policy.co', contactNo1: '123',
+        ...clientBody('Policy Co'), customerName: 'Pat', email: 'pat@policy.co', contactNo1: '123',
         paymentAmount: 500, sales_agent_id: org.sales.id,
     });
     clientId = res.body.data.id;
@@ -55,14 +55,47 @@ describe('catalog guards', () => {
 });
 
 describe('permission settings', () => {
-    it('lists only eligible actions per portal and tier', async () => {
+    it('lists the fixed catalog per portal and tier, marking entries above the ceiling as not eligible', async () => {
         const res = await as(org.admin).get('/api/organization/permissions');
         expect(res.status).toBe(200);
         expect(res.body.data.map((p) => p.key)).not.toContain('admin');
         const cstMember = tierEntry(res.body.data, 'cst', 'Member');
-        expect(cstMember.actions.map((a) => a.key)).toContain('client.set_status');
-        expect(cstMember.actions.map((a) => a.key)).not.toContain('client.discard');
-        expect(cstMember.fields.map((f) => f.key)).not.toContain('user.compensation');
+        const action = (key) => cstMember.actions.find((a) => a.key === key);
+        const field = (key) => cstMember.fields.find((f) => f.key === key);
+
+        // The five field groups and the mockup's action labels (Figure 4.6)
+        expect(cstMember.fields.map((f) => f.label)).toEqual([
+            'Client contact details', 'Payment details', 'Salary and payroll', 'Call recordings and transcripts', 'Internal notes',
+        ]);
+        for (const [key, label] of [['note.add', 'Add client note'], ['client.flag', 'Flag client'], ['deactivation.request', 'Request deactivation'],
+            ['deactivation.resolve', 'Approve deactivation'], ['client.assign', 'Reassign client'], ['client.move_stage', 'Move client stage']]) {
+            expect(action(key).label).toBe(label);
+        }
+        expect(action('client.set_status')).toMatchObject({ eligible: true, allowed: true });
+        expect(action('note.add')).toMatchObject({ eligible: true, allowed: true });
+        expect(action('client.discard')).toMatchObject({ eligible: false, allowed: false });
+        expect(field('user.compensation')).toMatchObject({ eligible: false, visible: false });
+        // Sales-only actions are not part of the CST list at all
+        expect(action('sales_target.manage')).toBeUndefined();
+
+        const salesManager = tierEntry(res.body.data, 'sales_manager', 'Manager');
+        expect(salesManager.actions.find((a) => a.key === 'client.import')).toMatchObject({ label: 'Import clients', eligible: true });
+        expect(tierEntry(res.body.data, 'finance', 'Member').actions.find((a) => a.key === 'payroll.manage').label).toBe('Run payroll');
+    });
+
+    it('note, flag and deactivation request actions guard their routes', async () => {
+        const set = (actions) => as(org.admin).put('/api/organization/permissions', { permissions: [{ portalKey: 'cst', tier: 'Member', actions }] });
+        await set({ 'note.add': false, 'client.flag': false, 'deactivation.request': false });
+
+        expect((await as(org.cst.token).post('/api/cst/notes', { client_id: clientId, note_text: 'x' })).status).toBe(403);
+        expect((await as(org.cst.token).post('/api/cst/flags', { client_id: clientId, flag_type: 'red' })).status).toBe(403);
+        expect((await as(org.cst.token).patch(`/api/clients/${clientId}/status`, { status: 'flagged', flag_type: 'red' })).status).toBe(403);
+        expect((await as(org.cst.token).post('/api/cst/deactivation-requests', { client_id: clientId, reason: 'x' })).status).toBe(403);
+        // Same portal, Manager tier: unaffected
+        expect((await as(org.cstLead.token).post('/api/cst/notes', { client_id: clientId, note_text: 'lead note' })).status).toBe(201);
+
+        await set({ 'note.add': true, 'client.flag': true, 'deactivation.request': true });
+        expect((await as(org.cst.token).post('/api/cst/notes', { client_id: clientId, note_text: 'back' })).status).toBe(201);
     });
 
     it('only the org admin can read or change permissions', async () => {
@@ -143,6 +176,26 @@ describe('field visibility', () => {
         // Admin always sees everything
         const admin = (await as(org.admin).get('/api/clients')).body.data.find((c) => c.id === clientId);
         expect(admin.payment_amount).toBeTruthy();
+    });
+
+    it('internal notes and call transcripts are field groups too', async () => {
+        await as(org.admin).put('/api/organization/permissions', {
+            permissions: [{ portalKey: 'sales', tier: 'Member', fields: { 'call.transcript': false, 'client.internal_notes': false } }],
+        });
+        const upload = await as(org.sales.token).post('/api/sales/recordings', {
+            client_id: clientId, recording_url: 'https://rec.example/1', transcript: 'secret words',
+        });
+        expect(upload.status).toBe(201);
+        expect(upload.body.data).not.toHaveProperty('transcript');
+        expect(upload.body.data).not.toHaveProperty('recording_url');
+        const list = (await as(org.sales.token).get('/api/sales/recordings')).body.data;
+        expect(list.every((r) => !('transcript' in r))).toBe(true);
+        const client = (await as(org.sales.token).get('/api/clients')).body.data.find((c) => c.id === clientId);
+        expect(client).not.toHaveProperty('notes');
+
+        // The manager of the same team still sees them
+        const managerView = (await as(org.sales_manager.token).get('/api/sales/recordings')).body.data;
+        expect(managerView.find((r) => r.id === upload.body.data.id).transcript).toBe('secret words');
     });
 
     it('write responses are filtered too', async () => {

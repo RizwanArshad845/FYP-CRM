@@ -147,7 +147,7 @@ export function ResourceBoard() {
                     <div className={cls.row}>
                         <div className="flex-1">
                             <div className="flex items-center gap-3">
-                                <Presentation className="h-5 w-5 text-indigo-500" />
+                                <Presentation className="h-5 w-5 text-primary" />
                                 <Input 
                                     className="h-8 font-semibold text-lg border-none hover:bg-muted focus-visible:ring-1 w-[300px] p-1"
                                     value={boardTitle}
@@ -197,11 +197,11 @@ export function ResourceBoard() {
                                 <Plus className="h-4 w-4 mr-2" /> New
                             </Button>
                             
-                            <Button variant="outline" size="sm" onClick={handleDelete} disabled={!boardId} className="text-rose-600 border-rose-200 hover:bg-rose-50">
+                            <Button variant="outline" size="sm" onClick={handleDelete} disabled={!boardId} className="text-danger border-danger-border hover:bg-danger-bg">
                                 <Trash2 className="h-4 w-4 mr-2" /> Delete
                             </Button>
                             
-                            <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+                            <Button size="sm" onClick={handleSave} disabled={isSaving} className="bg-primary hover:bg-primary">
                                 <Save className="h-4 w-4 mr-2" /> {isSaving ? 'Saving...' : 'Save to Cloud'}
                             </Button>
                         </div>

@@ -1,15 +1,17 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types/crm';
 import { apiFetch, getToken, setToken, clearToken, AUTH_EXPIRED_EVENT } from '../utils/api';
 import { toast } from 'sonner';
+import { orgPath, slugFromPath } from '../utils/orgPath';
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     staleSession: { name: string; clockInTime: string } | null;
-    login: (email: string, password: string) => Promise<User | null>;
+    /** `organization` is the slug of an organization's own login URL, if any */
+    login: (email: string, password: string, remember?: boolean, organization?: string) => Promise<User | null>;
     /** Begin a session from a token + session profile (login or signup response) */
-    startSession: (token: string, sessionUser: any) => Promise<User>;
+    startSession: (token: string, sessionUser: any, remember?: boolean) => Promise<User>;
     /** Merge a fresh session profile from the server (e.g. after a password change) */
     applySession: (sessionUser: any) => void;
     logout: (clockOutAlso?: boolean) => Promise<void>;
@@ -55,18 +57,21 @@ const toUser = (u: any, statusRes: any): User => ({
 const fetchStatus = (u: any) =>
     u.mustChangePassword ? Promise.resolve(null) : apiFetch('/attendance/status').catch(() => null);
 
-/** Where a signed-in user must go next, in order: password change, onboarding, clock-in, dashboard. */
-export const nextRouteFor = (user: User): string => {
+// The next step in order: password change, onboarding, clock-in, dashboard.
+const nextStepFor = (user: User): string => {
     if (user.mustChangePassword) return '/change-password';
     if (user.role === 'admin' && user.onboardingCompleted === false) return '/onboarding';
     if (!user.clockedIn) return '/clock-in';
     return '/dashboard';
 };
 
+/** Where a signed-in user must go next, under their organization's URL. */
+export const nextRouteFor = (user: User): string => orgPath(user.organization?.slug, nextStepFor(user));
+
 /** A blocking pre-dashboard step (password change / onboarding), or null. */
 export const pendingSetupRoute = (user: User): string | null => {
-    const next = nextRouteFor(user);
-    return next === '/change-password' || next === '/onboarding' ? next : null;
+    const step = nextStepFor(user);
+    return step === '/change-password' || step === '/onboarding' ? orgPath(user.organization?.slug, step) : null;
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -110,8 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
     }, []);
 
-    const startSession = async (token: string, sessionUser: any): Promise<User> => {
-        setToken(token);
+    const startSession = async (token: string, sessionUser: any, remember = false): Promise<User> => {
+        setToken(token, sessionUser.organization?.slug ?? '', remember);
         const next = toUser(sessionUser, await fetchStatus(sessionUser));
         setUser(next);
         return next;
@@ -121,13 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((prev) => (prev ? { ...prev, ...sessionFields(sessionUser) } : prev));
     };
 
-    const login = async (email: string, password: string): Promise<User | null> => {
+    const login = async (email: string, password: string, remember = false, organization?: string): Promise<User | null> => {
         try {
             const res = await apiFetch('/auth/login', {
                 method: 'POST',
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password, ...(organization && { organization }) })
             });
-            const next = await startSession(res.token, res.user);
+            const next = await startSession(res.token, res.user, remember);
             toast.success(`Welcome back, ${res.user.first_name}!`);
             return next;
         } catch (error: any) {
@@ -247,4 +252,11 @@ export function useAuth() {
     const context = useContext(AuthContext);
     if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
     return context;
+}
+
+/** Builds app paths under the current organization's URL (/<slug>/...). */
+export function useOrgPath() {
+    const { user } = useAuth();
+    const slug = user?.organization?.slug;
+    return useCallback((path: string) => orgPath(slug ?? slugFromPath(), path), [slug]);
 }

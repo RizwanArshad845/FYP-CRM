@@ -3,22 +3,8 @@
  * Move these to a database table eventually for dynamic management.
  */
 
-export const PRODUCTS = [
-    'Local SEO Service',
-    'Google Business Profile Optimization',
-    'Website Design & Development',
-    'Social Media Management',
-    'Content Marketing',
-    'Paid Search (PPC)'
-];
-
-export const SERVICE_AREAS = [
-    'United States',
-    'United Kingdom',
-    'Canada',
-    'Australia',
-    'European Union'
-];
+// Client products and service areas are per organization now: the options of
+// those client fields (backend/services/clientFieldService.js).
 
 export const EVENT_TYPES = [
     'meeting',
