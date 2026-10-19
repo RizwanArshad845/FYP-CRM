@@ -1,4 +1,4 @@
-import { httpError } from '../utils/tenant.js';
+import { PORTAL_FAMILY, httpError } from '../utils/tenant.js';
 import {
     ACTIONS, FIELD_GROUPS, TIERS, eligibleAction, eligibleFieldGroup, isConfigurable,
 } from '../policy/index.js';
@@ -140,12 +140,19 @@ export const getPermissions = async (db, tenantId) => {
         label: p.label,
         tiers: CONFIGURABLE_TIERS.map((tier) => ({
             tier,
+            // Every field group, and every action of the portal's team, so the screen shows the
+            // whole fixed list (Figure 4.6). Entries above the catalog ceiling are listed as
+            // not eligible: always off and locked.
             actions: Object.entries(ACTIONS)
-                .filter(([key]) => eligibleAction(key, p.key, tier))
-                .map(([key, a]) => ({ key, label: a.label, allowed: actionMap.get(`${p.id}|${tier}|${key}`) !== false })),
-            fields: Object.entries(FIELD_GROUPS)
-                .filter(([key]) => eligibleFieldGroup(key, p.key))
-                .map(([key, g]) => ({ key, label: g.label, visible: fieldMap.get(`${p.id}|${tier}|${key}`) !== false })),
+                .filter(([, a]) => a.portals.some((k) => (PORTAL_FAMILY[p.key] ?? [p.key]).includes(k)))
+                .map(([key, a]) => {
+                    const eligible = eligibleAction(key, p.key, tier);
+                    return { key, label: a.label, eligible, allowed: eligible && actionMap.get(`${p.id}|${tier}|${key}`) !== false };
+                }),
+            fields: Object.entries(FIELD_GROUPS).map(([key, g]) => {
+                const eligible = eligibleFieldGroup(key, p.key);
+                return { key, label: g.label, eligible, visible: eligible && fieldMap.get(`${p.id}|${tier}|${key}`) !== false };
+            }),
         })),
     }));
 };

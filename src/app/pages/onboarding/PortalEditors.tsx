@@ -7,7 +7,7 @@ import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Switch } from '../../components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { cn } from '../../components/ui/utils';
 
 export const TIERS: Tier[] = ['Member', 'Manager', 'Admin'];
@@ -196,6 +196,10 @@ export function LabelsEditor({ portals, onSave, saving, submitLabel, secondaryAc
 // Two restriction dials per (portal, tier): which data groups they see and which
 // actions they may take. Entries come from the fixed server catalog, so an org
 // can only switch things off, never invent new permissions.
+// Tiers in the order Member, Manager (the Admin tier is never restricted)
+const sortTiers = <T extends { tier: Tier }>(tiers: T[]) => [...tiers].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
+const firstTier = (tiers: { tier: Tier }[]): Tier => sortTiers(tiers)[0]?.tier ?? 'Member';
+
 export function PermissionsEditor({ permissions, onSave, saving }: {
   permissions: PortalPermissions[];
   onSave: (changes: PermissionChange[]) => void;
@@ -203,9 +207,20 @@ export function PermissionsEditor({ permissions, onSave, saving }: {
 }) {
   const { tierLabel } = usePortals();
   const [draft, setDraft] = useState<PortalPermissions[]>(permissions);
-  useEffect(() => setDraft(permissions), [permissions]);
+  const [portalKey, setPortalKey] = useState('');
+  const [tier, setTier] = useState<Tier>('Member');
+  useEffect(() => {
+    setDraft(permissions);
+    // Keep the current selection when it still exists, else start at the first portal and tier
+    const portal = permissions.find((p) => p.key === portalKey) ?? permissions[0];
+    if (portal && portal.key !== portalKey) {
+      setPortalKey(portal.key);
+      setTier(firstTier(portal.tiers));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissions]);
 
-  const toggle = (portalKey: string, tier: Tier, kind: 'actions' | 'fields', key: string, value: boolean) =>
+  const toggle = (kind: 'actions' | 'fields', key: string, value: boolean) =>
     setDraft((d) => d.map((p) => (p.key !== portalKey ? p : {
       ...p,
       tiers: p.tiers.map((t) => (t.tier !== tier ? t : {
@@ -215,72 +230,92 @@ export function PermissionsEditor({ permissions, onSave, saving }: {
       })),
     })));
 
+  // Only eligible entries can be overridden; the rest are fixed by the catalog.
   const changes = (): PermissionChange[] => draft.flatMap((p) => p.tiers.map((t) => ({
     portalKey: p.key,
     tier: t.tier,
-    actions: Object.fromEntries(t.actions.map((a) => [a.key, a.allowed])),
-    fields: Object.fromEntries(t.fields.map((f) => [f.key, f.visible])),
+    actions: Object.fromEntries(t.actions.filter((a) => a.eligible).map((a) => [a.key, a.allowed])),
+    fields: Object.fromEntries(t.fields.filter((f) => f.eligible).map((f) => [f.key, f.visible])),
   })));
 
   if (!draft.length) return <p className="text-sm text-muted-foreground">Enable a portal other than Admin to configure permissions.</p>;
 
+  const portal = draft.find((p) => p.key === portalKey) ?? draft[0];
+  const current = portal.tiers.find((t) => t.tier === tier) ?? portal.tiers[0];
+  const tierText = (t: Tier) => {
+    const label = tierLabel(portal.key, t);
+    return label !== t ? `${t} (${label})` : t;
+  };
+  const selectBox = 'w-[240px] rounded-[8px] border border-input-border bg-card px-3 py-[9px]';
+  const selectTrigger = 'w-full border-0 bg-transparent p-0 text-[13.5px] shadow-none focus-visible:ring-0 data-[size=default]:h-auto dark:bg-transparent';
+
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Restrict what each tier can see and do. Everything is on by default and nothing here can grant more than the tier
-        already allows. Admins are never restricted.
-      </p>
-      <div className="space-y-4">
-        {draft.map((p) => (
-          <Card key={p.key} className={cn('border-l-4', PORTAL_THEMES[p.key]?.borderAccent)}>
-            <CardContent className="pt-6 space-y-3">
-              <h3 className="font-semibold">{p.label}</h3>
-              <Tabs defaultValue={p.tiers[0]?.tier}>
-                <TabsList>
-                  {p.tiers.map((t) => <TabsTrigger key={t.tier} value={t.tier}>{tierLabel(p.key, t.tier)}</TabsTrigger>)}
-                </TabsList>
-                {p.tiers.map((t) => (
-                  <TabsContent key={t.tier} value={t.tier} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    <PermissionList
-                      title="Can see"
-                      items={t.fields.map((f) => ({ key: f.key, label: f.label, on: f.visible }))}
-                      idPrefix={`${p.key}-${t.tier}-field`}
-                      onToggle={(key, v) => toggle(p.key, t.tier, 'fields', key, v)}
-                    />
-                    <PermissionList
-                      title="Can do"
-                      items={t.actions.map((a) => ({ key: a.key, label: a.label, on: a.allowed }))}
-                      idPrefix={`${p.key}-${t.tier}-action`}
-                      onToggle={(key, v) => toggle(p.key, t.tier, 'actions', key, v)}
-                    />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </CardContent>
-          </Card>
-        ))}
+    <div>
+      <div className="mb-4 flex flex-wrap gap-4">
+        <div className={selectBox}>
+          <label className="mb-[5px] block text-[12px] font-normal text-muted-foreground">Portal</label>
+          <Select value={portal.key} onValueChange={(key) => { setPortalKey(key); setTier(firstTier(draft.find((p) => p.key === key)?.tiers ?? [])); }}>
+            <SelectTrigger aria-label="Portal" className={selectTrigger}><SelectValue /></SelectTrigger>
+            <SelectContent>{draft.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className={selectBox}>
+          <label className="mb-[5px] block text-[12px] font-normal text-muted-foreground">Tier</label>
+          <Select value={current.tier} onValueChange={(t) => setTier(t as Tier)}>
+            <SelectTrigger aria-label="Tier" className={selectTrigger}><SelectValue /></SelectTrigger>
+            <SelectContent>{sortTiers(portal.tiers).map((t) => <SelectItem key={t.tier} value={t.tier}>{tierText(t.tier)}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="flex justify-end">
-        <Button disabled={saving} onClick={() => onSave(changes())}>{saving ? 'Saving…' : 'Save permissions'}</Button>
+
+      <div className="flex flex-col gap-[18px] md:flex-row">
+        <PermissionList
+          title="Field groups"
+          caption="Which data this tier can see, in screens and assistant answers"
+          items={current.fields.map((f) => ({ key: f.key, label: f.label, on: f.visible, eligible: f.eligible }))}
+          idPrefix={`${portal.key}-${current.tier}-field`}
+          onToggle={(key, v) => toggle('fields', key, v)}
+        />
+        <PermissionList
+          title="Actions"
+          caption="Which operations this tier can perform"
+          items={current.actions.map((a) => ({ key: a.key, label: a.label, on: a.allowed, eligible: a.eligible }))}
+          idPrefix={`${portal.key}-${current.tier}-action`}
+          onToggle={(key, v) => toggle('actions', key, v)}
+        />
+      </div>
+
+      <div className="mt-[14px] flex items-center justify-between gap-4 text-[12.5px] text-muted-foreground">
+        <span>Both lists come from fixed catalogs; entries can be switched on or off but not created.</span>
+        <Button disabled={saving} onClick={() => onSave(changes())}>{saving ? 'Saving…' : 'Save changes'}</Button>
       </div>
     </div>
   );
 }
 
-function PermissionList({ title, items, idPrefix, onToggle }: {
+function PermissionList({ title, caption, items, idPrefix, onToggle }: {
   title: string;
-  items: { key: string; label: string; on: boolean }[];
+  caption: string;
+  items: { key: string; label: string; on: boolean; eligible: boolean }[];
   idPrefix: string;
   onToggle: (key: string, value: boolean) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
-      {items.length === 0 && <p className="text-sm text-muted-foreground">Nothing to configure.</p>}
+    <div className="flex-1 rounded-[10px] border border-border bg-card px-4 py-[14px]">
+      <h3 className="mb-1 text-[15px] font-bold tracking-normal">{title}</h3>
+      <p className="mb-[10px] text-[12.5px] text-muted-foreground">{caption}</p>
       {items.map((item) => (
-        <div key={item.key} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-          <Label htmlFor={`${idPrefix}-${item.key}`} className="font-normal">{item.label}</Label>
-          <Switch id={`${idPrefix}-${item.key}`} checked={item.on} onCheckedChange={(v) => onToggle(item.key, v)} />
+        <div key={item.key} className="flex items-center justify-between gap-3 border-b border-row-divider py-[10px] text-[13.5px]">
+          <label htmlFor={`${idPrefix}-${item.key}`} className={cn('text-[13.5px] font-normal', !item.eligible && 'text-muted-foreground')}>
+            {item.label}
+          </label>
+          <Switch
+            id={`${idPrefix}-${item.key}`}
+            checked={item.on}
+            disabled={!item.eligible}
+            title={item.eligible ? undefined : 'Not available for this tier'}
+            onCheckedChange={(v) => onToggle(item.key, v)}
+          />
         </div>
       ))}
     </div>

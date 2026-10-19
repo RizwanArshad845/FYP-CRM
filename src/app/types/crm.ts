@@ -75,8 +75,8 @@ export interface PipelineStage {
 
 export interface TierPermissions {
   tier: Tier;
-  actions: { key: string; label: string; allowed: boolean }[];
-  fields: { key: string; label: string; visible: boolean }[];
+  actions: { key: string; label: string; allowed: boolean; eligible: boolean }[];
+  fields: { key: string; label: string; visible: boolean; eligible: boolean }[];
 }
 
 export interface PortalPermissions {

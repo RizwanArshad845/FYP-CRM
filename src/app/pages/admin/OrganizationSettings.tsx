@@ -397,15 +397,7 @@ export function OrganizationSettings() {
       <TabsContent value="stages"><PipelineStagesEditor /></TabsContent>
 
       <TabsContent value="permissions">
-        <Card>
-          <CardHeader>
-            <CardTitle>Permissions</CardTitle>
-            <CardDescription>What each tier can see and do in its portal.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PermissionsEditor permissions={permissions} saving={saving === 'permissions'} onSave={savePermissions} />
-          </CardContent>
-        </Card>
+        <PermissionsEditor permissions={permissions} saving={saving === 'permissions'} onSave={savePermissions} />
       </TabsContent>
     </Tabs>
   );

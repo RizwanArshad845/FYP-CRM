@@ -1,5 +1,5 @@
 import pool from '../config/db.js';
-import { applyFieldVisibility } from '../policy/index.js';
+import { applyFieldVisibility, can } from '../policy/index.js';
 import { getFieldDefinitions, validateCustomFields } from '../services/customFieldService.js';
 import { getPipelineStages } from './organizationController.js';
 import {
@@ -140,6 +140,10 @@ export const updateClient = async (req, res) => {
 // Status / flag changes. CST agents may only change their own clients.
 export const toggleClientStatus = async (req, res) => {
     const { status, flag_type } = req.body;
+    // Flagging is its own permission on top of changing status
+    if ((status === 'flagged' || flag_type) && !(await can(req.user, 'client.flag'))) {
+        return res.status(403).json({ success: false, error: 'You do not have permission to perform this action' });
+    }
     const client = await getClientInTenant(req.user.tenantId, req.params.id);
     assertClientAccess(req.user, client);
 

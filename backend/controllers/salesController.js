@@ -1,6 +1,7 @@
 import pool from '../config/db.js';
 import { assertUserInScope, getClientInTenant, isManager, ownerScope } from '../utils/tenant.js';
 import { updateTargetAchieved } from '../services/metrics.js';
+import { applyFieldVisibility } from '../policy/index.js';
 
 // Optional client reference: must belong to the tenant when given.
 const optionalClientId = async (tenantId, clientId) => {
@@ -28,7 +29,7 @@ export const getImportantRecordings = async (req, res) => {
         WHERE r.tenant_id = $1
         ORDER BY r.created_at DESC
     `, [req.user.tenantId]);
-    res.json({ success: true, data: result.rows });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'call_recording', result.rows) });
 };
 
 export const addImportantRecording = async (req, res) => {
@@ -39,7 +40,7 @@ export const addImportantRecording = async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
         [req.user.tenantId, req.user.id, clientId, recording_url, outcome || 'pending', quality_rating || 0]
     );
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'call_recording', result.rows[0]) });
 };
 
 export const updateImportantRecording = async (req, res) => {
@@ -57,7 +58,7 @@ export const updateImportantRecording = async (req, res) => {
         [clientId, recording_url, outcome, quality_rating, req.params.id, req.user.id, req.user.tenantId]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Recording not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'call_recording', result.rows[0]) });
 };
 
 export const deleteImportantRecording = async (req, res) => {
@@ -175,7 +176,7 @@ export const getRecordings = async (req, res) => {
         WHERE r.tenant_id = $1
         ORDER BY r.created_at DESC
     `, [req.user.tenantId]);
-    res.json({ success: true, data: result.rows });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'call_recording', result.rows) });
 };
 
 export const uploadRecording = async (req, res) => {
@@ -188,7 +189,7 @@ export const uploadRecording = async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
         [tenantId, agentId, clientId, recording_url, duration_seconds || 0, transcript || '', outcome || 'pending', quality_rating || 0]
     );
-    res.status(201).json({ success: true, data: result.rows[0] });
+    res.status(201).json({ success: true, data: await applyFieldVisibility(req.user, 'call_recording', result.rows[0]) });
 };
 
 export const updateRecording = async (req, res) => {
@@ -206,7 +207,7 @@ export const updateRecording = async (req, res) => {
         [clientId, recording_url, outcome, quality_rating, req.params.id, req.user.tenantId, ...own.params]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Recording not found' });
-    res.json({ success: true, data: result.rows[0] });
+    res.json({ success: true, data: await applyFieldVisibility(req.user, 'call_recording', result.rows[0]) });
 };
 
 export const deleteRecording = async (req, res) => {

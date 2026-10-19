@@ -8,28 +8,34 @@ export const TIER_RANK = { Member: 1, Manager: 2, Admin: 3 };
 
 const action = (label, portals, minTier = 'Member') => ({ label, portals, minTier });
 
+// Labels are the plain UI texts of the permissions screen (Figure 4.6, plan 6.5).
 export const ACTIONS = {
     'admin.dashboard': action('View admin dashboards', ['admin']),
     'org.settings': action('Manage organization settings', ['admin']),
-    'user.manage': action('Create, edit and deactivate employees', ['admin']),
-    'event.manage': action('Manage company events', ['admin']),
-    'attendance.view_all': action('View everyone\'s attendance', ['admin']),
+    'user.manage': action('Manage employees', ['admin']),
+    'event.manage': action('Manage events', ['admin']),
+    'attendance.view_all': action('View all attendance', ['admin']),
 
-    'client.create': action('Add new clients', ['sales', 'sales_manager', 'cst_manager', 'admin']),
-    'client.update': action('Edit client details', ['sales_manager', 'cst_manager', 'admin'], 'Manager'),
-    'client.set_status': action('Flag / unflag clients', ['cst', 'cst_manager', 'admin']),
-    'client.assign': action('Assign / unassign clients to agents', ['cst_manager', 'admin'], 'Manager'),
-    'client.discard': action('Discard clients', ['cst_manager', 'admin'], 'Manager'),
-    'deactivation.resolve': action('Approve / reject deactivation requests', ['cst_manager', 'admin'], 'Manager'),
+    'note.add': action('Add client note', ['cst', 'cst_manager', 'admin']),
+    'client.flag': action('Flag client', ['cst', 'cst_manager', 'admin']),
+    'deactivation.request': action('Request deactivation', ['cst', 'cst_manager', 'admin']),
+    'deactivation.resolve': action('Approve deactivation', ['cst_manager', 'admin'], 'Manager'),
+    'client.assign': action('Reassign client', ['cst_manager', 'admin'], 'Manager'),
+    'client.move_stage': action('Move client stage', ['cst', 'cst_manager', 'admin']),
+    'client.import': action('Import clients', ['sales_manager', 'admin'], 'Manager'),
+    'client.create': action('Add client', ['sales', 'sales_manager', 'cst_manager', 'admin']),
+    'client.update': action('Edit client', ['sales_manager', 'cst_manager', 'admin'], 'Manager'),
+    'client.set_status': action('Change client status', ['cst', 'cst_manager', 'admin']),
+    'client.discard': action('Discard client', ['cst_manager', 'admin'], 'Manager'),
     'strategy.manage': action('Write client strategies', ['cst_manager', 'admin'], 'Manager'),
     'cst_target.manage': action('Set CST targets', ['cst_manager', 'admin'], 'Manager'),
-    'cst_target.update_achieved': action('Update achieved CST targets', ['cst', 'cst_manager', 'admin']),
+    'cst_target.update_achieved': action('Update CST results', ['cst', 'cst_manager', 'admin']),
 
     'sales_target.manage': action('Set sales targets', ['sales_manager', 'admin'], 'Manager'),
-    'sales_target.update_achieved': action('Update achieved sales targets', ['sales', 'sales_manager', 'admin']),
+    'sales_target.update_achieved': action('Update sales results', ['sales', 'sales_manager', 'admin']),
     'task.delegate': action('Delegate tasks', ['admin', 'sales_manager', 'cst_manager'], 'Manager'),
 
-    'payroll.manage': action('Manage payroll and salary slips', ['finance', 'admin']),
+    'payroll.manage': action('Run payroll', ['finance', 'admin']),
     'expense.manage': action('Manage expenses', ['finance', 'admin']),
 };
 
@@ -42,15 +48,28 @@ export const FIELD_GROUPS = {
         portals: null, // every portal
     },
     'client.financial': {
-        label: 'Client payment details',
+        label: 'Payment details',
         objectType: 'client',
         columns: ['payment_amount', 'payment_gateway'],
         portals: null,
     },
     'user.compensation': {
-        label: 'Employee salaries',
+        label: 'Salary and payroll',
         objectType: 'user',
         columns: ['base_salary'],
         portals: ['admin', 'finance'],
+    },
+    // call_recordings and important_call_recordings
+    'call.transcript': {
+        label: 'Call recordings and transcripts',
+        objectType: 'call_recording',
+        columns: ['transcript', 'recording_url'],
+        portals: ['sales', 'sales_manager', 'cst', 'cst_manager', 'admin'],
+    },
+    'client.internal_notes': {
+        label: 'Internal notes',
+        objectType: 'client',
+        columns: ['notes', 'tips_for_tech', 'client_concerns'],
+        portals: null,
     },
 };
