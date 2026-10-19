@@ -7,13 +7,21 @@ import {
 } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { apiFetch } from '../utils/api';
+import { OrgLogin } from './OrgLogin';
 
-// Older builds remembered the email (and once the password); remember me now keeps the token.
-const LEGACY_REMEMBER_KEYS = ['crm_remember_me', 'crm_remember_email'];
+// Older builds once stored the password; that key is wiped. (The organization login still remembers the email.)
+const LEGACY_REMEMBER_KEYS = ['crm_remember_me'];
 
-// Login page, Figure 4.1 (plan 9.3; docs/design/gui/login.html). On an organization's
-// own URL (/<slug>/login) it shows that organization's name instead of AICRE.
+// /login shows the AICRE login of Figure 4.1; an organization's own URL (/<slug>/login),
+// where employees land after logging out, shows the original employee login with the
+// organization's name in place of AICRE.
 export function Login() {
+  const { slug } = useParams();
+  return slug ? <OrgLogin slug={slug} /> : <AicreLogin />;
+}
+
+// Login page, Figure 4.1 (plan 9.3; docs/design/gui/login.html)
+function AicreLogin() {
   const { slug } = useParams();
   const [orgName, setOrgName] = useState<string | null>(null);
   const [orgMissing, setOrgMissing] = useState(false);
