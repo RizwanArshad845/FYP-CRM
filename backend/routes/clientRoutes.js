@@ -1,13 +1,16 @@
 import express from 'express';
 import {
     getClients, createClient, updateClient, toggleClientStatus,
-    getDeactivationRequests, assignClient, unassignClient, discardClient
+    getDeactivationRequests, assignClient, unassignClient, discardClient,
+    getClientCustomFields, getClientPipelineStages,
 } from '../controllers/clientController.js';
 import { allow } from '../policy/index.js';
 
 const router = express.Router();
 
 router.get('/', getClients);
+router.get('/custom-fields', getClientCustomFields);
+router.get('/pipeline-stages', getClientPipelineStages);
 router.post('/', allow('client.create'), createClient);
 router.put('/:id', allow('client.update'), updateClient);
 router.get('/deactivation-requests', getDeactivationRequests);

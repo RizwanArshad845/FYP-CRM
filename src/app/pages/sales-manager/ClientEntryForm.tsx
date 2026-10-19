@@ -11,6 +11,7 @@ import { Save, Send, X } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { useAuth } from '../../context/AuthContext';
 import { useClients } from '../../context/ClientContext';
+import { CustomFieldInputs, type CustomFieldValues } from '../../components/shared/CustomFieldInputs';
 import { useClientInbox } from '../../context/ClientInboxContext';
 import { apiFetch } from '../../utils/api';
 import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
@@ -56,7 +57,8 @@ export function ClientEntryForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingClients, setPendingClients] = useState<any[]>([]);
   const { user } = useAuth();
-  const { fetchData } = useClients();
+  const { fetchData, fieldDefinitions } = useClients();
+  const [customFields, setCustomFields] = useState<CustomFieldValues>({});
   const { fetchData: fetchInbox } = useClientInbox();
   const [states, setStates] = useState<string[]>([]);
   const [stateSearch, setStateSearch] = useState('');
@@ -120,13 +122,15 @@ export function ClientEntryForm() {
           digitalPresence: formData.websiteLink || formData.gbpLink || formData.yelpLink || formData.facebook || formData.twitter || formData.linkedin || formData.instagram,
           cin: formData.cin,
           paymentGateway: formData.paymentGateway,
-          sales_agent_id: user?.id
+          sales_agent_id: user?.id,
+          customFields,
         })
       });
 
       if (res.success) {
         toast.success('Client submitted successfully!');
         setFormData(EMPTY_FORM);
+      setCustomFields({});
         setPendingClients(prev => [res.data, ...prev]);
 
         // Trigger global refresh so CST Manager or Admin dashboards see it instantly
@@ -146,6 +150,7 @@ export function ClientEntryForm() {
   const handleClear = () => {
     if (confirm('Clear the form?')) {
       setFormData(EMPTY_FORM);
+      setCustomFields({});
       toast.info('Form cleared');
     }
   };
@@ -307,6 +312,8 @@ export function ClientEntryForm() {
               </div>
             ))}
           </section>
+
+          <CustomFieldInputs definitions={fieldDefinitions} values={customFields} onChange={setCustomFields} />
 
           {/* Actions */}
           <div className={`${cls.actions} pt-4`}>

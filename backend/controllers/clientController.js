@@ -1,5 +1,7 @@
 import pool from '../config/db.js';
 import { applyFieldVisibility } from '../policy/index.js';
+import { getFieldDefinitions, validateCustomFields } from '../services/customFieldService.js';
+import { getPipelineStages } from './organizationController.js';
 import {
     assertClientAccess, assertUsersInTenant, getClientInTenant, isManager, memberClientColumn,
 } from '../utils/tenant.js';
@@ -46,6 +48,7 @@ export const createClient = async (req, res) => {
     }
     await assertUsersInTenant(tenantId, [sales_agent_id, cst_agent_id]);
 
+    const custom = validateCustomFields(await getFieldDefinitions(tenantId), req.body.customFields);
     const safePaymentAmount = isNaN(parseFloat(paymentAmount)) ? 0 : parseFloat(paymentAmount);
     const initialStatus = ['cst', 'cst_manager'].includes(req.user.role) ? 'existing' : 'new';
 
@@ -54,13 +57,14 @@ export const createClient = async (req, res) => {
             tenant_id, company_name, customer_name, email, email_2, payment_amount,
             product_sold, service_area, contact_no_1, contact_no_2,
             client_concerns, tips_for_tech, notes, digital_presence,
-            sales_agent_id, cst_agent_id, status, client_services, cin, payment_gateway
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *`,
+            sales_agent_id, cst_agent_id, status, client_services, cin, payment_gateway, custom_fields
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING *`,
         [
             tenantId, companyName, customerName, email, email_2 || null, safePaymentAmount,
             productSold, serviceArea, contactNo1, contactNo2 || null,
             clientConcerns || null, tipsForTech || null, notes || null, digitalPresence || null,
             sales_agent_id || null, cst_agent_id || null, initialStatus, clientServices || null, cin || null, paymentGateway || null,
+            Object.keys(custom).length ? JSON.stringify(custom) : null,
         ]
     );
     res.status(201).json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
@@ -96,6 +100,9 @@ export const updateClient = async (req, res) => {
         clientConcerns, tipsForTech, notes, digitalPresence, clientServices,
         cin, paymentGateway,
     } = req.body;
+    // Custom fields are replaced as a whole when sent, and left alone otherwise.
+    const custom = req.body.customFields === undefined ? null
+        : validateCustomFields(await getFieldDefinitions(req.user.tenantId), req.body.customFields);
 
     const result = await pool.query(
         `UPDATE clients SET
@@ -115,6 +122,7 @@ export const updateClient = async (req, res) => {
             client_services = COALESCE($14, client_services),
             cin = COALESCE($15, cin),
             payment_gateway = COALESCE($16, payment_gateway),
+            custom_fields = COALESCE($19::jsonb, custom_fields),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $17 AND tenant_id = $18 RETURNING *`,
         [
@@ -122,6 +130,7 @@ export const updateClient = async (req, res) => {
             paymentAmount, productSold, serviceArea, contactNo1, contactNo2,
             clientConcerns, tipsForTech, notes, digitalPresence,
             clientServices, cin, paymentGateway, req.params.id, req.user.tenantId,
+            custom ? JSON.stringify(custom) : null,
         ]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Client not found' });
@@ -164,4 +173,13 @@ export const getDeactivationRequests = async (req, res) => {
         ORDER BY dr.created_at DESC
     `, [req.user.tenantId]);
     res.json({ success: true, data: result.rows });
+};
+
+// Definitions and stages for client forms and the board: readable by anyone in the tenant.
+export const getClientCustomFields = async (req, res) => {
+    res.json({ success: true, data: await getFieldDefinitions(req.user.tenantId) });
+};
+
+export const getClientPipelineStages = async (req, res) => {
+    res.json({ success: true, data: await getPipelineStages(req.user.tenantId) });
 };

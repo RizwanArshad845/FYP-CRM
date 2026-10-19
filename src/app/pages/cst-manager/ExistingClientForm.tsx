@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Send, X, UserPlus } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { useClients } from '../../context/ClientContext';
+import { CustomFieldInputs, type CustomFieldValues } from '../../components/shared/CustomFieldInputs';
 import { useClientInbox } from '../../context/ClientInboxContext';
 import { apiFetch } from '../../utils/api';
 import { PRODUCTS } from '../../constants/crm';
@@ -52,7 +53,8 @@ function Field({ id, label, type = 'text', required = false, placeholder = '', v
 export function ExistingClientForm() {
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { fetchData: fetchClients } = useClients();
+  const { fetchData: fetchClients, fieldDefinitions } = useClients();
+  const [customFields, setCustomFields] = useState<CustomFieldValues>({});
   const { fetchData: fetchInbox } = useClientInbox();
   const [states, setStates] = useState<string[]>([]);
   const [showStates, setShowStates] = useState(false);
@@ -102,13 +104,15 @@ export function ExistingClientForm() {
           clientServices: formData.clientServices,
           digitalPresence: formData.websiteLink || formData.gbpLink || formData.yelpLink || formData.facebook || formData.twitter || formData.linkedin || formData.instagram,
           cin: formData.cin,
-          paymentGateway: formData.paymentGateway
+          paymentGateway: formData.paymentGateway,
+          customFields,
         })
       });
 
       if (res.success) {
         toast.success('Existing client added successfully!');
         setFormData(EMPTY_FORM);
+      setCustomFields({});
         fetchClients();
         fetchInbox();
       } else {
@@ -124,6 +128,7 @@ export function ExistingClientForm() {
   const handleClear = () => {
     if (confirm('Clear the form?')) {
       setFormData(EMPTY_FORM);
+      setCustomFields({});
       toast.info('Form cleared');
     }
   };
@@ -284,6 +289,8 @@ export function ExistingClientForm() {
                 ))}
             </div>
           </section>
+
+          <CustomFieldInputs definitions={fieldDefinitions} values={customFields} onChange={setCustomFields} />
 
           {/* Actions */}
           <div className="flex gap-4 pt-6 border-t">

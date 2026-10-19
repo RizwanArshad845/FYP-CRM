@@ -10,6 +10,7 @@ import { Edit } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
 import { useClients } from '../../context/ClientContext';
+import { CustomFieldInputs } from '../../components/shared/CustomFieldInputs';
 import { useClientInbox } from '../../context/ClientInboxContext';
 
 interface EditClientModalProps {
@@ -22,7 +23,7 @@ interface EditClientModalProps {
 export function EditClientModal({ client, open, onOpenChange, onSuccess }: EditClientModalProps) {
     const [editForm, setEditForm] = useState<any>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const { updateClient } = useClients();
+    const { updateClient, fieldDefinitions } = useClients();
     const { fetchData: fetchInbox } = useClientInbox();
 
     useEffect(() => {
@@ -39,7 +40,8 @@ export function EditClientModal({ client, open, onOpenChange, onSuccess }: EditC
                 contact_no_2: client.contact_no_2,
                 client_concerns: client.client_concerns,
                 tips_for_tech: client.tips_for_tech,
-                notes: client.notes
+                notes: client.notes,
+                custom_fields: client.custom_fields ?? {},
             });
         }
     }, [client]);
@@ -130,6 +132,12 @@ export function EditClientModal({ client, open, onOpenChange, onSuccess }: EditC
                         <Textarea value={editForm.tips_for_tech} onChange={e => setEditForm({...editForm, tips_for_tech: e.target.value})} />
                     </div>
                 </div>
+                <CustomFieldInputs
+                    idPrefix="edit-cf"
+                    definitions={fieldDefinitions}
+                    values={editForm.custom_fields}
+                    onChange={(custom_fields) => setEditForm({ ...editForm, custom_fields })}
+                />
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
                     <Button onClick={handleUpdate} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
