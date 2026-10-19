@@ -7,7 +7,11 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from 'sonner';
-import { Save, Send, X } from 'lucide-react';
+import { Download, Save, Send, Upload, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { usePortals } from '../../hooks/usePortals';
+import { parseCsvFile, SkippedRows } from '../onboarding/EmployeesStep';
+import type { FieldDefinition } from '../../types/crm';
 import { cls } from '../../styles/classes';
 import { useAuth } from '../../context/AuthContext';
 import { useClients } from '../../context/ClientContext';
@@ -59,6 +63,8 @@ export function ClientEntryForm() {
   const { user } = useAuth();
   const { fetchData, fieldDefinitions } = useClients();
   const [customFields, setCustomFields] = useState<CustomFieldValues>({});
+  const [importOpen, setImportOpen] = useState(false);
+  const { can } = usePortals();
   const { fetchData: fetchInbox } = useClientInbox();
   const [states, setStates] = useState<string[]>([]);
   const [stateSearch, setStateSearch] = useState('');
@@ -158,9 +164,16 @@ export function ClientEntryForm() {
   return (
     <form onSubmit={handleSubmit}>
       <Card>
-        <CardHeader>
-          <CardTitle>Sales Information Entry for CST Team</CardTitle>
-          <CardDescription>Enter client information and sales details</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle>Sales Information Entry for CST Team</CardTitle>
+            <CardDescription>Enter client information and sales details</CardDescription>
+          </div>
+          {can('client.import') && (
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />Import CSV
+            </Button>
+          )}
         </CardHeader>
         <CardContent className={cls.page}>
           {/* Client Information */}
@@ -370,6 +383,114 @@ export function ClientEntryForm() {
           )}
         </CardContent>
       </Card>
+      <ClientImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        definitions={fieldDefinitions}
+        onImported={() => { fetchData(); fetchInbox(); }}
+      />
     </form>
+  );
+}
+
+// CSV column -> client field (the same names the client form posts)
+const CLIENT_CSV_COLUMNS: Record<string, string> = {
+  company_name: 'companyName', customer_name: 'customerName', email: 'email', email_2: 'email_2',
+  payment_amount: 'paymentAmount', product_sold: 'productSold', service_area: 'serviceArea',
+  contact_no_1: 'contactNo1', contact_no_2: 'contactNo2', cin: 'cin', payment_gateway: 'paymentGateway',
+  client_services: 'clientServices', client_concerns: 'clientConcerns', tips_for_tech: 'tipsForTech', notes: 'notes',
+};
+
+const asCustomValue = (def: FieldDefinition, value: string) =>
+  def.field_type === 'checkbox' ? ['true', 'yes', '1'].includes(value.toLowerCase()) : value;
+
+// Client CSV import (plan 7.5): template download, then the server validates every row
+// with the client form's rules and reports the rows it skipped.
+function ClientImportDialog({ open, onOpenChange, definitions, onImported }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  definitions: FieldDefinition[];
+  onImported: () => void;
+}) {
+  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [result, setResult] = useState<{ created: number; skipped: { row: number; label?: string; error: string }[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { if (!open) { setRows([]); setResult(null); } }, [open]);
+
+  const downloadTemplate = () => {
+    const headers = [...Object.keys(CLIENT_CSV_COLUMNS), ...definitions.map((d) => d.field_name)];
+    const csv = headers.map((h) => (/[",\n]/.test(h) ? `"${h.replace(/"/g, '""')}"` : h)).join(',') + '\n';
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'client-import-template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFile = (file: File) => parseCsvFile(file, (data) => {
+    const byName = new Map(definitions.map((d) => [d.field_name.toLowerCase(), d]));
+    const parsed = data.map((raw) => {
+      const row: Record<string, unknown> = {};
+      const custom: Record<string, unknown> = {};
+      for (const [header, rawValue] of Object.entries(raw)) {
+        const value = String(rawValue ?? '').trim();
+        if (!value) continue;
+        if (CLIENT_CSV_COLUMNS[header]) row[CLIENT_CSV_COLUMNS[header]] = value;
+        else if (byName.has(header)) { const def = byName.get(header)!; custom[def.field_name] = asCustomValue(def, value); }
+      }
+      if (Object.keys(custom).length) row.customFields = custom;
+      return row;
+    }).filter((r) => Object.keys(r).length);
+    if (!parsed.length) { toast.error('No clients found in the file'); return; }
+    setRows(parsed);
+    setResult(null);
+  });
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      const res = await apiFetch('/clients/import', { method: 'POST', body: JSON.stringify({ clients: rows }) });
+      setResult({ created: res.data.created.length, skipped: res.data.rowErrors.map((e: any) => ({ ...e, label: String(rows[e.row - 1]?.companyName ?? '') })) });
+      onImported();
+    } catch (error: any) {
+      const rowErrors = error.body?.rowErrors;
+      if (rowErrors) setResult({ created: 0, skipped: rowErrors.map((e: any) => ({ ...e, label: String(rows[e.row - 1]?.companyName ?? '') })) });
+      else toast.error(error.message || 'Import failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Import clients</DialogTitle>
+          <DialogDescription>Rows are checked with the same rules as the client form. Valid rows are saved; the others are listed.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Button type="button" variant="link" className="h-auto px-0" onClick={downloadTemplate}>
+            <Download className="h-4 w-4" />Download template
+          </Button>
+          <Input type="file" accept=".csv,text/csv" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleFile(file); e.target.value = ''; }} />
+          {rows.length > 0 && !result && <p className="text-sm">{rows.length} row{rows.length === 1 ? '' : 's'} ready to import.</p>}
+          {result && (
+            <>
+              <p className="text-sm">
+                <strong>{result.created}</strong> client{result.created === 1 ? '' : 's'} imported
+                {result.skipped.length > 0 && <>, <strong>{result.skipped.length}</strong> row{result.skipped.length === 1 ? '' : 's'} skipped</>}.
+              </p>
+              <SkippedRows rows={result.skipped} />
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button type="button" disabled={busy || !rows.length || !!result} onClick={submit}>{busy ? 'Importing…' : 'Import'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

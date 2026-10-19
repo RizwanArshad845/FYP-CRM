@@ -7,6 +7,10 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { DollarSign, Download, Calculator, TrendingUp, TrendingDown, Edit, Search, Plus, Trash2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Employee } from '../../types/crm';
@@ -77,6 +81,106 @@ const CALC_FIELDS: { k: string; label: string; placeholder: string }[] = [
 
 const PKR = (n: number) => `₨ ${n.toLocaleString()}`;
 
+// One salary slip on the current PDF page (A4, mm); shared by single and bulk downloads.
+const drawSlip = (pdf: jsPDF, slip: SalarySlip, orgName: string) => {
+  // 1. Header
+  pdf.setFontSize(22);
+  pdf.setTextColor(44, 62, 80); // #2C3E50
+  pdf.text('Official Salary Slip', 20, 25);
+  
+  pdf.setFontSize(10);
+  pdf.setTextColor(128, 128, 128);
+  pdf.text('PRIVATE & CONFIDENTIAL', 20, 32);
+  
+  pdf.setFontSize(10);
+  pdf.setTextColor(0, 0, 0);
+  // The slip is issued by the employer organization, not the platform
+  pdf.text(orgName, 140, 25);
+  pdf.text(`Date: ${new Date().toLocaleDateString()}`, 140, 30);
+
+  pdf.setDrawColor(200, 200, 200);
+  pdf.line(20, 40, 190, 40);
+
+  // 2. Employee Info Box
+  pdf.setFillColor(245, 247, 250);
+  pdf.rect(20, 45, 170, 40, 'F');
+  
+  pdf.setFontSize(9);
+  pdf.setTextColor(100, 100, 100);
+  pdf.text('Employee Name', 25, 53);
+  pdf.text('Employee ID', 110, 53);
+  pdf.text('Department', 25, 73);
+  pdf.text('Role', 110, 73);
+  
+  pdf.setFontSize(11);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(slip.employeeName, 25, 60);
+  pdf.text(slip.employeeId, 110, 60);
+  pdf.text(slip.department, 25, 80);
+  pdf.text(slip.role, 110, 80);
+
+  // 3. Pay Period
+  pdf.setFontSize(10);
+  pdf.text(`Pay Period: ${slip.payPeriodStart} to ${slip.payPeriodEnd}`, 20, 100);
+
+  // 4. Salary Breakdown Table
+  const startY = 110;
+  pdf.setDrawColor(220, 220, 220);
+  pdf.rect(20, startY, 170, 60);
+  
+  // Rows
+  const row = (label: string, value: string, y: number, isBold = false) => {
+      pdf.setFontSize(10);
+      if (isBold) pdf.setFont('helvetica', 'bold');
+      else pdf.setFont('helvetica', 'normal');
+      
+      pdf.text(label, 25, y);
+      // Replace the Unicode PKR symbol with safe 'Rs.' for the PDF
+      const safeValue = value.replace('₨', 'Rs.');
+      pdf.text(safeValue, 185, y, { align: 'right' });
+  };
+
+  row('Base Salary', PKR(slip.baseSalary), startY + 15);
+  row('Accrued Payments (Bonus)', PKR(slip.accruedPayments || 0), startY + 30);
+  row('Advance Payments (Deductions)', `- ${PKR(slip.advancePayments || 0)}`, startY + 45);
+  
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.5);
+  pdf.line(25, startY + 50, 185, startY + 50);
+  
+  row('Net Payable Amount', PKR(slip.totalSalary), startY + 56, true);
+
+  // 5. Footer
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(150, 150, 150);
+  pdf.text('This is a computer generated document and does not require a signature.', 105, 180, { align: 'center' });
+  pdf.text(`Generated with ${BRAND_NAME}`, 105, 185, { align: 'center' });
+};
+
+// Row of GET /finance/salary-slip(s) to the slip shape used by the dialog and PDF
+const toSlip = (s: any, id: number): SalarySlip => ({
+  id,
+  employeeName: s.employee_name,
+  employeeId: s.employee_id,
+  email: s.email,
+  department: s.department,
+  role: s.role,
+  payPeriodStart: String(s.pay_period_start).split('T')[0],
+  payPeriodEnd: String(s.pay_period_end).split('T')[0],
+  baseSalary: parseFloat(s.base_salary),
+  advancePayments: parseFloat(s.advance_payments),
+  accruedPayments: parseFloat(s.accrued_payments),
+  totalSalary: parseFloat(s.total_salary),
+  paymentStatus: s.payment_status,
+  processedAt: s.processed_at,
+});
+
+const currentMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
 const EDIT_FIELDS: { k: 'advancePayments' | 'accruedPayments'; label: string }[] = [
   { k: 'advancePayments', label: 'Advance Payments (PKR)' },
   { k: 'accruedPayments', label: 'Bonus (PKR)' },
@@ -97,7 +201,7 @@ const getCurrentPayPeriod = () => {
 };
 
 export function FinanceDashboard() {
-  const { payrolls, expenses, isLoading, addExpense, updateExpense, deleteExpense, updatePayroll } = useFinance();
+  const { payrolls, expenses, isLoading, addExpense, updateExpense, deleteExpense, updatePayroll, fetchPayrolls: refreshFinance } = useFinance();
   const { user } = useAuth();
   const { clients } = useClients();
   const [filterDept, setFilterDept] = useState('all');
@@ -106,6 +210,13 @@ export function FinanceDashboard() {
   const [editingEmp, setEditingEmp] = useState<any | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(EMPTY_EDIT);
   const [calc, setCalc] = useState({ base: '', bonus: '', deductions: '', advances: '' });
+  const [calcEmployee, setCalcEmployee] = useState('');
+
+  // Payroll run state
+  const [runMonth, setRunMonth] = useState(currentMonth());
+  const [confirmRunOpen, setConfirmRunOpen] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runResult, setRunResult] = useState<{ month: string; processed: number; skipped: { user_id: number; name: string; reason: string }[] } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
 
@@ -183,79 +294,7 @@ export function FinanceDashboard() {
             format: 'a4'
         });
 
-        // 1. Header
-        pdf.setFontSize(22);
-        pdf.setTextColor(44, 62, 80); // #2C3E50
-        pdf.text('Official Salary Slip', 20, 25);
-        
-        pdf.setFontSize(10);
-        pdf.setTextColor(128, 128, 128);
-        pdf.text('PRIVATE & CONFIDENTIAL', 20, 32);
-        
-        pdf.setFontSize(10);
-        pdf.setTextColor(0, 0, 0);
-        // The slip is issued by the employer organization, not the platform
-        pdf.text(user?.organization?.name ?? BRAND_NAME, 140, 25);
-        pdf.text(`Date: ${new Date().toLocaleDateString()}`, 140, 30);
-
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(20, 40, 190, 40);
-
-        // 2. Employee Info Box
-        pdf.setFillColor(245, 247, 250);
-        pdf.rect(20, 45, 170, 40, 'F');
-        
-        pdf.setFontSize(9);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text('Employee Name', 25, 53);
-        pdf.text('Employee ID', 110, 53);
-        pdf.text('Department', 25, 73);
-        pdf.text('Role', 110, 73);
-        
-        pdf.setFontSize(11);
-        pdf.setTextColor(0, 0, 0);
-        pdf.text(currentSlip.employeeName, 25, 60);
-        pdf.text(currentSlip.employeeId, 110, 60);
-        pdf.text(currentSlip.department, 25, 80);
-        pdf.text(currentSlip.role, 110, 80);
-
-        // 3. Pay Period
-        pdf.setFontSize(10);
-        pdf.text(`Pay Period: ${currentSlip.payPeriodStart} to ${currentSlip.payPeriodEnd}`, 20, 100);
-
-        // 4. Salary Breakdown Table
-        const startY = 110;
-        pdf.setDrawColor(220, 220, 220);
-        pdf.rect(20, startY, 170, 60);
-        
-        // Rows
-        const row = (label: string, value: string, y: number, isBold = false) => {
-            pdf.setFontSize(10);
-            if (isBold) pdf.setFont('helvetica', 'bold');
-            else pdf.setFont('helvetica', 'normal');
-            
-            pdf.text(label, 25, y);
-            // Replace the Unicode PKR symbol with safe 'Rs.' for the PDF
-            const safeValue = value.replace('₨', 'Rs.');
-            pdf.text(safeValue, 185, y, { align: 'right' });
-        };
-
-        row('Base Salary', PKR(currentSlip.baseSalary), startY + 15);
-        row('Accrued Payments (Bonus)', PKR(currentSlip.accruedPayments || 0), startY + 30);
-        row('Advance Payments (Deductions)', `- ${PKR(currentSlip.advancePayments || 0)}`, startY + 45);
-        
-        pdf.setDrawColor(0, 0, 0);
-        pdf.setLineWidth(0.5);
-        pdf.line(25, startY + 50, 185, startY + 50);
-        
-        row('Net Payable Amount', PKR(currentSlip.totalSalary), startY + 56, true);
-
-        // 5. Footer
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text('This is a computer generated document and does not require a signature.', 105, 180, { align: 'center' });
-        pdf.text(`Generated with ${BRAND_NAME}`, 105, 185, { align: 'center' });
+        drawSlip(pdf, currentSlip, user?.organization?.name ?? BRAND_NAME);
 
         const filename = `Salary_Slip_${currentSlip.employeeName.replace(/\s+/g, '_')}_${currentSlip.payPeriodStart}.pdf`;
         pdf.save(filename);
@@ -275,28 +314,67 @@ export function FinanceDashboard() {
     try {
         const res = await apiFetch(`/finance/salary-slip/${emp.id}`);
         if (res.success) {
-            const s = res.data;
-            const slip: SalarySlip = {
-                id: emp.id,
-                employeeName: s.employee_name,
-                employeeId: s.employee_id,
-                email: s.email,
-                department: s.department,
-                role: s.role,
-                payPeriodStart: s.pay_period_start.split('T')[0],
-                payPeriodEnd: s.pay_period_end.split('T')[0],
-                baseSalary: parseFloat(s.base_salary),
-                advancePayments: parseFloat(s.advance_payments),
-                accruedPayments: parseFloat(s.accrued_payments),
-                totalSalary: parseFloat(s.total_salary),
-                paymentStatus: s.payment_status,
-                processedAt: s.processed_at,
-            };
-            setCurrentSlip(slip);
+            setCurrentSlip(toSlip(res.data, emp.id));
             setIsSlipOpen(true);
         }
     } catch (error) {
         toast.error('Failed to generate salary slip');
+    }
+  };
+
+  // ==========================================
+  // Payroll run (UC6) — POST /finance/payroll/run, GET /finance/salary-slips
+  // ==========================================
+
+  const runPayroll = async () => {
+    setConfirmRunOpen(false);
+    setIsRunning(true);
+    try {
+      const res = await apiFetch('/finance/payroll/run', { method: 'POST', body: JSON.stringify({ month: runMonth }) });
+      setRunResult({ month: runMonth, processed: res.data.processed.length, skipped: res.data.skipped });
+      refreshFinance();
+      toast.success(`Payroll saved for ${res.data.processed.length} employee(s)`);
+    } catch (error: any) {
+      toast.error(error.message || 'Payroll run failed');
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  // One PDF, one slip per page, in the existing slip layout
+  const downloadAllSlips = async () => {
+    if (!runResult) return;
+    try {
+      toast.loading('Generating PDF...', { id: 'pdf-all' });
+      const res = await apiFetch(`/finance/salary-slips?month=${runResult.month}`);
+      if (!res.data.length) { toast.error('No slips for this month', { id: 'pdf-all' }); return; }
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      res.data.forEach((row: any, i: number) => {
+        if (i > 0) pdf.addPage();
+        drawSlip(pdf, toSlip(row, row.user_id), user?.organization?.name ?? BRAND_NAME);
+      });
+      pdf.save(`Salary_Slips_${runResult.month}.pdf`);
+      toast.success(`${res.data.length} slip(s) downloaded`, { id: 'pdf-all' });
+    } catch (error: any) {
+      toast.error(error.message || 'Could not download slips', { id: 'pdf-all' });
+    }
+  };
+
+  // The calculator saves through the same PATCH /finance/salary/:id as the edit dialog:
+  // deductions and advances are both stored as advances, so net = base + bonus - deductions - advances.
+  const saveCalculation = async () => {
+    const emp = payrolls.find(e => String(e.id) === calcEmployee);
+    if (!emp) { toast.error('Choose an employee first'); return; }
+    setIsSaving(true);
+    try {
+      await updatePayroll(emp.id, {
+        base_salary: Number(calc.base || 0),
+        advance_payments: Number(calc.deductions || 0) + Number(calc.advances || 0),
+        accrued_payments: Number(calc.bonus || 0),
+        payment_status: (emp.payment_status ?? 'pending') as PaymentStatus,
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -412,9 +490,73 @@ export function FinanceDashboard() {
                 <p className={cls.hint}>Total Calculated</p>
                 <p className="text-3xl font-bold">₨ {calcTotal.toLocaleString()}</p>
               </div>
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <div className={cls.field}>
+                  <Label>Employee</Label>
+                  <Select value={calcEmployee} onValueChange={(v) => {
+                    setCalcEmployee(v);
+                    const emp = payrolls.find(e => String(e.id) === v);
+                    if (emp) setCalc(prev => ({ ...prev, base: String(emp.base_salary || '') }));
+                  }}>
+                    <SelectTrigger className="w-[240px]"><SelectValue placeholder="Choose an employee" /></SelectTrigger>
+                    <SelectContent>{payrolls.map(e => <SelectItem key={e.id} value={String(e.id)}>{e.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <Button disabled={!calcEmployee || isSaving} onClick={saveCalculation}>Save to employee</Button>
+              </div>
             </CardContent>
           )}
         </Card>
+
+        {/* Payroll run (UC6): pay every active employee for a month, then download all slips */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Payroll run</CardTitle>
+            <CardDescription>Calculate and save the pay of every active employee for a month, then download all salary slips.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className={cls.field}>
+                <Label htmlFor="run-month">Month</Label>
+                <Input id="run-month" type="month" value={runMonth} onChange={e => setRunMonth(e.target.value)} className="w-[200px]" />
+              </div>
+              <Button disabled={!runMonth || isRunning} onClick={() => setConfirmRunOpen(true)}>
+                <FileText className="h-4 w-4 mr-2" />{isRunning ? 'Generating…' : 'Generate all slips'}
+              </Button>
+            </div>
+            {runResult && (
+              <div className="rounded-[10px] border border-border p-4 space-y-3">
+                <p className="text-sm">
+                  <strong>{runResult.processed}</strong> employee{runResult.processed === 1 ? '' : 's'} processed for {runResult.month}
+                  {runResult.skipped.length > 0 && <>, <strong>{runResult.skipped.length}</strong> skipped</>}.
+                </p>
+                {runResult.skipped.length > 0 && (
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {runResult.skipped.map(s => <li key={s.user_id}>{s.name}: {s.reason}</li>)}
+                  </ul>
+                )}
+                <Button variant="outline" disabled={!runResult.processed} onClick={downloadAllSlips}>
+                  <Download className="h-4 w-4 mr-2" />Download all slips
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <AlertDialog open={confirmRunOpen} onOpenChange={setConfirmRunOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Generate all slips for {runMonth}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The pay of every active employee is calculated and saved for this month. Running it again for the same month updates the records instead of duplicating them.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={runPayroll}>Generate</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Employee Salary Table — data from GET /finance/employees (getEmployeesWithPayroll) */}
         <Card className="shadow-sm">

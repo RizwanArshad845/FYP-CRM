@@ -438,7 +438,7 @@ function ActiveClientsPanel() {
                       resolveDeactivationRequest(req.id, true, req.client_id);
                     }}
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Deactivate
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Discard
                   </Button>
                   <Button
                     size="sm"

@@ -49,10 +49,10 @@ export function ActiveClientsPanel() {
                                             variant="destructive"
                                             onClick={() => {
                                                 resolveDeactivationRequest(req.id, true, req.client_id);
-                                                toast.success(`${req.client_name} has been deactivated.`);
+                                                toast.success(`${req.client_name} has been discarded.`);
                                             }}
                                         >
-                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Deactivate
+                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Discard
                                         </Button>
                                         <Button
                                             size="sm"

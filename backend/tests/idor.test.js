@@ -95,14 +95,16 @@ describe('clients and targets', () => {
         expect(Number(own.body.data.achieved_amount)).toBe(50);
     });
 
-    it('deactivation approval records the real reviewer and deactivates the client', async () => {
+    it('deactivation approval records the real reviewer and discards the client', async () => {
         const reqRes = await as(org.cst.token).post('/api/cst/deactivation-requests', { client_id: clientId, reason: 'churned' });
         expect(reqRes.status).toBe(201);
         expect(reqRes.body.data.requested_by).toBe(org.cst.id);
         const resolved = await as(org.cst_manager.token).patch(`/api/cst-manager/deactivation-requests/${reqRes.body.data.id}/resolve`, { status: 'approved', reviewed_by: 999999 });
         expect(resolved.status).toBe(200);
         const client = (await as(org.cst_manager.token).get('/api/clients')).body.data.find((c) => c.id === clientId);
-        expect(client.status).toBe('deactivated');
+        expect(client.status).toBe('discarded');
+        expect(client.discard_reason).toBe('churned');
+        expect(client.discarded_at).toBeTruthy();
     });
 });
 

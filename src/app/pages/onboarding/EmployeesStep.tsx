@@ -14,6 +14,34 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 interface Row { first_name: string; last_name: string; email: string; portal_key: string; tier: string; department: string }
 interface Created { id: number; first_name: string; last_name: string; email: string; portal_key: string; tier: Tier; tempPassword: string }
 
+/** Reads a CSV file into rows keyed by trimmed, lower-case header. Shared by the employee and client imports. */
+export const parseCsvFile = (file: File, onRows: (rows: Record<string, string>[]) => void) => {
+  Papa.parse<Record<string, string>>(file, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim().toLowerCase(),
+    complete: ({ data, errors }) => {
+      if (errors.length) toast.warning(`Some CSV lines could not be read (${errors.length})`);
+      onRows(data);
+    },
+  });
+};
+
+/** List of rows the server skipped, with reasons. Shared by the employee and client imports. */
+export function SkippedRows({ rows }: { rows: { row: number; label?: string; error: string }[] }) {
+  if (!rows.length) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>Skipped rows</AlertTitle>
+      <AlertDescription>
+        <ul className="list-disc pl-4">
+          {rows.map((e) => <li key={e.row}>Row {e.row}{e.label ? ` (${e.label})` : ''}: {e.error}</li>)}
+        </ul>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 const emptyRow = (portal_key = '', tier = ''): Row => ({ first_name: '', last_name: '', email: '', portal_key, tier, department: '' });
 const NO_DEPARTMENT = '__none__';
 
@@ -76,12 +104,7 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack,
   };
 
   const handleCsv = (file: File) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase(),
-      complete: ({ data, errors }) => {
-        if (errors.length) toast.warning(`Some CSV lines could not be read (${errors.length})`);
+    parseCsvFile(file, (data) => {
         const parsed = data.map((raw) => {
           const row = emptyRow();
           for (const [header, value] of Object.entries(raw)) {
@@ -96,7 +119,6 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack,
         setRows(parsed);
         setRowErrors([]);
         toast.success(`Loaded ${parsed.length} employee(s) from CSV. Review and submit.`);
-      },
     });
   };
 
@@ -147,16 +169,7 @@ export function EmployeesStep({ portals, departments, onCreated, onSkip, onBack,
         <p className="text-sm">
           <strong>{created.length}</strong> employee{created.length === 1 ? '' : 's'} added{skipped.length ? <>, <strong>{skipped.length}</strong> row{skipped.length === 1 ? '' : 's'} skipped</> : ''}.
         </p>
-        {skipped.length > 0 && (
-          <Alert variant="destructive">
-            <AlertTitle>Skipped rows</AlertTitle>
-            <AlertDescription>
-              <ul className="list-disc pl-4">
-                {skipped.map((e) => <li key={e.row}>Row {e.row}{e.email ? ` (${e.email})` : ''}: {e.error}</li>)}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+        <SkippedRows rows={skipped.map((e) => ({ ...e, label: e.email }))} />
         <Alert>
           <AlertTitle>Save these temporary passwords now</AlertTitle>
           <AlertDescription>

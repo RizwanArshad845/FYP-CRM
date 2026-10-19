@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import pool, { withTransaction } from '../config/db.js';
 import { assertUserInScope, getClientInTenant, isManager, ownerScope } from '../utils/tenant.js';
 import { updateTargetAchieved } from '../services/metrics.js';
 import { applyFieldVisibility } from '../policy/index.js';
@@ -98,23 +98,54 @@ export const getFollowUps = async (req, res) => {
     res.json({ success: true, data: result.rows });
 };
 
+export const DUPLICATE_FOLLOW_UP = 'A follow up for this client already exists on this day.';
+
+// UC3: fill missing details from the client, reject a second follow up for the same
+// client and day, and number follow ups on the server, all in one transaction.
 export const createFollowUp = async (req, res) => {
     const {
         user_id, client_id, due_date, notes, status, closer_name, client_name_text,
-        contact_time, follow_up_number, product, area, contact_no,
+        contact_time, product, area, contact_no,
     } = req.body;
     const tenantId = req.user.tenantId;
     const agentId = await actingAgentId(req.user, user_id);
-    const clientId = await optionalClientId(tenantId, client_id);
 
-    const result = await pool.query(
-        `INSERT INTO follow_ups (tenant_id, sales_agent_id, client_id, due_date, notes, status, closer_name, client_name_text,
-                                 contact_time, follow_up_number, product, area, contact_no)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-        [tenantId, agentId, clientId, due_date, notes, status || 'pending', closer_name || null, client_name_text || null,
-            contact_time || null, follow_up_number || null, product || null, area || null, contact_no || null]
-    );
-    res.status(201).json({ success: true, data: result.rows[0] });
+    const outcome = await withTransaction(async (db) => {
+        let client = null;
+        if (client_id != null && client_id !== '') {
+            client = await getClientInTenant(tenantId, client_id, db);
+            // Lock the client so two requests can't both pass the duplicate check
+            await db.query('SELECT id FROM clients WHERE id = $1 FOR UPDATE', [client.id]);
+            const dup = await db.query(
+                'SELECT id FROM follow_ups WHERE tenant_id = $1 AND client_id = $2 AND due_date = $3 LIMIT 1',
+                [tenantId, client.id, due_date]
+            );
+            if (dup.rows[0]) return { existingId: dup.rows[0].id };
+        }
+
+        const name = client_name_text || client?.customer_name || client?.company_name || null;
+        // Next number per client; leads without a client record are numbered by name
+        const next = client
+            ? await db.query('SELECT COALESCE(MAX(follow_up_number), 0) + 1 AS n FROM follow_ups WHERE tenant_id = $1 AND client_id = $2', [tenantId, client.id])
+            : await db.query('SELECT COALESCE(MAX(follow_up_number), 0) + 1 AS n FROM follow_ups WHERE tenant_id = $1 AND client_id IS NULL AND LOWER(client_name_text) = LOWER($2)', [tenantId, name ?? '']);
+
+        const { rows } = await db.query(
+            `INSERT INTO follow_ups (tenant_id, sales_agent_id, client_id, due_date, notes, status, closer_name, client_name_text,
+                                     contact_time, follow_up_number, product, area, contact_no)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+            [tenantId, agentId, client?.id ?? null, due_date, notes, status || 'pending', closer_name || null, name,
+                contact_time || null, next.rows[0].n,
+                product || client?.product_sold || null,
+                area || client?.service_area || null,
+                contact_no || client?.phone || client?.contact_no_1 || null]
+        );
+        return { row: rows[0] };
+    });
+
+    if (outcome.existingId) {
+        return res.status(409).json({ success: false, error: DUPLICATE_FOLLOW_UP, existingId: outcome.existingId });
+    }
+    res.status(201).json({ success: true, data: outcome.row });
 };
 
 export const updateFollowUp = async (req, res) => {

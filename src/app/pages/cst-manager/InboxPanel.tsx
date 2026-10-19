@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -14,6 +14,9 @@ import { useEmployees } from '../../context/EmployeeContext';
 import { useClients } from '../../context/ClientContext';
 import { EditClientModal } from './EditClientModal';
 import { usePortals } from '../../hooks/usePortals';
+import { apiFetch } from '../../utils/api';
+
+type Suggestion = { id: number; name: string; active_count: number };
 
 function statusBadge(status: InboxClient['status']) {
     if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -40,8 +43,28 @@ export function InboxPanel() {
 
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [editForm, setEditForm] = useState<any>(null);
-    const { updateClient } = useClients();
+    const { updateClient, fetchData: fetchClients } = useClients();
     const { fetchData: fetchInbox } = useClientInbox();
+
+    // UC4: the least loaded CST agent for each unassigned client (server-side)
+    const [suggestions, setSuggestions] = useState<Record<number, Suggestion | null>>({});
+    const canAssign = can('client.assign');
+    useEffect(() => {
+        if (!canAssign) return;
+        apiFetch('/cst-manager/unassigned-clients')
+            .then((res) => setSuggestions(Object.fromEntries(res.data.map((c: any) => [Number(c.id), c.suggested_agent]))))
+            .catch(() => setSuggestions({}));
+    }, [inboxClients, canAssign]);
+
+    const acceptSuggestion = async (client: InboxClient, agent: Suggestion) => {
+        try {
+            await apiFetch(`/cst-manager/clients/${client.id}/assign-cst`, { method: 'PATCH', body: JSON.stringify({ cst_agent_id: agent.id }) });
+            toast.success(`${client.company_name} assigned to ${agent.name}`);
+            await Promise.all([fetchInbox(), fetchClients()]);
+        } catch (error: any) {
+            toast.error(error.message || 'Assignment failed');
+        }
+    };
 
     const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
     const [discardReason, setDiscardReason] = useState('');
@@ -151,6 +174,12 @@ export function InboxPanel() {
                                     <div className={`${cls.muted} bg-blue-50`}>
                                         <p className={cls.hintXs}>Tips for Tech</p>
                                         <p className="text-sm mt-1">{client.tips_for_tech}</p>
+                                    </div>
+                                )}
+                                {canAssign && suggestions[client.id] && (
+                                    <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-primary-soft px-3 py-2 text-[13px]">
+                                        <span>Suggested: <strong>{suggestions[client.id]!.name}</strong> ({suggestions[client.id]!.active_count} active)</span>
+                                        <Button size="sm" onClick={() => acceptSuggestion(client, suggestions[client.id]!)}>Accept</Button>
                                     </div>
                                 )}
                                 <div className="flex gap-2">

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Plus, Edit, Trash2, Phone, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cls } from '../../styles/classes';
-import { apiFetch } from '../../utils/api';
+import { apiFetch, ApiError } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
@@ -42,6 +42,20 @@ const STATUS_COLORS: Record<FollowUpStatus, string> = {
     closed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
 };
 
+// Client details used to fill a new follow up (UC3)
+interface ClientOption {
+    id: number;
+    name: string;
+    customer_name?: string | null;
+    company_name?: string | null;
+    product_sold?: string | null;
+    service_area?: string | null;
+    phone?: string | null;
+    contact_no_1?: string | null;
+}
+
+const NO_CLIENT = '__none__';
+
 const EMPTY: Omit<FollowUpLead, 'id'> = {
     clientId: 0, clientName: '', agentName: '', contactNo: '', product: '',
     area: '', status: 'pending', dueDate: '', notes: '',
@@ -51,24 +65,21 @@ const EMPTY: Omit<FollowUpLead, 'id'> = {
 export function FollowUpLeads() {
     const { user } = useAuth();
     const { leads, refreshLeads, isLoading: contextLoading } = useFollowUps();
-    const [clients, setClients] = useState<{ id: number, name: string }[]>([]);
+    const [clients, setClients] = useState<ClientOption[]>([]);
+    const [duplicateId, setDuplicateId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editing, setEditing] = useState<FollowUpLead | null>(null);
     const [form, setForm] = useState<Omit<FollowUpLead, 'id'>>(EMPTY);
     const [filterAgent, setFilterAgent] = useState('all');
-    const [isExistingClient, setIsExistingClient] = useState(true);
 
     const fetchData = async () => {
         setIsLoading(true);
         try {
             const clientsRes = await apiFetch('/clients');
             if (clientsRes.success) {
-                setClients(clientsRes.data.map((c: any) => ({
-                    id: Number(c.id),
-                    name: c.name || c.company_name
-                })));
+                setClients(clientsRes.data.map((c: any) => ({ ...c, id: Number(c.id), name: c.name || c.company_name })));
             }
         } catch (error) {
             toast.error('Failed to load clients');
@@ -84,7 +95,22 @@ export function FollowUpLeads() {
 
     const set = (k: keyof typeof EMPTY, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
-    const openAdd = () => { setEditing(null); setForm({ ...EMPTY, agentName: user?.first_name ? `${user.first_name} ${user.last_name || ''}` : '' }); setIsOpen(true); };
+    // Selecting a client fills name, product, area and contact number (the server does the same)
+    const selectClient = (value: string) => {
+        setDuplicateId(null);
+        const c = clients.find(x => String(x.id) === value);
+        if (!c) { setForm(prev => ({ ...prev, clientId: 0 })); return; }
+        setForm(prev => ({
+            ...prev,
+            clientId: c.id,
+            clientNameText: c.customer_name || c.company_name || '',
+            product: c.product_sold || '',
+            area: c.service_area || '',
+            contactNo: c.phone || c.contact_no_1 || '',
+        }));
+    };
+
+    const openAdd = () => { setDuplicateId(null); setEditing(null); setForm({ ...EMPTY, agentName: user?.first_name ? `${user.first_name} ${user.last_name || ''}` : '' }); setIsOpen(true); };
     const openEdit = (l: FollowUpLead) => { setEditing(l); setForm(l); setIsOpen(true); };
 
     const handleSave = async () => {
@@ -92,22 +118,11 @@ export function FollowUpLeads() {
         if (!form.clientNameText && !form.clientId) { toast.error('Client name is required'); return; }
         if (!form.dueDate) { toast.error('Due date is required'); return; }
         if (form.dueDate < today) { toast.error('Due date cannot be in the past'); return; }
-        if ((form.followUpNumber || 0) < 1) { toast.error('Follow-up number must be at least 1'); return; }
-
-        // Check for duplicates (same client + same follow-up number)
-        const duplicate = leads.find(l => 
-            l.id !== editing?.id && 
-            (l.clientNameText === form.clientNameText || l.clientName === form.clientName) &&
-            l.followUpNumber === form.followUpNumber
-        );
-        if (duplicate) {
-            toast.error(`Follow-up #${form.followUpNumber} already exists for this client`);
-            return;
-        }
 
         if (isSubmitting) return;
 
         setIsSubmitting(true);
+        setDuplicateId(null);
         try {
             const method = editing ? 'PUT' : 'POST';
             const url = editing ? `/sales/follow-ups/${editing.id}` : '/sales/follow-ups';
@@ -125,7 +140,6 @@ export function FollowUpLeads() {
                     closer_name: form.closerName,
                     client_name_text: form.clientNameText,
                     contact_time: form.contactTime,
-                    follow_up_number: form.followUpNumber,
                     contact_no: form.contactNo
                 })
             });
@@ -136,7 +150,9 @@ export function FollowUpLeads() {
                 setIsOpen(false);
             }
         } catch (error) {
-            toast.error('Failed to save follow-up');
+            // Duplicate for the same client and day: the server names the existing follow up
+            if (error instanceof ApiError && error.status === 409 && error.body?.existingId) setDuplicateId(error.body.existingId);
+            else toast.error((error as Error).message || 'Failed to save follow-up');
         } finally {
             setIsSubmitting(false);
         }
@@ -230,6 +246,28 @@ export function FollowUpLeads() {
                         <DialogTitle>{editing ? 'Edit Follow-Up' : 'Add Follow-Up'}</DialogTitle>
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 py-2">
+                        {duplicateId && (
+                            <div className="col-span-2 rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-[13px] text-danger">
+                                A follow up for this client already exists on this day.{' '}
+                                {leads.some(l => l.id === duplicateId) && (
+                                    <button type="button" className="font-bold underline" onClick={() => { const l = leads.find(x => x.id === duplicateId); setDuplicateId(null); if (l) openEdit(l); }}>
+                                        Open the existing follow up
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        {!editing && (
+                            <div className={`${cls.field} col-span-2`}>
+                                <Label>Client</Label>
+                                <Select value={form.clientId ? String(form.clientId) : NO_CLIENT} onValueChange={selectClient}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={NO_CLIENT}>New lead (not a client yet)</SelectItem>
+                                        {clients.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <div className={cls.field}>
                             <Label>Client Name *</Label>
                             <Input 
@@ -244,16 +282,6 @@ export function FollowUpLeads() {
                         </div>
 
                         <div className={cls.field}>
-                            <Label>Follow-up #</Label>
-                            <Input 
-                                type="number"
-                                min="1"
-                                value={form.followUpNumber} 
-                                onChange={e => set('followUpNumber', Number(e.target.value))} 
-                                placeholder="e.g. 1"
-                            />
-                        </div>
-                        <div className={cls.field}>
                             <Label>Due Date *</Label>
                             <Input 
                                 type="date" 
@@ -267,14 +295,14 @@ export function FollowUpLeads() {
                             <Label>Product</Label>
                             <Select value={form.product} onValueChange={v => set('product', v)}>
                                 <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
-                                <SelectContent>{PRODUCTS.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                                <SelectContent>{[...new Set([form.product, ...PRODUCTS].filter(Boolean))].map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                         <div className={cls.field}>
                             <Label>Area</Label>
                             <Select value={form.area} onValueChange={v => set('area', v)}>
                                 <SelectTrigger><SelectValue placeholder="Select area" /></SelectTrigger>
-                                <SelectContent>{SERVICE_AREAS.map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                                <SelectContent>{[...new Set([form.area, ...SERVICE_AREAS].filter(Boolean))].map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
 

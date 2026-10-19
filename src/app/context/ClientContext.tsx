@@ -52,6 +52,8 @@ export interface DeactivationRequest {
     client_id: number;
     client_name: string;
     requested_by: string;  // agent name
+    reason?: string;
+    flag_type?: string | null;
     created_at: string;  // ISO string
     requestedAt?: string; // For backward compatibility
 }
@@ -62,6 +64,8 @@ interface ClientContextType {
     toggleActive: (id: number) => void;
     requestDeactivation: (clientId: number, clientName: string, agentName: string) => void;
     resolveDeactivationRequest: (requestId: number, approve: boolean, clientId: number) => void;
+    /** UC5: approve or reject several requests in one transaction */
+    resolveDeactivationRequests: (requestIds: number[], approve: boolean) => Promise<boolean>;
     flagClient: (id: number, type: string, reason: string) => Promise<void>;
     unflagClient: (id: number) => Promise<void>;
     updateClient: (id: number, data: any) => Promise<boolean>;
@@ -136,6 +140,8 @@ export function ClientProvider({ children }: { children: ReactNode }) {
                     client_id: Number(r.client_id),
                     client_name: r.company_name,
                     requested_by: r.requested_by,
+                    reason: r.reason,
+                    flag_type: r.flag_type,
                     created_at: r.created_at,
                     requestedAt: r.created_at
                 }));
@@ -205,7 +211,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
 
             if (res.success) {
                 if (approve) {
-                    setClients(prev => prev.map(c => c.id === clientId ? { ...c, isActive: false, status: 'deactivated' } : c));
+                    setClients(prev => prev.map(c => c.id === clientId ? { ...c, status: 'discarded' } : c));
                 }
                 setDeactivationRequests(prev => prev.filter(r => r.id !== requestId));
                 toast.success(`Request ${approve ? 'approved' : 'rejected'}`);
@@ -213,6 +219,21 @@ export function ClientProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error('Resolution error:', error);
             toast.error('Failed to resolve request');
+        }
+    };
+
+    const resolveDeactivationRequests = async (requestIds: number[], approve: boolean) => {
+        try {
+            await apiFetch('/cst-manager/deactivation-requests/resolve-bulk', {
+                method: 'POST',
+                body: JSON.stringify({ ids: requestIds, decision: approve ? 'approved' : 'rejected' }),
+            });
+            await fetchData();
+            toast.success(`${requestIds.length} request${requestIds.length === 1 ? '' : 's'} ${approve ? 'approved' : 'rejected'}`);
+            return true;
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to resolve requests');
+            return false;
         }
     };
 
@@ -330,7 +351,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     return (
         <ClientContext.Provider value={{
             clients, deactivationRequests, toggleActive, requestDeactivation,
-            resolveDeactivationRequest, flagClient, unflagClient, updateClient,
+            resolveDeactivationRequest, resolveDeactivationRequests, flagClient, unflagClient, updateClient,
             getClientNotes, addClientNote, updateClientNote, deleteClientNote,
             fetchData, fieldDefinitions, pipelineStages, isLoading
         }}>

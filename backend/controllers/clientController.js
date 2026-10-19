@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import pool from '../config/db.js';
+import pool, { withTransaction } from '../config/db.js';
+import { clientImportSchema, clientSchema } from '../validation/clientSchema.js';
 import { applyFieldVisibility, can } from '../policy/index.js';
 import { getFieldDefinitions, validateCustomFields } from '../services/customFieldService.js';
 import { getPipelineStages } from './organizationController.js';
@@ -39,44 +40,84 @@ export const getClients = async (req, res) => {
     res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows) });
 };
 
+// Inserts one client validated by clientSchema; `custom` is the checked custom field object.
+const insertClient = async (db, tenantId, c, status, custom) => (await db.query(
+    `INSERT INTO clients (
+        tenant_id, company_name, customer_name, email, email_2, payment_amount,
+        product_sold, service_area, contact_no_1, contact_no_2,
+        client_concerns, tips_for_tech, notes, digital_presence,
+        sales_agent_id, cst_agent_id, status, client_services, cin, payment_gateway, custom_fields
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING *`,
+    [
+        tenantId, c.companyName, c.customerName ?? null, c.email || null, c.email_2 || null, c.paymentAmount ?? 0,
+        c.productSold ?? null, c.serviceArea ?? null, c.contactNo1 ?? null, c.contactNo2 || null,
+        c.clientConcerns || null, c.tipsForTech || null, c.notes || null, c.digitalPresence || null,
+        c.sales_agent_id || null, c.cst_agent_id || null, status, c.clientServices || null, c.cin || null, c.paymentGateway || null,
+        Object.keys(custom).length ? JSON.stringify(custom) : null,
+    ]
+)).rows[0];
+
 // Create a new client (Sales Manager entry form or CST Manager existing-client form)
 export const createClient = async (req, res) => {
-    const {
-        companyName, customerName, email, email_2, paymentAmount,
-        productSold, serviceArea, contactNo1, contactNo2,
-        clientConcerns, tipsForTech, notes, digitalPresence,
-        clientServices, cin, paymentGateway,
-    } = req.body;
-    let { sales_agent_id, cst_agent_id } = req.body;
+    const c = { ...req.body };
     const tenantId = req.user.tenantId;
 
     // Member-tier sales staff can only create clients for themselves.
     if (!isManager(req.user) && memberClientColumn(req.user) === 'sales_agent_id') {
-        sales_agent_id = req.user.id;
-        cst_agent_id = null;
+        c.sales_agent_id = req.user.id;
+        c.cst_agent_id = null;
     }
-    await assertUsersInTenant(tenantId, [sales_agent_id, cst_agent_id]);
+    await assertUsersInTenant(tenantId, [c.sales_agent_id, c.cst_agent_id]);
 
-    const custom = validateCustomFields(await getFieldDefinitions(tenantId), req.body.customFields);
-    const safePaymentAmount = isNaN(parseFloat(paymentAmount)) ? 0 : parseFloat(paymentAmount);
+    const custom = validateCustomFields(await getFieldDefinitions(tenantId), c.customFields);
     const initialStatus = ['cst', 'cst_manager'].includes(req.user.role) ? 'existing' : 'new';
 
-    const result = await pool.query(
-        `INSERT INTO clients (
-            tenant_id, company_name, customer_name, email, email_2, payment_amount,
-            product_sold, service_area, contact_no_1, contact_no_2,
-            client_concerns, tips_for_tech, notes, digital_presence,
-            sales_agent_id, cst_agent_id, status, client_services, cin, payment_gateway, custom_fields
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING *`,
-        [
-            tenantId, companyName, customerName, email, email_2 || null, safePaymentAmount,
-            productSold, serviceArea, contactNo1, contactNo2 || null,
-            clientConcerns || null, tipsForTech || null, notes || null, digitalPresence || null,
-            sales_agent_id || null, cst_agent_id || null, initialStatus, clientServices || null, cin || null, paymentGateway || null,
-            Object.keys(custom).length ? JSON.stringify(custom) : null,
-        ]
-    );
-    res.status(201).json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
+    const row = await insertClient(pool, tenantId, c, initialStatus, custom);
+    res.status(201).json({ success: true, data: await applyFieldVisibility(req.user, 'client', row) });
+};
+
+/**
+ * Client CSV import for sales managers (plan 7.5): each row goes through the same
+ * clientSchema as POST /clients plus the custom field rules. Valid rows are saved in
+ * one transaction with status 'new'; invalid rows are skipped and listed.
+ */
+export const importClients = async (req, res) => {
+    const tenantId = req.user.tenantId;
+    const definitions = await getFieldDefinitions(tenantId);
+    const rowErrors = [];
+    const valid = [];
+
+    for (const [index, raw] of req.body.clients.entries()) {
+        const parsed = clientSchema.safeParse(raw);
+        if (!parsed.success) {
+            // Plain field names, e.g. "payment amount: payment must be 0 or more"
+            const label = (i) => String(i.path[0] ?? 'row').replace(/_/g, ' ').replace(/([a-z])([A-Z0-9])/g, '$1 $2').toLowerCase();
+            rowErrors.push({
+                row: index + 1,
+                error: parsed.error.issues.map((i) => (i.message.startsWith(label(i)) ? i.message : `${label(i)}: ${i.message}`)).join(', '),
+            });
+            continue;
+        }
+        const c = { ...parsed.data, sales_agent_id: parsed.data.sales_agent_id ?? req.user.id };
+        try {
+            const custom = validateCustomFields(definitions, c.customFields);
+            await assertUsersInTenant(tenantId, [c.sales_agent_id, c.cst_agent_id]);
+            valid.push({ c, custom });
+        } catch (error) {
+            if (!error.status || error.status >= 500) throw error;
+            rowErrors.push({ row: index + 1, error: error.message });
+        }
+    }
+
+    if (!valid.length) {
+        return res.status(400).json({ success: false, error: 'No valid rows; nothing was created', rowErrors });
+    }
+    const created = await withTransaction(async (db) => {
+        const out = [];
+        for (const { c, custom } of valid) out.push(await insertClient(db, tenantId, c, 'new', custom));
+        return out;
+    });
+    res.status(201).json({ success: true, data: { created: await applyFieldVisibility(req.user, 'client', created), rowErrors } });
 };
 
 // Assign a CST Agent to a client and mark as 'active'
@@ -163,6 +204,8 @@ export const toggleClientStatus = async (req, res) => {
     res.json({ success: true, data: await applyFieldVisibility(req.user, 'client', result.rows[0]) });
 };
 
+export { clientSchema, clientImportSchema };
+
 export const stageMoveSchema = z.object({ stage_id: z.number().int().positive() });
 
 // Kanban move (plan 6.3): sets the stage and when it changed; never touches status.
@@ -194,7 +237,7 @@ export const discardClient = async (req, res) => {
 export const getDeactivationRequests = async (req, res) => {
     const result = await pool.query(`
         SELECT dr.id, dr.client_id, dr.reason, dr.status, dr.created_at,
-               c.company_name,
+               c.company_name, c.flag_type,
                COALESCE(u.first_name || ' ' || u.last_name, 'Unknown') AS requested_by
         FROM client_deactivation_requests dr
         JOIN clients c ON dr.client_id = c.id
