@@ -7,9 +7,9 @@ interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     staleSession: { name: string; clockInTime: string } | null;
-    login: (email: string, password: string) => Promise<User | null>;
+    login: (email: string, password: string, remember?: boolean) => Promise<User | null>;
     /** Begin a session from a token + session profile (login or signup response) */
-    startSession: (token: string, sessionUser: any) => Promise<User>;
+    startSession: (token: string, sessionUser: any, remember?: boolean) => Promise<User>;
     /** Merge a fresh session profile from the server (e.g. after a password change) */
     applySession: (sessionUser: any) => void;
     logout: (clockOutAlso?: boolean) => Promise<void>;
@@ -110,8 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
     }, []);
 
-    const startSession = async (token: string, sessionUser: any): Promise<User> => {
-        setToken(token);
+    const startSession = async (token: string, sessionUser: any, remember = false): Promise<User> => {
+        setToken(token, remember);
         const next = toUser(sessionUser, await fetchStatus(sessionUser));
         setUser(next);
         return next;
@@ -121,13 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((prev) => (prev ? { ...prev, ...sessionFields(sessionUser) } : prev));
     };
 
-    const login = async (email: string, password: string): Promise<User | null> => {
+    const login = async (email: string, password: string, remember = false): Promise<User | null> => {
         try {
             const res = await apiFetch('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ email, password })
             });
-            const next = await startSession(res.token, res.user);
+            const next = await startSession(res.token, res.user, remember);
             toast.success(`Welcome back, ${res.user.first_name}!`);
             return next;
         } catch (error: any) {

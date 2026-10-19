@@ -12,38 +12,26 @@ interface StatCardProps {
     accentColor?: string;
 }
 
-export function StatCard({ icon, title, value, subtitle, valueClassName, trend, accentColor }: StatCardProps) {
+// Mockup card (plan 9.2): white, 1px border, radius 10px, no lift or glow.
+export function StatCard({ icon, title, value, subtitle, valueClassName, trend }: StatCardProps) {
     return (
-        <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50">
-            {/* Top accent bar with glow */}
-            {accentColor && (
-                <>
-                    <div className="absolute top-0 left-0 right-0 h-1 rounded-t-lg" style={{ backgroundColor: accentColor }} />
-                    <div className="absolute top-0 left-0 right-0 h-8 opacity-[0.06] pointer-events-none" style={{ background: `linear-gradient(to bottom, ${accentColor}, transparent)` }} />
-                </>
-            )}
+        <Card className="gap-0">
             <CardContent className="pt-5 pb-4">
                 <div className="flex items-start justify-between mb-3">
-                    <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-muted/80 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <div className="h-10 w-10 rounded-[8px] flex items-center justify-center bg-primary-soft text-primary">
                         {icon}
                     </div>
                     {trend && (
-                        <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-                            trend.value >= 0
-                                ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        <span className={`inline-flex items-center gap-1 rounded-[12px] px-[9px] py-[3px] text-xs ${
+                            trend.value >= 0 ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
                         }`}>
-                            {trend.value >= 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                            ) : (
-                                <TrendingDown className="h-3 w-3" />
-                            )}
+                            {trend.value >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                             {trend.value >= 0 ? '+' : ''}{trend.value}%
-                        </div>
+                        </span>
                     )}
                 </div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
-                <div className={`text-2xl font-bold tracking-tight ${valueClassName ?? ''}`}>{value}</div>
+                <p className="text-xs font-medium uppercase tracking-[0.4px] text-muted-foreground mb-1">{title}</p>
+                <div className={`text-2xl font-bold ${valueClassName ?? ''}`}>{value}</div>
                 {subtitle && <p className="text-xs text-muted-foreground mt-1.5">{subtitle}</p>}
             </CardContent>
         </Card>

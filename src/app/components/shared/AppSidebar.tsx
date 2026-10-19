@@ -1,20 +1,16 @@
 import {
-  LayoutDashboard, Clock, LogOut, Sun, Moon, Bell, Bug, AlertTriangle, Waves,
-  Globe, Users, BookOpen, CalendarIcon, TrendingUp, UserCog, ClipboardList, AlertCircle, Target, StickyNote, Settings, Flag, Mic, FileText, PhoneCall, ClipboardCheck, Building2
+  LayoutDashboard, Clock, LogOut, Sun, Moon, Bug, AlertTriangle,
+  Globe, Users, BookOpen, CalendarIcon, TrendingUp, UserCog, ClipboardList, AlertCircle, Target, StickyNote, Flag, Mic, FileText, PhoneCall, ClipboardCheck, Building2
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { type PortalTheme } from '../../styles/portal-themes';
-import { BrandLogo, BRAND_NAME } from './BrandMark';
+import { BRAND_NAME } from './BrandMark';
 import { usePortals } from '../../hooks/usePortals';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -32,18 +28,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
 } from '../ui/dialog';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { toast } from 'sonner';
 
-interface AppSidebarProps {
-  theme: PortalTheme;
-}
-
-export function AppSidebar({ theme }: AppSidebarProps) {
+export function AppSidebar() {
   const { user, logout } = useAuth();
-  const { tierLabel } = usePortals();
+  const { tierLabel, labelFor } = usePortals();
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = useSidebar();
@@ -170,99 +158,76 @@ export function AppSidebar({ theme }: AppSidebarProps) {
     ];
   }
 
+  const brand = user?.organization?.name ?? BRAND_NAME;
+  const tierName = user?.tier ? tierLabel(user.role, user.tier) : '';
+  const portalCaption = user ? `${labelFor(user.role)}${tierName && tierName !== user.tier ? ` · ${tierName}` : ''}` : '';
+
+  // Mockup nav item: 14px #cfd8ea, 10px 22px; active navy-active with a 3px accent line (plan 9.2)
+  const navClass = 'h-auto rounded-none px-[22px] py-[10px] text-[14px] text-sidebar-foreground hover:bg-navy-active/60 hover:text-white data-[active=true]:bg-navy-active data-[active=true]:font-normal data-[active=true]:text-white data-[active=true]:border-l-[3px] data-[active=true]:border-accent-line data-[active=true]:pl-[19px]';
+
+  const toggleDark = () => {
+    setIsDark((d) => !d);
+    window.dispatchEvent(new Event('theme-change'));
+  };
+
   return (
     <>
-      <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-muted/50">
-        <SidebarHeader className="p-3">
-          <div className="flex items-center gap-3">
-            <BrandLogo />
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="text-sm font-bold truncate text-sidebar-foreground">{user?.organization?.name ?? BRAND_NAME}</p>
-                <p className="text-xs text-muted-foreground truncate opacity-80">
-                  {theme.label}{user?.tier ? ` · ${tierLabel(user.role, user.tier)}` : ''}
-                </p>
-              </div>
-            )}
-          </div>
-        </SidebarHeader>
-
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map((item) => {
-                  const isActive = location.pathname + location.search === item.url ||
-                    (item.url === '/dashboard?module=client-ops' && location.pathname === '/dashboard' && location.search === '') ||
-                    (item.url === '/dashboard?module=team-performance' && user?.role === 'sales' && location.pathname === '/dashboard' && location.search === '');
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={item.title}
-                        className={isActive ? "bg-primary/10 text-primary font-bold shadow-sm border-r-4 border-primary" : "text-sidebar-foreground/70 hover:text-sidebar-foreground"}
-                      >
-                        <button onClick={() => navigate(item.url)} className="flex items-center justify-between w-full gap-2">
-                          <div className="flex items-center gap-2">
-                            <item.icon className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
-                            {!collapsed && <span>{item.title}</span>}
-                          </div>
-                          {!collapsed && item.badge > 0 && (
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-yellow-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white/10 animate-in zoom-in duration-300">
-                              {item.badge}
-                            </span>
-                          )}
-                        </button>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip="Report Bug"
-                  >
-                    <button onClick={() => window.open('https://tally.so/r/BzLb0R', '_blank')} className="flex items-center gap-2 text-rose-500 hover:text-rose-600 transition-colors">
-                      <Bug className="h-4 w-4" />
-                      {!collapsed && <span>Report Bug</span>}
-                    </button>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-
-        <SidebarFooter className="p-3 border-t border-sidebar-border">
-          {user && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0"
-                  style={{ backgroundColor: theme.accent }}
-                >
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                {!collapsed && (
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize truncate">{user.role.replace('_', ' ')}</p>
-                  </div>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size={collapsed ? 'icon' : 'sm'}
-                className="w-full justify-start text-muted-foreground hover:text-destructive"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4" />
-                {!collapsed && <span className="ml-2">Logout</span>}
-              </Button>
+      <Sidebar collapsible="icon" className="border-r-0">
+        <SidebarHeader className="p-0 pt-[18px] pb-[18px]">
+          {collapsed ? (
+            <div className="text-center text-[20px] font-bold text-white" title={brand}>{brand.charAt(0).toUpperCase()}</div>
+          ) : (
+            <div className="px-[22px] text-[20px] font-bold leading-tight tracking-[0.5px] text-white">
+              <span className="block truncate">{brand}</span>
+              <small className="mt-[2px] block truncate text-[11px] font-normal tracking-normal text-sidebar-caption">{portalCaption}</small>
             </div>
           )}
+        </SidebarHeader>
+
+        <SidebarContent className="gap-0">
+          <SidebarMenu className="gap-0">
+            {navItems.map((item) => {
+              const isActive = location.pathname + location.search === item.url ||
+                (item.url === '/dashboard?module=client-ops' && location.pathname === '/dashboard' && location.search === '') ||
+                (item.url === '/dashboard?module=team-performance' && user?.role === 'sales' && location.pathname === '/dashboard' && location.search === '');
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton isActive={isActive} tooltip={item.title} className={navClass} onClick={() => navigate(item.url)}>
+                    <item.icon className="h-4 w-4" />
+                    <span className="flex-1 truncate">{item.title}</span>
+                    {!collapsed && item.badge > 0 && (
+                      <span className="rounded-[12px] bg-accent-line px-[7px] py-[1px] text-[11px] font-bold text-white">{item.badge}</span>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarContent>
+
+        <SidebarFooter className="p-0 pb-3">
+          <SidebarMenu className="gap-0">
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip={isDark ? 'Light mode' : 'Dark mode'} className={navClass} onClick={toggleDark}>
+                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Report Bug" className={navClass} onClick={() => window.open('https://tally.so/r/BzLb0R', '_blank')}>
+                <Bug className="h-4 w-4" />
+                <span>Report Bug</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            {user && (
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Logout" className={navClass} onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+          </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
 

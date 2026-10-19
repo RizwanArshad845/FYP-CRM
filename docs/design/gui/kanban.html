@@ -1,0 +1,18 @@
+<html><head><link rel="stylesheet" href="base.css"><style>
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.tog{display:flex;border:1px solid #cfd6e3;border-radius:8px;overflow:hidden}.tog span{padding:7px 14px;font-size:13px;background:#fff}.tog .on{background:#3b6fe0;color:#fff}
+.cols{display:flex;gap:14px}.col{flex:1;background:#e9edf4;border-radius:10px;padding:10px;height:560px}
+.ch{display:flex;justify-content:space-between;font-weight:700;font-size:13.5px;padding:4px 4px 10px}.ch span{color:#6b7383;font-weight:400}
+.k{background:#fff;border-radius:8px;padding:11px 12px;margin-bottom:10px;border:1px solid #dfe4ee;font-size:13px}
+.k b{display:block;font-size:14px;margin-bottom:5px}.k div{color:#6b7383;display:flex;justify-content:space-between}
+.drag{transform:rotate(-2deg);box-shadow:0 10px 24px rgba(30,42,68,.25);border-color:#3b6fe0}
+</style></head><body><div class="app"><div class="side"><div class="brand">AICRE<small>CST Agent</small></div><div class="nav">
+<a>Dashboard</a><a class="on">Active Clients</a><a>Notes and Flags</a><a>Concerns</a><a>Templates</a></div></div>
+<div class="main"><div class="top"><h1>Active Clients</h1><div class="user"><span>Sara Ahmed</span><div class="av">SA</div></div></div>
+<div class="body"><div class="bar"><span style="color:#6b7383;font-size:13px">Dragging a card changes the stage only; the client status is not affected.</span><div class="tog"><span>Table view</span><span class="on">Kanban view</span></div></div>
+<div class="cols">
+<div class="col"><div class="ch">New Lead <span>2</span></div><div class="k"><b>Nova Foods</b><div><span>Ali</span><span>4 days</span></div></div><div class="k"><b>Bolt Gyms</b><div><span>Omar</span><span>1 day</span></div></div></div>
+<div class="col"><div class="ch">Contacted <span>2</span></div><div class="k"><b>Acme Travel</b><div><span>Sara</span><span>6 days</span></div></div><div class="k drag"><b>Peak Autos</b><div><span>Omar</span><span>2 days</span></div></div></div>
+<div class="col"><div class="ch">Proposal Sent <span>1</span></div><div class="k"><b>Orbit Media</b><div><span>Sara</span><span>3 days</span></div></div></div>
+<div class="col"><div class="ch">Won <span>2</span></div><div class="k"><b>Zen Clinics</b><div><span>Ali</span><span>12 days</span></div></div><div class="k"><b>Lumen Studio</b><div><span>Sara</span><span>20 days</span></div></div></div>
+</div></div></div></div></body></html>

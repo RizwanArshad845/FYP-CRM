@@ -4,15 +4,20 @@ const API_BASE: string = import.meta.env.VITE_API_URL || '/api';
 
 const TOKEN_KEY = 'crm_token';
 
-export const getToken = (): string | null => sessionStorage.getItem(TOKEN_KEY);
+// "Remember me" keeps the token in localStorage (survives a browser restart);
+// otherwise it lives in sessionStorage and ends with the tab.
+export const getToken = (): string | null =>
+    sessionStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(TOKEN_KEY);
 
-export const setToken = (token: string) => {
-    sessionStorage.setItem(TOKEN_KEY, token);
+export const setToken = (token: string, remember = false) => {
+    (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+    (remember ? sessionStorage : localStorage).removeItem(TOKEN_KEY);
     clearApiCache();
 };
 
 export const clearToken = () => {
     sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     clearApiCache();
 };
 

@@ -114,7 +114,7 @@ export function CSTManagerDashboard() {
     return (
         <div className="min-h-screen bg-background">
             <DashboardHeader title="CST Manager Portal" theme={theme} />
-            <main className="container mx-auto px-4 py-8">
+            <main className="px-6 py-5">
                 {/* Welcome Hero */}
                 {/* <WelcomeHero theme={theme}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

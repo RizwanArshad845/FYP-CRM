@@ -53,3 +53,6 @@ Thumbs.db
 
 # Local embedded Postgres data (npm run db:local)
 .local-db/
+
+# Personal notes, never committed
+myfolder/

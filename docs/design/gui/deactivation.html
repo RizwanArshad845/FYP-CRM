@@ -1,0 +1,22 @@
+<html><head><link rel="stylesheet" href="base.css"><style>
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.bar .l{font-size:13px;color:#6b7383}
+.cb{width:17px;height:17px;border-radius:4px;border:2px solid #b9c2d3;display:inline-block;vertical-align:middle}
+.cb.on{background:#3b6fe0;border-color:#3b6fe0;position:relative}.cb.on:after{content:"\2713";color:#fff;font-size:12px;font-weight:700;position:absolute;left:2px;top:-2px}
+tr.sel td{background:#f2f6ff}
+.acts{display:flex;gap:8px}.btn.r{color:#b42318;border-color:#f1c4c0}
+.note{margin-top:14px;font-size:12.5px;color:#6b7383}
+</style></head><body><div class="app"><div class="side"><div class="brand">AICRE<small>CST Manager</small></div><div class="nav">
+<a>Dashboard</a><a>Client Assignment</a><a class="on">Deactivation Requests</a><a>Concerns</a><a>Strategies</a><a>Team</a></div></div>
+<div class="main"><div class="top"><h1>Deactivation Requests</h1><div class="user"><span>Hamza Tariq</span><div class="av">HT</div></div></div>
+<div class="body"><div class="bar"><span class="l">5 pending requests &middot; 3 selected</span><div class="acts"><span class="btn r">Reject selected</span><span class="btn p">Approve selected (3)</span></div></div>
+<div class="card"><table>
+<tr><th style="width:40px"><span class="cb"></span></th><th>Client</th><th>Requested by</th><th>Reason</th><th>Flag</th><th>Requested on</th><th>Status</th></tr>
+<tr class="sel"><td><span class="cb on"></span></td><td>Nova Foods</td><td>Sara Ahmed</td><td>Closed the business</td><td><span class="tag red">Red</span></td><td>24 Sep 2026</td><td><span class="tag yel">Pending</span></td></tr>
+<tr class="sel"><td><span class="cb on"></span></td><td>Bolt Gyms</td><td>Omar Khan</td><td>No payment for three months</td><td><span class="tag red">Red</span></td><td>25 Sep 2026</td><td><span class="tag yel">Pending</span></td></tr>
+<tr><td><span class="cb"></span></td><td>Acme Travel</td><td>Sara Ahmed</td><td>Moved to another provider</td><td><span class="tag yel">Yellow</span></td><td>26 Sep 2026</td><td><span class="tag yel">Pending</span></td></tr>
+<tr class="sel"><td><span class="cb on"></span></td><td>Orbit Media</td><td>Ali Hassan</td><td>Duplicate account</td><td><span class="tag bl">None</span></td><td>27 Sep 2026</td><td><span class="tag yel">Pending</span></td></tr>
+<tr><td><span class="cb"></span></td><td>Peak Autos</td><td>Omar Khan</td><td>Requested by the client</td><td><span class="tag yel">Yellow</span></td><td>28 Sep 2026</td><td><span class="tag yel">Pending</span></td></tr>
+</table></div>
+<div class="note">Approving marks each request approved and each client discarded in one transaction; rejected clients stay active.</div>
+</div></div></div></body></html>

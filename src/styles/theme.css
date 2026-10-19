@@ -1,93 +1,109 @@
 @custom-variant dark (&:is(.dark *));
 
+/* AICRE design tokens (docs/design/gui/base.css, plan Section 9.1).
+   shadcn variables map onto them so every component inherits the mockup look. */
 :root {
-  --font-size: 16px;
-  --background: hsl(220 20% 97%);
-  --foreground: hsl(222 47% 11%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(222 47% 11%);
-  --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --heading-foreground: hsl(222 47% 11%);
-  --heading-accent: hsl(243 75% 59%);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: hsl(222 47% 11%);
-  --primary-foreground: hsl(210 40% 98%);
-  --secondary: hsl(210 40% 96%);
-  --secondary-foreground: hsl(222 47% 11%);
-  --muted: hsl(210 40% 94%);
-  --muted-foreground: hsl(215 16% 47%);
-  --accent: hsl(210 40% 94%);
-  --accent-foreground: hsl(222 47% 11%);
-  --destructive: hsl(0 84% 60%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(214 32% 91%);
-  --input: transparent;
-  --input-background: hsl(210 40% 96%);
-  --switch-background: hsl(215 20% 80%);
-  --table-stripe: hsl(210 40% 98%);
-  --table-hover: hsl(210 40% 95%);
+  --font-size: 16px; /* rem base unchanged so Tailwind sizes stay true; body text is 14px */
+  --aicre-font: Arial, "Liberation Sans", Helvetica, sans-serif;
+
+  --aicre-text: #1f2937;
+  --aicre-text-muted: #6b7383;
+  --aicre-text-secondary: #5b6475;
+  --aicre-placeholder: #9aa3b2;
+  --aicre-bg: #f3f5f9;
+  --aicre-surface: #ffffff;
+  --aicre-border: #e3e7ef;
+  --aicre-row-divider: #eef1f6;
+  --aicre-input-border: #cfd6e3;
+  --aicre-th-bg: #f8f9fc;
+  --aicre-navy: #1e2a44;
+  --aicre-navy-active: #2f4170;
+  --aicre-accent-line: #5b8def;
+  --aicre-primary: #3b6fe0;
+  --aicre-primary-soft: #f2f6ff;
+  --aicre-sidebar-text: #cfd8ea;
+  --aicre-sidebar-caption: #9fb0cf;
+  --aicre-success-bg: #e6f6ec;
+  --aicre-success: #1d7a3e;
+  --aicre-warning-bg: #fff4d6;
+  --aicre-warning: #8a6100;
+  --aicre-danger-bg: #fde8e8;
+  --aicre-danger: #b42318;
+  --aicre-danger-border: #f1c4c0;
+  --aicre-info-bg: #e8efff;
+  --aicre-info: #2d55b8;
+  --aicre-kanban-col: #e9edf4;
+
+  --background: var(--aicre-bg);
+  --foreground: var(--aicre-text);
+  --card: var(--aicre-surface);
+  --card-foreground: var(--aicre-text);
+  --card-shadow: none;
+  --heading-foreground: var(--aicre-text);
+  --heading-accent: var(--aicre-primary);
+  --popover: var(--aicre-surface);
+  --popover-foreground: var(--aicre-text);
+  --primary: var(--aicre-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--aicre-th-bg);
+  --secondary-foreground: var(--aicre-text);
+  --muted: var(--aicre-th-bg);
+  --muted-foreground: var(--aicre-text-muted);
+  --accent: var(--aicre-primary-soft);
+  --accent-foreground: var(--aicre-text);
+  --destructive: var(--aicre-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--aicre-border);
+  --input: var(--aicre-input-border);
+  --input-background: var(--aicre-surface);
+  --switch-background: var(--aicre-input-border);
+  --table-stripe: var(--aicre-surface);
+  --table-hover: var(--aicre-th-bg);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --ring: var(--aicre-primary);
+  --chart-1: #3b6fe0;
+  --chart-2: #1d7a3e;
+  --chart-3: #8a6100;
+  --chart-4: #b42318;
+  --chart-5: #5b8def;
+  --radius: 10px;
+  --sidebar: var(--aicre-navy);
+  --sidebar-foreground: var(--aicre-sidebar-text);
+  --sidebar-primary: var(--aicre-accent-line);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--aicre-navy-active);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--aicre-navy-active);
+  --sidebar-ring: var(--aicre-accent-line);
 }
 
+/* Dark mode is not drawn in the report; same tokens, dark equivalents. */
 .dark {
-  --background: hsl(222 47% 8%);
-  --foreground: hsl(210 40% 98%);
-  --card: hsl(222 47% 12%);
-  --card-foreground: hsl(210 40% 98%);
-  --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.2);
-  --popover: hsl(222 47% 11%);
-  --popover-foreground: hsl(210 40% 98%);
-  --primary: hsl(210 40% 98%);
-  --primary-foreground: hsl(222 47% 11%);
-  --secondary: hsl(217 33% 17%);
-  --secondary-foreground: hsl(210 40% 98%);
-  --muted: hsl(217 33% 17%);
-  --muted-foreground: hsl(215 20% 65%);
-  --accent: hsl(217 33% 17%);
-  --accent-foreground: hsl(210 40% 98%);
-  --destructive: hsl(0 63% 31%);
-  --destructive-foreground: hsl(0 86% 70%);
-  --border: hsl(217 33% 17%);
-  --input: hsl(217 33% 17%);
-  --ring: hsl(216 12% 40%);
-  --heading-foreground: hsl(210 40% 98%);
-  --heading-accent: hsl(243 75% 70%);
-  --table-stripe: hsl(217 33% 14%);
-  --table-hover: hsl(217 33% 20%);
-  --input-background: hsl(217 33% 15%);
-  --switch-background: hsl(215 20% 35%);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --aicre-text: #e5e9f2;
+  --aicre-text-muted: #9aa3b2;
+  --aicre-text-secondary: #b4bccb;
+  --aicre-placeholder: #6b7383;
+  --aicre-bg: #111827;
+  --aicre-surface: #1a2234;
+  --aicre-border: #2b3548;
+  --aicre-row-divider: #232d40;
+  --aicre-input-border: #3a4660;
+  --aicre-th-bg: #1f283b;
+  --aicre-navy: #0f1626;
+  --aicre-navy-active: #24314f;
+  --aicre-primary: #5b8def;
+  --aicre-primary-soft: #1e2b47;
+  --aicre-success-bg: #143823;
+  --aicre-success: #6fd394;
+  --aicre-warning-bg: #3d3010;
+  --aicre-warning: #f2c94c;
+  --aicre-danger-bg: #42191a;
+  --aicre-danger: #f2938a;
+  --aicre-danger-border: #6b2a26;
+  --aicre-info-bg: #1c2a4d;
+  --aicre-info: #93b2f5;
+  --aicre-kanban-col: #161e2e;
 }
 
 @theme inline {
@@ -133,6 +149,28 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--aicre-font);
+  --color-navy: var(--aicre-navy);
+  --color-navy-active: var(--aicre-navy-active);
+  --color-accent-line: var(--aicre-accent-line);
+  --color-primary-soft: var(--aicre-primary-soft);
+  --color-text-secondary: var(--aicre-text-secondary);
+  --color-placeholder: var(--aicre-placeholder);
+  --color-input-border: var(--aicre-input-border);
+  --color-row-divider: var(--aicre-row-divider);
+  --color-th: var(--aicre-th-bg);
+  --color-sidebar-caption: var(--aicre-sidebar-caption);
+  --color-success: var(--aicre-success);
+  --color-success-bg: var(--aicre-success-bg);
+  --color-warning: var(--aicre-warning);
+  --color-warning-bg: var(--aicre-warning-bg);
+  --color-danger: var(--aicre-danger);
+  --color-danger-bg: var(--aicre-danger-bg);
+  --color-danger-border: var(--aicre-danger-border);
+  --color-info: var(--aicre-info);
+  --color-info-bg: var(--aicre-info-bg);
+  --color-kanban: var(--aicre-kanban-col);
 }
 
 @layer base {
@@ -142,6 +180,13 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--aicre-font);
+    font-size: 14px;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--aicre-placeholder);
   }
 
   /**
@@ -186,19 +231,19 @@
   }
 
   label {
-    font-size: var(--text-base);
+    font-size: 13px;
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
 
   button {
-    font-size: var(--text-base);
+    font-size: 13px;
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
 
   input {
-    font-size: var(--text-base);
+    font-size: 14px;
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }

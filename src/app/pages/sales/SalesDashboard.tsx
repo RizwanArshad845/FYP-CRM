@@ -31,7 +31,7 @@ export function SalesDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Sales Team Portal" theme={theme} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="px-6 py-5">
         <div className="w-full">
 
           {activeModule === 'followup' && (
